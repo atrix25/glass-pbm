@@ -1,0 +1,972 @@
+// Glass — transparent PBM proof of concept
+// Anchored on Wisconsin ETF / Navitus contract ETG0013.
+//
+// Money convention: every monetary column is an Int holding CENTS.
+// Per-unit reference prices are Float, preserving the decimal places published
+// by the source file (NADAC carries 5). The engine converts to integer
+// micro-dollars on load and rounds to cents only at defined points.
+// See src/lib/money.ts.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Proof layer
+// ---------------------------------------------------------------------------
+
+/// A published document that some rule, rate, or price is derived from.
+/// Every rule-bearing row in this schema points at one of these. If a rule
+/// cannot cite a source, it cannot be seeded.
+model SourceDocument {
+  id            String   @id
+  title         String
+  publisher     String
+  url           String
+  /// "contract" | "benefit" | "formulary" | "pa-criteria" | "price-file" | "audit" | "statute" | "report"
+  kind          String
+  /// Revision or effective date as printed on the document itself.
+  publishedDate String?
+  retrievedAt   DateTime
+  /// SHA-256 of the retrieved bytes, so a trace is replayable.
+  contentHash   String?
+  /// Where the local cached copy lives, if we fetched one.
+  localPath     String?
+  /// Page / section / row pointer used when citing this document generically.
+  locator       String?
+  notes         String?
+
+  contractRates   ContractRate[]
+  formularyEntries FormularyEntry[]
+  costShareRules  CostShareRule[]
+  criteriaTrees   PACriteriaTree[]
+  rebateTerms     RebateTerm[]
+  auditFindings   AuditFinding[]
+  drugPrices      DrugPrice[]
+
+  @@index([kind])
+}
+
+/// One evaluated rule inside an adjudication or PA determination.
+/// This is the artifact that makes the claim breakdown a derivation rather
+/// than a summary.
+model TraceStep {
+  id        String  @id @default(cuid())
+  claimId   String?
+  claim     Claim?  @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  paId      String?
+  pa        PriorAuthorization? @relation(fields: [paId], references: [id], onDelete: Cascade)
+
+  seq       Int
+  /// Stable dotted identifier, e.g. "pricing.lesser-of.mac-arm".
+  ruleId    String
+  /// Pipeline stage: eligibility | coverage | um | pricing | costshare | rebate | pa
+  stage     String
+  /// Human-readable question this step answers.
+  question  String
+  /// JSON: inputs the rule read.
+  inputs    String
+  /// JSON: what the rule produced.
+  output    String
+  /// Did this rule change the outcome?
+  fired     Boolean @default(false)
+  /// Plain-language result shown in the UI.
+  detail    String?
+
+  sourceDocumentId String?
+  /// Precise pointer within the source, e.g. "Exhibit C, rebate footnote 3".
+  citation         String?
+
+  @@index([claimId, seq])
+  @@index([paId, seq])
+  @@index([ruleId])
+}
+
+// ---------------------------------------------------------------------------
+// Plan sponsor, benefit design, membership
+// ---------------------------------------------------------------------------
+
+model PlanSponsor {
+  id            String   @id
+  name          String
+  shortName     String
+  /// "Self-insured" | "Fully-insured"
+  fundingType   String
+  situsState    String
+  planYearStart String
+  /// "Pass-through" | "Traditional"
+  pricingModel  String
+  contractId    String
+  contractName  String
+
+  benefitPlans BenefitPlan[]
+  members      Member[]
+  claims       Claim[]
+}
+
+model BenefitPlan {
+  id            String @id
+  sponsorId     String
+  sponsor       PlanSponsor @relation(fields: [sponsorId], references: [id])
+  name          String
+  /// "Commercial" | "EGWP"
+  lineOfBusiness String
+  planYear      Int
+  effectiveDate DateTime
+  terminationDate DateTime?
+
+  formularyId   String
+  formulary     Formulary @relation(fields: [formularyId], references: [id])
+  networkId     String
+  network       Network   @relation(fields: [networkId], references: [id])
+
+  /// Pharmacy deductible in cents. Wisconsin IYC has none; HDHP integrates with medical.
+  deductibleIndividual Int @default(0)
+  deductibleFamily     Int @default(0)
+  deductibleIntegratedWithMedical Boolean @default(false)
+
+  /// Wisconsin runs two parallel out-of-pocket limits with different eligibility.
+  /// Level 1 and 2 cost share accumulates to the Rx limit; Level 3 and 4 does not,
+  /// reaching only the federal maximum. Certificate of Coverage, 2026.
+  rxOopLimitIndividual      Int
+  rxOopLimitFamily          Int
+  federalOopLimitIndividual Int
+  federalOopLimitFamily     Int
+  /// Which formulary levels accumulate to the Rx out-of-pocket limit. JSON int array.
+  rxOopEligibleLevels       String @default("[1,2]")
+
+  /// Member pays coinsurance plus the brand/generic difference on DAW 1
+  /// unless a MedWatch form is on file.
+  dawPenaltyEnabled Boolean @default(true)
+  /// Level 4 must be filled at a designated specialty pharmacy or is not covered.
+  specialtyChannelRestricted Boolean @default(true)
+  specialtyPharmacyIds       String  @default("[]")
+
+  maxDaysSupplyPerCopay Int @default(30)
+  retail90MultiplierCopays Int @default(3)
+  mailMultiplierCopays     Int @default(2)
+
+  costShareRules CostShareRule[]
+  eligibilitySpans EligibilitySpan[]
+  claims          Claim[]
+  accumulators    Accumulator[]
+}
+
+model CostShareRule {
+  id            String @id @default(cuid())
+  benefitPlanId String
+  benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id], onDelete: Cascade)
+
+  /// Wisconsin formulary "Level": 1 | 2 | 3 | 4. Also "$0" and "100%/EX" as pseudo-levels.
+  level         String
+  /// "Retail" | "Retail90" | "Mail" | "Specialty"
+  channel       String
+
+  /// "Copay" | "Coinsurance" | "NotCovered" | "Zero"
+  costShareType String
+  copayCents    Int?
+  coinsuranceRateBps Int?
+  coinsuranceMaxCents Int?
+  coinsuranceMinCents Int?
+
+  accumulatesToRxOop      Boolean @default(true)
+  accumulatesToFederalOop Boolean @default(true)
+  appliesToDeductible     Boolean @default(false)
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+  citation         String?
+
+  @@unique([benefitPlanId, level, channel])
+}
+
+model Member {
+  id           String @id
+  sponsorId    String
+  sponsor      PlanSponsor @relation(fields: [sponsorId], references: [id])
+  cardholderId String
+  personCode   String
+  /// 1 Cardholder | 2 Spouse | 3 Child
+  relationshipCode String
+  subscriberId String?
+
+  firstName String
+  lastName  String
+  dateOfBirth DateTime
+  gender      String
+  addressLine1 String?
+  city        String?
+  state       String?
+  zip         String?
+  phone       String?
+  email       String?
+
+  /// JSON array of ICD-10 codes, drives diagnosis-restricted coverage and PA criteria.
+  diagnosisCodes String @default("[]")
+  weightKg       Float?
+
+  eligibilitySpans EligibilitySpan[]
+  claims           Claim[]
+  accumulators     Accumulator[]
+  priorAuths       PriorAuthorization[]
+  chatSessions     ChatSession[]
+
+  @@unique([cardholderId, personCode])
+  @@index([lastName])
+}
+
+model EligibilitySpan {
+  id            String @id @default(cuid())
+  memberId      String
+  member        Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  benefitPlanId String
+  benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
+
+  effectiveDate   DateTime
+  terminationDate DateTime?
+  coverageTier    String
+  /// "Active" | "Retiree" | "COBRA"
+  memberType      String @default("Active")
+
+  claims Claim[]
+
+  @@index([memberId, effectiveDate])
+}
+
+// ---------------------------------------------------------------------------
+// Drugs and prices
+// ---------------------------------------------------------------------------
+
+model Drug {
+  id           String @id
+  /// Normalized 11-digit NDC.
+  ndc11        String @unique
+  name         String
+  genericName  String?
+  strength     String?
+  dosageForm   String?
+  route        String?
+  labeler      String?
+  /// The NDC description exactly as printed in the CMS NADAC file. Kept
+  /// verbatim because it carries package form ("4 PACK", "KIT", "TABLET")
+  /// that determines how a dispensed quantity maps onto the pricing unit.
+  nadacDescription String?
+
+  /// Medi-Span style multi-source code: N | M | O | Y. Drives brand/generic
+  /// classification together with the DAW code and the contract ruleset.
+  monyCode      String @default("Y")
+  isBrandLabel  Boolean @default(false)
+  isSpecialty   Boolean @default(false)
+  isBiosimilar  Boolean @default(false)
+  referenceProductNdc String?
+  therapeuticClass String?
+  /// Units per package, used to convert dispensed quantity to billable units.
+  packageSize  Float @default(1)
+  unitOfMeasure String @default("EA")
+  isOtc        Boolean @default(false)
+  deaSchedule  String?
+
+  prices       DrugPrice[]
+  formularyEntries FormularyEntry[]
+  claims       Claim[]
+  priorAuths   PriorAuthorization[]
+  rebateTerms  RebateTerm[]
+
+  @@index([name])
+  @@index([therapeuticClass])
+}
+
+/// Effective-dated per-unit reference price. Float preserves published decimals.
+model DrugPrice {
+  id        String @id @default(cuid())
+  drugId    String
+  drug      Drug   @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  /// "NADAC" | "AWP" | "WAC" | "MAC"
+  priceType String
+  unitPrice Float
+  effectiveDate DateTime
+  terminationDate DateTime?
+  /// "CMS NADAC" | "Derived" — derived prices are badged in the UI.
+  source    String
+  /// True when this price is modeled rather than observed, because the
+  /// underlying benchmark is proprietary. Surfaced everywhere it is used.
+  isSimulated Boolean @default(false)
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+
+  @@index([drugId, priceType, effectiveDate])
+}
+
+// ---------------------------------------------------------------------------
+// Formulary
+// ---------------------------------------------------------------------------
+
+model Formulary {
+  id        String @id
+  name      String
+  version   String
+  effectiveDate DateTime
+
+  entries      FormularyEntry[]
+  benefitPlans BenefitPlan[]
+}
+
+model FormularyEntry {
+  id          String @id @default(cuid())
+  formularyId String
+  formulary   Formulary @relation(fields: [formularyId], references: [id], onDelete: Cascade)
+  drugId      String
+  drug        Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  /// Wisconsin Level as printed: "1" | "2" | "3" | "4" | "$0" | "NC" | "100%/EX" | "20%"
+  level       String
+  /// The raw Special Code string from the formulary PDF, e.g. "MSP-PA-QL".
+  specialCode String?
+  category    String?
+
+  /// Decoded flags from the special code legend.
+  requiresPA        Boolean @default(false)
+  requiresStep      Boolean @default(false)
+  hasQuantityLimit  Boolean @default(false)
+  diagnosisRestricted Boolean @default(false)
+  specialistRestricted Boolean @default(false)
+  mandatorySpecialty  Boolean @default(false)
+  limitedDistribution Boolean @default(false)
+  notCovered          Boolean @default(false)
+  planExclusion       Boolean @default(false)
+  isVaccine           Boolean @default(false)
+
+  /// Parsed from the inline parenthetical, e.g. "(QL= 1 pack/28 days)".
+  qlQuantity Float?
+  qlDays     Int?
+  qlRawText  String?
+  /// Parsed ICD-10 prefixes from "Diagnosis Restricted – Type 2 Diabetes (E11)".
+  requiredDiagnosisCodes String @default("[]")
+  diagnosisRawText       String?
+
+  criteriaTreeId String?
+  criteriaTree   PACriteriaTree? @relation(fields: [criteriaTreeId], references: [id])
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+  citation         String?
+
+  @@unique([formularyId, drugId])
+  @@index([level])
+}
+
+// ---------------------------------------------------------------------------
+// Pharmacy network
+// ---------------------------------------------------------------------------
+
+model Pharmacy {
+  id           String @id
+  npi          String @unique
+  ncpdpId      String?
+  name         String
+  chainName    String?
+  /// "Independent" | "Chain" | "Mail" | "Specialty" | "LTC"
+  pharmacyType String
+  city         String?
+  state        String?
+  zip          String?
+  latitude     Float?
+  longitude    Float?
+  phone        String?
+  is340B       Boolean @default(false)
+  /// True for Lumicera and UW Health, the designated specialty pharmacies.
+  isDesignatedSpecialty Boolean @default(false)
+
+  networkLinks NetworkPharmacy[]
+  claims       Claim[]
+}
+
+model Network {
+  id     String @id
+  name   String
+  /// "Limited" | "Broad" | "Specialty" | "Mail"
+  type   String
+  notes  String?
+
+  pharmacies   NetworkPharmacy[]
+  benefitPlans BenefitPlan[]
+}
+
+model NetworkPharmacy {
+  id         String @id @default(cuid())
+  networkId  String
+  network    Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
+  pharmacyId String
+  pharmacy   Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  /// "Participating" | "Preferred" | "NonParticipating"
+  status     String @default("Participating")
+  effectiveDate DateTime
+  terminationDate DateTime?
+
+  @@unique([networkId, pharmacyId])
+}
+
+// ---------------------------------------------------------------------------
+// Contract terms
+// ---------------------------------------------------------------------------
+
+/// A rate card row. The same shape serves the pharmacy side and the client
+/// side. Under pass-through the two must be the same row, which the engine
+/// asserts as an invariant.
+model ContractRate {
+  id           String @id @default(cuid())
+  contractId   String
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  /// "Pharmacy" | "Client"
+  rateSide     String
+  /// "Commercial" | "EGWP"
+  lineOfBusiness String
+  /// "Retail" | "Retail90" | "Mail" | "Specialty"
+  channel      String
+  /// "Brand" | "Generic" | "All"
+  drugClass    String
+
+  /// AWP discount in basis points. 18.20% is 1820.
+  awpDiscountBps Int?
+  dispensingFeeCents Int @default(0)
+  /// Ordered JSON array naming which arms enter the lesser-of, e.g.
+  /// ["AWP_MINUS","MAC","SUBMITTED"]. Explicit because omitting U&C is
+  /// precisely how spread is manufactured.
+  lesserOfArms   String @default("[\"AWP_MINUS\",\"MAC\",\"UANDC\",\"SUBMITTED\"]")
+  includeUandC   Boolean @default(true)
+
+  /// Minimum rebate guarantee per qualifying brand claim, in cents.
+  minRebatePerBrandClaimCents Int?
+
+  effectiveDate   DateTime
+  terminationDate DateTime?
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+  citation         String?
+
+  @@index([contractId, lineOfBusiness, channel, drugClass])
+}
+
+model Contract {
+  id          String @id
+  name        String
+  pbmName     String
+  sponsorName String
+  /// "PassThrough" | "Traditional"
+  model       String
+  effectiveDate DateTime
+  terminationDate DateTime?
+
+  adminFeePmpmCommercialCents Int @default(0)
+  adminFeePmpmEgwpCents       Int @default(0)
+  /// Amendment 5: taken from rebates before pass-through.
+  rebateAdminFeePmpmCents     Int @default(0)
+  rebatePassThroughBps        Int @default(10000)
+
+  /// Retail is 1-83 days supply; Retail90 is 84 or more. Exhibit C footnote.
+  retailMaxDaysSupply Int @default(83)
+  /// Guarantees only apply to a category with at least this many claims.
+  minClaimsPerCategory Int @default(1000)
+  /// JSON array of rule identifiers that exclude a claim from discount guarantees.
+  discountExclusions String @default("[]")
+  /// JSON array of rule identifiers that exclude a claim from rebate guarantees.
+  rebateExclusions   String @default("[]")
+  /// A claim where the member pays more than this share may forfeit its rebate.
+  rebateMemberShareThresholdBps Int @default(5000)
+
+  notes String?
+
+  rates    ContractRate[]
+  claims   Claim[]
+  rebateTerms RebateTerm[]
+}
+
+// ---------------------------------------------------------------------------
+// Claims
+// ---------------------------------------------------------------------------
+
+model Claim {
+  id        String @id @default(cuid())
+  claimNumber String @unique
+
+  /// "B1" billing | "B2" reversal | "B3" rebill
+  transactionCode String @default("B1")
+
+  sponsorId     String
+  sponsor       PlanSponsor @relation(fields: [sponsorId], references: [id])
+  memberId      String
+  member        Member @relation(fields: [memberId], references: [id])
+  eligibilitySpanId String?
+  eligibilitySpan   EligibilitySpan? @relation(fields: [eligibilitySpanId], references: [id])
+  benefitPlanId String
+  benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
+  pharmacyId    String
+  pharmacy      Pharmacy @relation(fields: [pharmacyId], references: [id])
+  drugId        String
+  drug          Drug @relation(fields: [drugId], references: [id])
+  contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id])
+
+  dateOfService DateTime
+  rxNumber      String
+  fillNumber    Int @default(0)
+  quantityDispensed Float
+  daysSupply    Int
+  dawCode       String @default("0")
+  prescriberNpi String?
+  compoundCode  String @default("1")
+
+  /// Submitted pricing, in cents.
+  ingredientCostSubmittedCents Int @default(0)
+  dispensingFeeSubmittedCents  Int @default(0)
+  usualAndCustomaryCents       Int @default(0)
+  grossAmountDueCents          Int @default(0)
+
+  /// Adjudication outcome.
+  /// "P" paid | "R" rejected | "A" approved reversal | "D" duplicate
+  responseStatus String
+  /// JSON array of NCPDP reject codes.
+  rejectCodes    String @default("[]")
+  rejectMessage  String?
+
+  /// Pharmacy side, in cents.
+  allowedIngredientCostCents Int @default(0)
+  allowedDispensingFeeCents  Int @default(0)
+  totalAllowedCents          Int @default(0)
+  /// NCPDP 522-FM: which arm of the lesser-of won.
+  basisOfReimbursement       String?
+  pharmacyPaidCents          Int @default(0)
+
+  /// Client side. Identical to the pharmacy side under pass-through.
+  billedIngredientCostCents Int @default(0)
+  billedDispensingFeeCents  Int @default(0)
+  totalBilledCents          Int @default(0)
+  planPaidCents             Int @default(0)
+
+  /// Member liability, in cents.
+  patientPayCents            Int @default(0)
+  appliedToDeductibleCents   Int @default(0)
+  copayCoinsuranceCents      Int @default(0)
+  brandSelectionPenaltyCents Int @default(0)
+
+  /// Benchmarks captured at adjudication so the claim reproduces later.
+  awpUnitAtDos   Float?
+  awpTotalCents  Int?
+  nadacUnitAtDos Float?
+  nadacTotalCents Int?
+  macUnitAtDos   Float?
+  awpIsSimulated Boolean @default(false)
+
+  /// Derived classification under the contract ruleset.
+  brandGenericClass String?
+  channel           String
+  formularyLevel    String?
+  isSpecialtyClaim  Boolean @default(false)
+
+  /// Guarantee and rebate participation.
+  excludedFromDiscountGuarantee Boolean @default(false)
+  discountExclusionReason       String?
+  rebateEligible                Boolean @default(false)
+  rebateExclusionReason         String?
+  estimatedRebateCents          Int @default(0)
+
+  /// Set when this claim is part of a seeded audit-replication scenario.
+  scenarioTag String?
+
+  configVersionId String?
+  configVersion   ConfigVersion? @relation(fields: [configVersionId], references: [id])
+
+  adjudicatedAt DateTime @default(now())
+  ncpdpRequest  String?
+  ncpdpResponse String?
+
+  /// The full derivation, as emitted by the engine at adjudication time.
+  /// Stored on the claim rather than as child rows because it is read as a
+  /// unit, always for exactly one claim, and never aggregated.
+  traceJson String?
+
+  traceSteps TraceStep[]
+  accumulatorTransactions AccumulatorTransaction[]
+  rebateAccruals RebateAccrual[]
+
+  reversalOfClaimId String?
+
+  @@index([memberId, dateOfService])
+  @@index([dateOfService])
+  @@index([responseStatus])
+  @@index([scenarioTag])
+  @@index([channel])
+}
+
+// ---------------------------------------------------------------------------
+// Accumulators
+// ---------------------------------------------------------------------------
+
+model Accumulator {
+  id            String @id @default(cuid())
+  memberId      String
+  member        Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  benefitPlanId String
+  benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
+
+  /// "RxOopIndividual" | "RxOopFamily" | "FederalOopIndividual"
+  /// | "FederalOopFamily" | "DeductibleIndividual" | "DeductibleFamily"
+  accumulatorType String
+  planYear      Int
+  limitCents    Int
+  accumulatedCents Int @default(0)
+
+  transactions AccumulatorTransaction[]
+
+  @@unique([memberId, accumulatorType, planYear])
+}
+
+/// Signed delta per claim. Stored so a reversal unwinds exactly and
+/// re-adjudication is safe.
+model AccumulatorTransaction {
+  id            String @id @default(cuid())
+  accumulatorId String
+  accumulator   Accumulator @relation(fields: [accumulatorId], references: [id], onDelete: Cascade)
+  claimId       String?
+  claim         Claim? @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  /// "Apply" | "Reverse" | "Adjustment"
+  transactionType String @default("Apply")
+  amountCents     Int
+  appliedAt       DateTime @default(now())
+
+  @@index([accumulatorId])
+  @@index([claimId])
+}
+
+// ---------------------------------------------------------------------------
+// Rebates
+// ---------------------------------------------------------------------------
+
+model RebateContract {
+  id            String @id
+  manufacturer  String
+  /// "PBM" | "GPO" | "Aggregator"
+  contractingEntity String @default("GPO")
+  entityDomicile String?
+  effectiveDate DateTime
+  terminationDate DateTime?
+
+  terms    RebateTerm[]
+  accruals RebateAccrual[]
+}
+
+model RebateTerm {
+  id               String @id @default(cuid())
+  rebateContractId String
+  rebateContract   RebateContract @relation(fields: [rebateContractId], references: [id], onDelete: Cascade)
+  contractId       String?
+  contract         Contract? @relation(fields: [contractId], references: [id])
+  drugId           String?
+  drug             Drug? @relation(fields: [drugId], references: [id])
+
+  /// "BaseRebate" | "PriceProtection" | "AdminFee" | "FormularyPlacementFee"
+  /// | "DataFee" | "GPOServiceFee" | "RebateSubstitution"
+  /// Modeling this as a typed collection rather than a scalar is what makes
+  /// a pass-through claim falsifiable.
+  remunerationType String
+  /// "PctOfWAC" | "PctOfAWP" | "FlatPerClaim"
+  calculationBasis String
+  rateBps          Int?
+  flatAmountCents  Int?
+
+  /// Is this remuneration type inside the client contract's definition of
+  /// the word "rebate"?
+  inPlanRebateDefinition Boolean @default(true)
+  passThroughBps         Int @default(10000)
+  /// "None" | "PBM" | "GPO"
+  retainedByEntity       String @default("None")
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+  citation         String?
+}
+
+model RebateAccrual {
+  id       String @id @default(cuid())
+  claimId  String
+  claim    Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  rebateContractId String?
+  rebateContract   RebateContract? @relation(fields: [rebateContractId], references: [id])
+
+  remunerationType String
+  basisAmountCents Int @default(0)
+  amountCents      Int
+  passedToPlanCents Int
+  retainedCents    Int @default(0)
+  accrualPeriod    String
+  status           String @default("Accrued")
+
+  @@index([claimId])
+  @@index([accrualPeriod])
+}
+
+// ---------------------------------------------------------------------------
+// Prior authorization
+// ---------------------------------------------------------------------------
+
+/// A published clinical criteria document, encoded as an executable tree.
+model PACriteriaTree {
+  id          String @id
+  name        String
+  /// Drug or class the tree governs.
+  scopeLabel  String
+  /// JSON array of drug name patterns this tree applies to.
+  drugPatterns String @default("[]")
+  publishedDate String?
+  approvalDurationDays Int @default(365)
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+
+  steps            CriteriaStep[]
+  formularyEntries FormularyEntry[]
+  priorAuths       PriorAuthorization[]
+}
+
+/// One numbered node in a published criteria decision tree.
+model CriteriaStep {
+  id       String @id @default(cuid())
+  treeId   String
+  tree     PACriteriaTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  /// The step number as printed in the published document.
+  stepNumber Int
+  question   String
+  /// Machine-evaluable predicate identifier resolved by the criteria engine,
+  /// e.g. "member.hasDiagnosis" with args.
+  predicate  String
+  /// JSON args for the predicate.
+  predicateArgs String @default("{}")
+
+  /// "step" | "approve" | "deny"
+  yesOutcome String
+  yesStep    Int?
+  yesApprovalDays Int?
+  noOutcome  String
+  noStep     Int?
+  noApprovalDays Int?
+
+  /// Plain-language reason attached to a terminal outcome.
+  denyReason String?
+  citation   String?
+
+  decisionSteps PADecisionStep[]
+
+  @@unique([treeId, stepNumber])
+}
+
+model PriorAuthorization {
+  id        String @id @default(cuid())
+  paNumber  String @unique
+  memberId  String
+  member    Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  drugId    String
+  drug      Drug @relation(fields: [drugId], references: [id])
+  treeId    String?
+  tree      PACriteriaTree? @relation(fields: [treeId], references: [id])
+
+  /// "PA" | "StepException" | "QuantityException" | "FormularyException"
+  requestType String @default("PA")
+  /// "Standard" | "Expedited"
+  urgency     String @default("Standard")
+  prescriberNpi  String?
+  prescriberName String?
+  requestedQuantity Float?
+  requestedDaysSupply Int?
+  /// JSON of the answered question set.
+  questionResponses String @default("{}")
+
+  /// "Received" | "PendingInfo" | "InReview" | "Approved" | "Denied" | "Expired"
+  status      String @default("Received")
+  determination String?
+  /// The step number that produced the outcome. This is the citation.
+  decidingStepNumber Int?
+  denyReason  String?
+  approvedDays Int?
+  approvedEffectiveDate DateTime?
+  approvedTerminationDate DateTime?
+
+  receivedAt DateTime @default(now())
+  prescriberStatementAt DateTime?
+  decisionDueAt DateTime?
+  decidedAt    DateTime?
+  /// "AI" | "Pharmacist"
+  decidedBy    String?
+  reviewerNote String?
+  /// True when the AI routed this to a human rather than deciding.
+  escalated    Boolean @default(false)
+
+  traceSteps TraceStep[]
+  decisionSteps PADecisionStep[]
+
+  @@index([memberId])
+  @@index([status])
+}
+
+/// The path actually traversed through the criteria tree.
+model PADecisionStep {
+  id       String @id @default(cuid())
+  paId     String
+  pa       PriorAuthorization @relation(fields: [paId], references: [id], onDelete: Cascade)
+  criteriaStepId String
+  criteriaStep   CriteriaStep @relation(fields: [criteriaStepId], references: [id])
+
+  seq      Int
+  answer   Boolean
+  evidence String?
+
+  @@index([paId, seq])
+}
+
+// ---------------------------------------------------------------------------
+// Change management
+// ---------------------------------------------------------------------------
+
+/// A content-addressed snapshot of benefit configuration, so any two
+/// versions can be compared and any claim can be replayed against either.
+model ConfigVersion {
+  id          String @id @default(cuid())
+  label       String
+  description String?
+  /// SHA-256 over the canonical JSON of the configuration.
+  contentHash String
+  /// JSON snapshot of the changed configuration.
+  payload     String
+  /// JSON list of human-readable change descriptions.
+  changeSummary String @default("[]")
+  createdBy   String @default("demo")
+  createdAt   DateTime @default(now())
+  isBaseline  Boolean @default(false)
+
+  claims Claim[]
+  runs   ReadjudicationRun[]
+}
+
+model ReadjudicationRun {
+  id          String @id @default(cuid())
+  configVersionId String
+  configVersion   ConfigVersion @relation(fields: [configVersionId], references: [id], onDelete: Cascade)
+  baselineLabel String
+  claimsEvaluated Int
+  claimsChanged   Int
+  membersAffected Int
+  planCostDeltaCents Int
+  memberCostDeltaCents Int
+  newRejects      Int
+  /// JSON array of per-claim diffs.
+  diffPayload     String
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Audit replication and proof
+// ---------------------------------------------------------------------------
+
+/// A finding published by Wisconsin's independent PBM auditor that our
+/// engine should independently reproduce.
+model AuditFinding {
+  id          String @id
+  title       String
+  auditor     String @default("PillarRx Consulting")
+  auditYear   Int
+  /// What the published report said.
+  publishedFinding String
+  /// How our engine detects the same thing.
+  detectionRule    String
+  scenarioTag      String?
+  expectedOutcome  String
+
+  sourceDocumentId String?
+  sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
+
+  results AuditFindingResult[]
+}
+
+model AuditFindingResult {
+  id        String @id @default(cuid())
+  findingId String
+  finding   AuditFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  detected  Boolean
+  detail    String
+  /// JSON of the claims that triggered detection.
+  evidence  String @default("[]")
+  runAt     DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// AI member service
+// ---------------------------------------------------------------------------
+
+model ChatSession {
+  id       String @id @default(cuid())
+  memberId String?
+  member   Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  title    String?
+  createdAt DateTime @default(now())
+
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  /// JSON array of tool calls with arguments, results, and timings.
+  toolCalls String @default("[]")
+  /// JSON array of citations the answer relied on.
+  citations String @default("[]")
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+/// A question whose correct answer is computed directly from the database,
+/// used to score the agent.
+model EvalCase {
+  id         String @id @default(cuid())
+  category   String
+  question   String
+  /// JSON of the gold answer computed by the rules engine.
+  goldAnswer String
+  /// JSON array of tool names the agent is expected to use.
+  expectedTools String @default("[]")
+  /// For refusal cases, the agent is expected to decline rather than answer.
+  expectsRefusal Boolean @default(false)
+  memberId   String?
+  drugId     String?
+
+  results EvalResult[]
+}
+
+model EvalResult {
+  id       String @id @default(cuid())
+  caseId   String
+  case     EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  runId    String
+  passed   Boolean
+  /// "exact" | "citation" | "trajectory" | "refusal"
+  checkType String
+  actual    String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+}

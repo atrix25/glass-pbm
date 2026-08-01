@@ -1,0 +1,12 @@
+.git
+.next
+node_modules
+.vercel
+.DS_Store
+npm-debug.log*
+
+# 75 MB of NADAC source rows and the formulary PDF. These are inputs to the
+# ingest step, which has already run; its output is in prisma/dev.db.
+data/raw
+
+# prisma/dev.db is deliberately NOT ignored — it is the seeded book.

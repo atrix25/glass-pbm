@@ -1,0 +1,54 @@
+{
+  "name": "glass-pbm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Glass — an end-to-end transparent PBM proof of concept anchored on the Wisconsin ETF / Navitus contract (ETG0013)",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:push": "prisma db push --skip-generate",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "ingest": "tsx scripts/ingest/index.ts",
+    "seed": "tsx scripts/seed/index.ts",
+    "setup": "npm run db:generate && npm run db:push && npm run seed",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "prisma": {
+    "seed": "tsx scripts/seed/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.55",
+    "@ai-sdk/openai": "^2.0.71",
+    "@prisma/client": "^6.19.0",
+    "ai": "^5.0.98",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.550.0",
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.3.1",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "pdfjs-dist": "^5.5.207",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}

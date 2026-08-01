@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d5dae3;
+  --color-ink-300: #b0b9c9;
+  --color-ink-400: #8493ab;
+  --color-ink-500: #647590;
+  --color-ink-600: #4e5d76;
+  --color-ink-700: #404b60;
+  --color-ink-800: #374051;
+  --color-ink-900: #1d2432;
+  --color-ink-950: #12161f;
+
+  --color-glass-50: #eefbfa;
+  --color-glass-100: #d3f5f3;
+  --color-glass-200: #ace9e8;
+  --color-glass-300: #74d8d8;
+  --color-glass-400: #38bec1;
+  --color-glass-500: #1ca2a7;
+  --color-glass-600: #148187;
+  --color-glass-700: #14676d;
+  --color-glass-800: #155259;
+  --color-glass-900: #16454b;
+  --color-glass-950: #072a2f;
+
+  --color-amber-signal: #b45309;
+  --color-positive: #0f766e;
+  --color-negative: #b91c1c;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono",
+    Menlo, Consolas, monospace;
+}
+
+:root {
+  --background: #f8f9fb;
+  --foreground: #12161f;
+}
+
+* {
+  border-color: var(--color-ink-200);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures everywhere money appears, so columns line up. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+::selection {
+  background: var(--color-glass-200);
+  color: var(--color-ink-950);
+}
+
+/* Thin, unobtrusive scrollbars inside data panes. */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-ink-300);
+  border-radius: 999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(28, 162, 167, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(28, 162, 167, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(28, 162, 167, 0);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s infinite;
+}
