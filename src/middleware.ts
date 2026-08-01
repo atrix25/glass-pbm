@@ -5,7 +5,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // official ETF or Navitus system by anyone who stumbles onto the host.
 // Unset DEMO_PASSWORD disables the gate, which is what local development wants.
 
-const REALM = 'Basic realm="Glass — proof of concept", charset="UTF-8"';
+// Header values are Latin-1; keep this ASCII.
+const REALM = 'Basic realm="Glass proof of concept", charset="UTF-8"';
 
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;

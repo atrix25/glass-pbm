@@ -41,6 +41,8 @@ describe("routing picks the question the member asked", () => {
   const cases: [string, string][] = [
     ["Why am I still paying after hitting my $600 limit?", "oop-limit"],
     ["How much have I paid this year?", "oop-limit"],
+    ["How much have I spent toward my out of pocket maximum?", "oop-limit"],
+    ["Have I met my out-of-pocket max yet?", "oop-limit"],
     ["How much would Ozempic cost me?", "cost-quote"],
     ["how much is my atorvastatin", "cost-quote"],
     ["What is the copay on Lipitor?", "cost-quote"],
@@ -65,6 +67,20 @@ describe("routing picks the question the member asked", () => {
   it("does not mistake a common word for a drug name", async () => {
     const r = await ask(THOMAS.id, "why was my claim rejected at the pharmacy");
     expect(r.drug).toBeNull();
+  });
+
+  // A word sitting inside a phrase the router already recognised is part of
+  // that phrase. "out of pocket" put POCKET where a drug name goes, and the
+  // agent answered that it could not find Pocket on the formulary.
+  it("does not read a word out of a recognised phrase as a product", async () => {
+    for (const q of [
+      "How much have I spent toward my out of pocket maximum?",
+      "Is there anything cheaper than what I take now?",
+      "When can I refill my prescription?",
+    ]) {
+      const r = await ask(MARGARET.id, q);
+      expect({ q, intent: r.intent }).not.toEqual({ q, intent: "unknown-drug" });
+    }
   });
 });
 

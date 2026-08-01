@@ -67,10 +67,18 @@ export interface DrugMention {
   unrecognised: string | null;
 }
 
-/** Pull a drug name out of free text, preferring names the member actually has. */
+/**
+ * Pull a drug name out of free text, preferring names the member actually has.
+ *
+ * `claimedPhrases` are spans of the question that an intent pattern already
+ * matched. A word inside one of those is part of an English phrase the router
+ * recognised, not a product: "out of pocket maximum" must not yield a drug
+ * called Pocket.
+ */
 export async function extractDrug(
   text: string,
   memberId: string,
+  claimedPhrases: string[] = [],
 ): Promise<DrugMention> {
   const upper = text.toUpperCase();
 
@@ -98,7 +106,8 @@ export async function extractDrug(
   const m = upper.match(
     /\b(?:MY|THE|FOR|OF|ON|IS|ABOUT|THAN|COVER|COVERED)\s+([A-Z]{5,})\b/,
   );
-  if (m && !STOPWORDS.has(m[1])) {
+  const claimed = claimedPhrases.some((p) => p.toUpperCase().includes(m?.[1] ?? "\u0000"));
+  if (m && !STOPWORDS.has(m[1]) && !claimed) {
     const exists = await prisma.drug.findFirst({
       where: { name: { startsWith: m[1] } },
       select: { id: true },
@@ -170,6 +179,40 @@ const STOPWORDS = new Set([
   "CHEAPER",
   "GENERIC",
   "GENERICS",
+  // Function words and other closed-class English that can land in the slot a
+  // drug name would occupy: "is THERE anything cheaper", "of POCKET maximum".
+  "THERE",
+  "THESE",
+  "THOSE",
+  "WHICH",
+  "WHERE",
+  "WHILE",
+  "WOULD",
+  "COULD",
+  "SHOULD",
+  "BEING",
+  "THEIR",
+  "OTHER",
+  "EVERY",
+  "AFTER",
+  "BEFORE",
+  "STILL",
+  "ABOUT",
+  "AGAIN",
+  "GOING",
+  "RIGHT",
+  "POCKET",
+  "MAXIMUM",
+  "EXPENSIVE",
+  "SUPPLY",
+  "NETWORK",
+  "SPENDING",
+  "REASON",
+  "PROBLEM",
+  "ANOTHER",
+  "REFILLED",
+  "APPROVED",
+  "DENIED",
 ]);
 
 interface Intent {
@@ -413,7 +456,20 @@ export async function planCalls(
   question: string,
   memberId: string,
 ): Promise<Plan> {
-  const mention = await extractDrug(question, memberId);
+  // Score intents first. Scoring does not depend on the drug, and the spans
+  // the patterns matched are what tells the extractor which words are already
+  // spoken for as ordinary English.
+  const scored = INTENTS.map((intent) => {
+    const matches = intent.any
+      .map((r) => question.match(r)?.[0])
+      .filter((s): s is string => Boolean(s));
+    return { intent, score: matches.length * intent.weight, matches };
+  })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const claimedPhrases = scored.flatMap((s) => s.matches);
+  const mention = await extractDrug(question, memberId, claimedPhrases);
   const drug = mention.drug;
 
   // A named product that resolves to nothing is answerable on its own, and
@@ -432,13 +488,6 @@ export async function planCalls(
       ],
     };
   }
-
-  const scored = INTENTS.map((intent) => {
-    const hits = intent.any.filter((r) => r.test(question)).length;
-    return { intent, score: hits > 0 ? hits * intent.weight : 0 };
-  })
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score);
 
   if (scored.length === 0) {
     return {
