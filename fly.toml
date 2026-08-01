@@ -1,0 +1,19 @@
+app = "glass-pbm-demo"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Kept warm on purpose: a cold start in front of an audience is not worth
+  # the few dollars a month it saves.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"
