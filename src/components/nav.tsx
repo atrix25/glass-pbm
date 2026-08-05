@@ -14,6 +14,7 @@ import {
   Landmark,
   Map,
   MessageSquare,
+  Presentation,
   Radar,
   Receipt,
   Ruler,
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 
 const ICONS = {
   walkthrough: Map,
+  pitch: Presentation,
   agents: Bot,
   sponsor: Building2,
   claims: Receipt,

@@ -126,3 +126,23 @@ body {
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
 }
+
+/* Pitch deck: slide content enters; staggered panels follow. */
+@keyframes pitch-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pitch-enter {
+  animation: pitch-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pitch-stagger {
+  animation: pitch-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
