@@ -1,4 +1,19 @@
+/**
+ * The plan sponsor's view of the book, as of the simulation clock.
+ *
+ * These read the daily rollup rather than the claim table. At a hundred
+ * thousand lives the book is over a million and a half claims, and the eight
+ * group-bys this dashboard needs would each be a full scan. Every figure here
+ * is still a sum of claim columns — the rollup adds no facts, and the
+ * invariant suite checks it against the claims it summarises — but the sum was
+ * done once at seed time instead of once per page load.
+ *
+ * Cutting at the clock is not an optimisation, it is the point: the plan year
+ * is seeded through December and most of it has not happened yet.
+ */
+
 import { prisma } from "@/lib/db";
+import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
 export const PLAN_YEAR = 2026;
 
@@ -21,48 +36,110 @@ export interface BookTotals {
   specialtyBilledCents: number;
 }
 
-export async function getBookTotals(): Promise<BookTotals> {
-  const [row] = await prisma.$queryRaw<
-    Array<Record<string, number | bigint | null>>
-  >`
-    SELECT
-      COUNT(*)                                                   AS claimsSubmitted,
-      SUM(CASE WHEN responseStatus = 'P' THEN 1 ELSE 0 END)      AS claimsPaid,
-      SUM(CASE WHEN responseStatus = 'R' THEN 1 ELSE 0 END)      AS claimsRejected,
-      SUM(totalBilledCents)                                      AS totalBilledCents,
-      SUM(planPaidCents)                                         AS planPaidCents,
-      SUM(patientPayCents)                                       AS memberPaidCents,
-      SUM(pharmacyPaidCents)                                     AS pharmacyPaidCents,
-      SUM(estimatedRebateCents)                                  AS rebateCents,
-      SUM(COALESCE(nadacTotalCents, 0))                          AS nadacTotalCents,
-      SUM(billedDispensingFeeCents)                              AS dispensingFeeCents,
-      SUM(totalBilledCents - totalAllowedCents)                  AS spreadCents,
-      SUM(CASE WHEN responseStatus = 'P' AND brandGenericClass = 'Generic' THEN 1 ELSE 0 END) AS genericClaims,
-      SUM(CASE WHEN responseStatus = 'P' AND brandGenericClass = 'Brand'   THEN 1 ELSE 0 END) AS brandClaims,
-      SUM(CASE WHEN responseStatus = 'P' AND isSpecialtyClaim = 1 THEN 1 ELSE 0 END)          AS specialtyClaims,
-      SUM(CASE WHEN isSpecialtyClaim = 1 THEN totalBilledCents ELSE 0 END)                    AS specialtyBilledCents
-    FROM Claim
-  `;
-  const members = await prisma.member.count();
-  const n = (v: unknown) => Number(v ?? 0);
+function window(clock: SimulationClock) {
+  return { gte: PLAN_YEAR_START, lte: clock.today };
+}
+
+export async function getBookTotals(
+  clock: SimulationClock,
+): Promise<BookTotals> {
+  const [agg, dims, members] = await Promise.all([
+    prisma.bookDay.aggregate({
+      where: { date: window(clock) },
+      _sum: {
+        claimsSubmitted: true,
+        claimsPaid: true,
+        claimsRejected: true,
+        totalBilledCents: true,
+        planPaidCents: true,
+        patientPayCents: true,
+        pharmacyPaidCents: true,
+        estimatedRebateCents: true,
+        genericClaims: true,
+        brandClaims: true,
+        specialtyClaims: true,
+        specialtyBilledCents: true,
+      },
+    }),
+    /*
+     * NADAC, dispensing fees and the billed-to-allowed spread are not on the
+     * daily row because they are only meaningful cut by something. Summing one
+     * dimension recovers the book total, and channel is the cheapest: four
+     * keys a day rather than several hundred.
+     */
+    prisma.bookDayDimension.aggregate({
+      where: { dimension: "channel", date: window(clock) },
+      _sum: {
+        nadacCents: true,
+        dispensingFeeCents: true,
+        billedCents: true,
+        allowedCents: true,
+      },
+    }),
+    prisma.member.count(),
+  ]);
+
+  const s = agg._sum;
+  const d = dims._sum;
   return {
     members,
-    claimsSubmitted: n(row.claimsSubmitted),
-    claimsPaid: n(row.claimsPaid),
-    claimsRejected: n(row.claimsRejected),
-    totalBilledCents: n(row.totalBilledCents),
-    planPaidCents: n(row.planPaidCents),
-    memberPaidCents: n(row.memberPaidCents),
-    pharmacyPaidCents: n(row.pharmacyPaidCents),
-    rebateCents: n(row.rebateCents),
-    nadacTotalCents: n(row.nadacTotalCents),
-    dispensingFeeCents: n(row.dispensingFeeCents),
-    spreadCents: n(row.spreadCents),
-    genericClaims: n(row.genericClaims),
-    brandClaims: n(row.brandClaims),
-    specialtyClaims: n(row.specialtyClaims),
-    specialtyBilledCents: n(row.specialtyBilledCents),
+    claimsSubmitted: s.claimsSubmitted ?? 0,
+    claimsPaid: s.claimsPaid ?? 0,
+    claimsRejected: s.claimsRejected ?? 0,
+    totalBilledCents: s.totalBilledCents ?? 0,
+    planPaidCents: s.planPaidCents ?? 0,
+    memberPaidCents: s.patientPayCents ?? 0,
+    pharmacyPaidCents: s.pharmacyPaidCents ?? 0,
+    rebateCents: s.estimatedRebateCents ?? 0,
+    nadacTotalCents: d.nadacCents ?? 0,
+    dispensingFeeCents: d.dispensingFeeCents ?? 0,
+    spreadCents: (d.billedCents ?? 0) - (d.allowedCents ?? 0),
+    genericClaims: s.genericClaims ?? 0,
+    brandClaims: s.brandClaims ?? 0,
+    specialtyClaims: s.specialtyClaims ?? 0,
+    specialtyBilledCents: s.specialtyBilledCents ?? 0,
   };
+}
+
+/** Roll one dimension of the daily cube up to the clock. */
+async function rollup(
+  clock: SimulationClock,
+  dimension: string,
+): Promise<
+  Array<{
+    key: string;
+    claims: number;
+    billedCents: number;
+    planPaidCents: number;
+    memberPaidCents: number;
+    rebateCents: number;
+    nadacCents: number;
+    dispensingFeeCents: number;
+  }>
+> {
+  const rows = await prisma.bookDayDimension.groupBy({
+    by: ["key"],
+    where: { dimension, date: window(clock) },
+    _sum: {
+      claims: true,
+      billedCents: true,
+      planPaidCents: true,
+      memberPaidCents: true,
+      rebateCents: true,
+      nadacCents: true,
+      dispensingFeeCents: true,
+    },
+  });
+  return rows.map((r) => ({
+    key: r.key,
+    claims: r._sum.claims ?? 0,
+    billedCents: r._sum.billedCents ?? 0,
+    planPaidCents: r._sum.planPaidCents ?? 0,
+    memberPaidCents: r._sum.memberPaidCents ?? 0,
+    rebateCents: r._sum.rebateCents ?? 0,
+    nadacCents: r._sum.nadacCents ?? 0,
+    dispensingFeeCents: r._sum.dispensingFeeCents ?? 0,
+  }));
 }
 
 export interface ChannelRow {
@@ -75,29 +152,13 @@ export interface ChannelRow {
   nadacCents: number;
 }
 
-export async function getChannelMix(): Promise<ChannelRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT channel,
-           COUNT(*)                        AS claims,
-           SUM(totalBilledCents)           AS billedCents,
-           SUM(planPaidCents)              AS planPaidCents,
-           SUM(patientPayCents)            AS memberPaidCents,
-           SUM(billedDispensingFeeCents)   AS dispensingFeeCents,
-           SUM(COALESCE(nadacTotalCents,0))AS nadacCents
-    FROM Claim
-    WHERE responseStatus = 'P'
-    GROUP BY channel
-    ORDER BY SUM(totalBilledCents) DESC
-  `;
-  return rows.map((r) => ({
-    channel: String(r.channel),
-    claims: Number(r.claims ?? 0),
-    billedCents: Number(r.billedCents ?? 0),
-    planPaidCents: Number(r.planPaidCents ?? 0),
-    memberPaidCents: Number(r.memberPaidCents ?? 0),
-    dispensingFeeCents: Number(r.dispensingFeeCents ?? 0),
-    nadacCents: Number(r.nadacCents ?? 0),
-  }));
+export async function getChannelMix(
+  clock: SimulationClock,
+): Promise<ChannelRow[]> {
+  const rows = await rollup(clock, "channel");
+  return rows
+    .map((r) => ({ channel: r.key, ...r }))
+    .sort((a, b) => b.billedCents - a.billedCents);
 }
 
 export interface LevelRow {
@@ -107,23 +168,18 @@ export interface LevelRow {
   memberPaidCents: number;
 }
 
-export async function getLevelMix(): Promise<LevelRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT COALESCE(formularyLevel, 'n/a') AS level,
-           COUNT(*)                        AS claims,
-           SUM(totalBilledCents)           AS billedCents,
-           SUM(patientPayCents)            AS memberPaidCents
-    FROM Claim
-    WHERE responseStatus = 'P'
-    GROUP BY COALESCE(formularyLevel, 'n/a')
-    ORDER BY level
-  `;
-  return rows.map((r) => ({
-    level: String(r.level),
-    claims: Number(r.claims ?? 0),
-    billedCents: Number(r.billedCents ?? 0),
-    memberPaidCents: Number(r.memberPaidCents ?? 0),
-  }));
+export async function getLevelMix(
+  clock: SimulationClock,
+): Promise<LevelRow[]> {
+  const rows = await rollup(clock, "level");
+  return rows
+    .map((r) => ({
+      level: r.key,
+      claims: r.claims,
+      billedCents: r.billedCents,
+      memberPaidCents: r.memberPaidCents,
+    }))
+    .sort((a, b) => a.level.localeCompare(b.level));
 }
 
 export interface MonthPoint {
@@ -134,25 +190,38 @@ export interface MonthPoint {
   rebateCents: number;
 }
 
-export async function getMonthlyTrend(): Promise<MonthPoint[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT strftime('%Y-%m', dateOfService / 1000, 'unixepoch') AS month,
-           COUNT(*)                     AS claims,
-           SUM(planPaidCents)           AS planPaidCents,
-           SUM(patientPayCents)         AS memberPaidCents,
-           SUM(estimatedRebateCents)    AS rebateCents
-    FROM Claim
-    WHERE responseStatus = 'P'
-    GROUP BY month
-    ORDER BY month
-  `;
-  return rows.map((r) => ({
-    month: String(r.month),
-    claims: Number(r.claims ?? 0),
-    planPaidCents: Number(r.planPaidCents ?? 0),
-    memberPaidCents: Number(r.memberPaidCents ?? 0),
-    rebateCents: Number(r.rebateCents ?? 0),
-  }));
+export async function getMonthlyTrend(
+  clock: SimulationClock,
+): Promise<MonthPoint[]> {
+  const days = await prisma.bookDay.findMany({
+    where: { date: window(clock) },
+    select: {
+      date: true,
+      claimsPaid: true,
+      planPaidCents: true,
+      patientPayCents: true,
+      estimatedRebateCents: true,
+    },
+    orderBy: { date: "asc" },
+  });
+
+  const byMonth = new Map<string, MonthPoint>();
+  for (const d of days) {
+    const month = d.date.toISOString().slice(0, 7);
+    const p = byMonth.get(month) ?? {
+      month,
+      claims: 0,
+      planPaidCents: 0,
+      memberPaidCents: 0,
+      rebateCents: 0,
+    };
+    p.claims += d.claimsPaid;
+    p.planPaidCents += d.planPaidCents;
+    p.memberPaidCents += d.patientPayCents;
+    p.rebateCents += d.estimatedRebateCents;
+    byMonth.set(month, p);
+  }
+  return [...byMonth.values()];
 }
 
 export interface RejectRow {
@@ -162,32 +231,52 @@ export interface RejectRow {
   members: number;
 }
 
-export async function getRejectMix(): Promise<RejectRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT rejectCodes                AS code,
-           rejectMessage              AS message,
-           COUNT(*)                   AS claims,
-           COUNT(DISTINCT memberId)   AS members
-    FROM Claim
-    WHERE responseStatus = 'R'
-    GROUP BY rejectCodes
-    ORDER BY claims DESC
-  `;
-  return rows.map((r) => {
+/**
+ * Reject mix, with the distinct members behind each code.
+ *
+ * The member count cannot come from the rollup: distinct members per day do
+ * not add up across days. It is counted from the claims, which is affordable
+ * because rejects are a small share of the book and the index on
+ * responseStatus keeps the scan to them.
+ */
+export async function getRejectMix(
+  clock: SimulationClock,
+): Promise<RejectRow[]> {
+  const [rolled, detail] = await Promise.all([
+    rollup(clock, "reject"),
+    prisma.$queryRaw<Array<Record<string, unknown>>>`
+      SELECT rejectCodes              AS code,
+             rejectMessage            AS message,
+             COUNT(DISTINCT memberId) AS members
+      FROM Claim
+      WHERE responseStatus = 'R' AND dateOfService <= ${clock.today}
+      GROUP BY rejectCodes
+    `,
+  ]);
+
+  const meta = new Map<string, { message: string; members: number }>();
+  for (const r of detail) {
     let code = String(r.code ?? "[]");
     try {
-      const parsed = JSON.parse(code) as string[];
-      code = parsed[0] ?? code;
+      code = (JSON.parse(code) as string[])[0] ?? code;
     } catch {
       /* leave raw */
     }
-    return {
-      code,
-      message: String(r.message ?? "").replace(/\.\s*Eligible.*$/, ""),
-      claims: Number(r.claims ?? 0),
-      members: Number(r.members ?? 0),
-    };
-  });
+    const existing = meta.get(code);
+    meta.set(code, {
+      message: existing?.message ?? String(r.message ?? ""),
+      members: (existing?.members ?? 0) + Number(r.members ?? 0),
+    });
+  }
+
+  return rolled
+    .map((r) => ({
+      code: r.key,
+      message: (meta.get(r.key)?.message ?? "").replace(/\.\s*Eligible.*$/, ""),
+      claims: r.claims,
+      members: meta.get(r.key)?.members ?? 0,
+    }))
+    .sort((a, b) => b.claims - a.claims);
 }
 
 export interface TopDrugRow {
@@ -201,33 +290,38 @@ export interface TopDrugRow {
   rebateCents: number;
 }
 
-export async function getTopDrugs(limit = 12): Promise<TopDrugRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT c.drugId                     AS drugId,
-           d.name                       AS name,
-           d.therapeuticClass           AS therapeuticClass,
-           d.isSpecialty                AS isSpecialty,
-           COUNT(*)                     AS claims,
-           SUM(c.totalBilledCents)      AS billedCents,
-           SUM(c.patientPayCents)       AS memberPaidCents,
-           SUM(c.estimatedRebateCents)  AS rebateCents
-    FROM Claim c
-    JOIN Drug d ON d.id = c.drugId
-    WHERE c.responseStatus = 'P'
-    GROUP BY c.drugId
-    ORDER BY billedCents DESC
-    LIMIT ${limit}
-  `;
-  return rows.map((r) => ({
-    drugId: String(r.drugId),
-    name: String(r.name),
-    therapeuticClass: r.therapeuticClass ? String(r.therapeuticClass) : null,
-    isSpecialty: Boolean(Number(r.isSpecialty ?? 0)),
-    claims: Number(r.claims ?? 0),
-    billedCents: Number(r.billedCents ?? 0),
-    memberPaidCents: Number(r.memberPaidCents ?? 0),
-    rebateCents: Number(r.rebateCents ?? 0),
-  }));
+export async function getTopDrugs(
+  clock: SimulationClock,
+  limit = 12,
+): Promise<TopDrugRow[]> {
+  const rows = (await rollup(clock, "drug"))
+    .sort((a, b) => b.billedCents - a.billedCents)
+    .slice(0, limit);
+
+  const drugs = await prisma.drug.findMany({
+    where: { id: { in: rows.map((r) => r.key) } },
+    select: {
+      id: true,
+      name: true,
+      therapeuticClass: true,
+      isSpecialty: true,
+    },
+  });
+  const byId = new Map(drugs.map((d) => [d.id, d]));
+
+  return rows.map((r) => {
+    const d = byId.get(r.key);
+    return {
+      drugId: r.key,
+      name: d?.name ?? r.key,
+      therapeuticClass: d?.therapeuticClass ?? null,
+      isSpecialty: d?.isSpecialty ?? false,
+      claims: r.claims,
+      billedCents: r.billedCents,
+      memberPaidCents: r.memberPaidCents,
+      rebateCents: r.rebateCents,
+    };
+  });
 }
 
 export interface ClassRow {
@@ -236,23 +330,18 @@ export interface ClassRow {
   billedCents: number;
 }
 
-export async function getTopClasses(limit = 8): Promise<ClassRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT COALESCE(d.therapeuticClass, 'Unclassified') AS therapeuticClass,
-           COUNT(*)                                     AS claims,
-           SUM(c.totalBilledCents)                      AS billedCents
-    FROM Claim c
-    JOIN Drug d ON d.id = c.drugId
-    WHERE c.responseStatus = 'P'
-    GROUP BY COALESCE(d.therapeuticClass, 'Unclassified')
-    ORDER BY billedCents DESC
-    LIMIT ${limit}
-  `;
-  return rows.map((r) => ({
-    therapeuticClass: String(r.therapeuticClass),
-    claims: Number(r.claims ?? 0),
-    billedCents: Number(r.billedCents ?? 0),
-  }));
+export async function getTopClasses(
+  clock: SimulationClock,
+  limit = 8,
+): Promise<ClassRow[]> {
+  return (await rollup(clock, "class"))
+    .map((r) => ({
+      therapeuticClass: r.key,
+      claims: r.claims,
+      billedCents: r.billedCents,
+    }))
+    .sort((a, b) => b.billedCents - a.billedCents)
+    .slice(0, limit);
 }
 
 /** Which arm of the lesser-of actually won, across the book. */
@@ -262,19 +351,14 @@ export interface BasisRow {
   billedCents: number;
 }
 
-export async function getBasisMix(): Promise<BasisRow[]> {
-  const rows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
-    SELECT COALESCE(basisOfReimbursement, 'n/a') AS basis,
-           COUNT(*)                              AS claims,
-           SUM(totalBilledCents)                 AS billedCents
-    FROM Claim
-    WHERE responseStatus = 'P'
-    GROUP BY COALESCE(basisOfReimbursement, 'n/a')
-    ORDER BY claims DESC
-  `;
-  return rows.map((r) => ({
-    basis: String(r.basis),
-    claims: Number(r.claims ?? 0),
-    billedCents: Number(r.billedCents ?? 0),
-  }));
+export async function getBasisMix(
+  clock: SimulationClock,
+): Promise<BasisRow[]> {
+  return (await rollup(clock, "basis"))
+    .map((r) => ({
+      basis: r.key,
+      claims: r.claims,
+      billedCents: r.billedCents,
+    }))
+    .sort((a, b) => b.claims - a.claims);
 }

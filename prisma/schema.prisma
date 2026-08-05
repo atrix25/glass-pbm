@@ -43,13 +43,13 @@ model SourceDocument {
   locator       String?
   notes         String?
 
-  contractRates   ContractRate[]
+  contractRates    ContractRate[]
   formularyEntries FormularyEntry[]
-  costShareRules  CostShareRule[]
-  criteriaTrees   PACriteriaTree[]
-  rebateTerms     RebateTerm[]
-  auditFindings   AuditFinding[]
-  drugPrices      DrugPrice[]
+  costShareRules   CostShareRule[]
+  criteriaTrees    PACriteriaTree[]
+  rebateTerms      RebateTerm[]
+  auditFindings    AuditFinding[]
+  drugPrices       DrugPrice[]
 
   @@index([kind])
 }
@@ -58,27 +58,27 @@ model SourceDocument {
 /// This is the artifact that makes the claim breakdown a derivation rather
 /// than a summary.
 model TraceStep {
-  id        String  @id @default(cuid())
-  claimId   String?
-  claim     Claim?  @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  paId      String?
-  pa        PriorAuthorization? @relation(fields: [paId], references: [id], onDelete: Cascade)
+  id      String              @id @default(cuid())
+  claimId String?
+  claim   Claim?              @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  paId    String?
+  pa      PriorAuthorization? @relation(fields: [paId], references: [id], onDelete: Cascade)
 
-  seq       Int
+  seq      Int
   /// Stable dotted identifier, e.g. "pricing.lesser-of.mac-arm".
-  ruleId    String
+  ruleId   String
   /// Pipeline stage: eligibility | coverage | um | pricing | costshare | rebate | pa
-  stage     String
+  stage    String
   /// Human-readable question this step answers.
-  question  String
+  question String
   /// JSON: inputs the rule read.
-  inputs    String
+  inputs   String
   /// JSON: what the rule produced.
-  output    String
+  output   String
   /// Did this rule change the outcome?
-  fired     Boolean @default(false)
+  fired    Boolean @default(false)
   /// Plain-language result shown in the UI.
-  detail    String?
+  detail   String?
 
   sourceDocumentId String?
   /// Precise pointer within the source, e.g. "Exhibit C, rebate footnote 3".
@@ -94,7 +94,7 @@ model TraceStep {
 // ---------------------------------------------------------------------------
 
 model PlanSponsor {
-  id            String   @id
+  id            String @id
   name          String
   shortName     String
   /// "Self-insured" | "Fully-insured"
@@ -112,24 +112,24 @@ model PlanSponsor {
 }
 
 model BenefitPlan {
-  id            String @id
-  sponsorId     String
-  sponsor       PlanSponsor @relation(fields: [sponsorId], references: [id])
-  name          String
+  id              String      @id
+  sponsorId       String
+  sponsor         PlanSponsor @relation(fields: [sponsorId], references: [id])
+  name            String
   /// "Commercial" | "EGWP"
-  lineOfBusiness String
-  planYear      Int
-  effectiveDate DateTime
+  lineOfBusiness  String
+  planYear        Int
+  effectiveDate   DateTime
   terminationDate DateTime?
 
-  formularyId   String
-  formulary     Formulary @relation(fields: [formularyId], references: [id])
-  networkId     String
-  network       Network   @relation(fields: [networkId], references: [id])
+  formularyId String
+  formulary   Formulary @relation(fields: [formularyId], references: [id])
+  networkId   String
+  network     Network   @relation(fields: [networkId], references: [id])
 
   /// Pharmacy deductible in cents. Wisconsin IYC has none; HDHP integrates with medical.
-  deductibleIndividual Int @default(0)
-  deductibleFamily     Int @default(0)
+  deductibleIndividual            Int     @default(0)
+  deductibleFamily                Int     @default(0)
   deductibleIntegratedWithMedical Boolean @default(false)
 
   /// Wisconsin runs two parallel out-of-pocket limits with different eligibility.
@@ -144,35 +144,35 @@ model BenefitPlan {
 
   /// Member pays coinsurance plus the brand/generic difference on DAW 1
   /// unless a MedWatch form is on file.
-  dawPenaltyEnabled Boolean @default(true)
+  dawPenaltyEnabled          Boolean @default(true)
   /// Level 4 must be filled at a designated specialty pharmacy or is not covered.
   specialtyChannelRestricted Boolean @default(true)
   specialtyPharmacyIds       String  @default("[]")
 
-  maxDaysSupplyPerCopay Int @default(30)
+  maxDaysSupplyPerCopay    Int @default(30)
   retail90MultiplierCopays Int @default(3)
   mailMultiplierCopays     Int @default(2)
 
-  costShareRules CostShareRule[]
+  costShareRules   CostShareRule[]
   eligibilitySpans EligibilitySpan[]
-  claims          Claim[]
-  accumulators    Accumulator[]
+  claims           Claim[]
+  accumulators     Accumulator[]
 }
 
 model CostShareRule {
-  id            String @id @default(cuid())
+  id            String      @id @default(cuid())
   benefitPlanId String
   benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id], onDelete: Cascade)
 
   /// Wisconsin formulary "Level": 1 | 2 | 3 | 4. Also "$0" and "100%/EX" as pseudo-levels.
-  level         String
+  level   String
   /// "Retail" | "Retail90" | "Mail" | "Specialty"
-  channel       String
+  channel String
 
   /// "Copay" | "Coinsurance" | "NotCovered" | "Zero"
-  costShareType String
-  copayCents    Int?
-  coinsuranceRateBps Int?
+  costShareType       String
+  copayCents          Int?
+  coinsuranceRateBps  Int?
   coinsuranceMaxCents Int?
   coinsuranceMinCents Int?
 
@@ -188,44 +188,46 @@ model CostShareRule {
 }
 
 model Member {
-  id           String @id
-  sponsorId    String
-  sponsor      PlanSponsor @relation(fields: [sponsorId], references: [id])
-  cardholderId String
-  personCode   String
+  id               String      @id
+  sponsorId        String
+  sponsor          PlanSponsor @relation(fields: [sponsorId], references: [id])
+  cardholderId     String
+  personCode       String
   /// 1 Cardholder | 2 Spouse | 3 Child
   relationshipCode String
-  subscriberId String?
+  subscriberId     String?
 
-  firstName String
-  lastName  String
-  dateOfBirth DateTime
-  gender      String
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime
+  gender       String
   addressLine1 String?
-  city        String?
-  state       String?
-  zip         String?
-  phone       String?
-  email       String?
+  city         String?
+  state        String?
+  zip          String?
+  phone        String?
+  email        String?
 
   /// JSON array of ICD-10 codes, drives diagnosis-restricted coverage and PA criteria.
   diagnosisCodes String @default("[]")
   weightKg       Float?
 
-  eligibilitySpans EligibilitySpan[]
-  claims           Claim[]
-  accumulators     Accumulator[]
-  priorAuths       PriorAuthorization[]
-  chatSessions     ChatSession[]
+  eligibilitySpans     EligibilitySpan[]
+  claims               Claim[]
+  accumulators         Accumulator[]
+  accumulatorTransfers AccumulatorTransfer[]
+  priorAuths           PriorAuthorization[]
+  chatSessions         ChatSession[]
+  durAlerts            DurAlert[]
 
   @@unique([cardholderId, personCode])
   @@index([lastName])
 }
 
 model EligibilitySpan {
-  id            String @id @default(cuid())
+  id            String      @id @default(cuid())
   memberId      String
-  member        Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member        Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   benefitPlanId String
   benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
 
@@ -233,11 +235,78 @@ model EligibilitySpan {
   terminationDate DateTime?
   coverageTier    String
   /// "Active" | "Retiree" | "COBRA"
-  memberType      String @default("Active")
+  memberType      String    @default("Active")
+
+  /// A termination the employer reported after the fact, and the date the
+  /// notice arrived.
+  ///
+  /// Deliberately kept apart from terminationDate rather than overwriting it.
+  /// Eligibility of record on the date of service is what the engine read and
+  /// what every claim reproduces against, and backdating it would make months
+  /// of correct adjudications look like errors. The plan learning something
+  /// late is a new fact about today, not a different past: the gap between
+  /// these two dates is the recovery window.
+  reportedTerminationDate DateTime?
+  retroReportedAt         DateTime?
 
   claims Claim[]
 
   @@index([memberId, effectiveDate])
+}
+
+/// A deductible or out-of-pocket amount consumed outside the pharmacy benefit.
+///
+/// The High Deductible Health Plan runs one deductible across medical and
+/// pharmacy. This system adjudicates pharmacy only, so the medical side is not
+/// something it can compute — it is something it receives. Real integrated
+/// plans work the same way: the medical carrier sends the pharmacy benefit
+/// manager an accumulator file, and the processor treats the balance in that
+/// file as fact because it has no claim detail behind it.
+///
+/// Modelling it as an ingested feed rather than a number baked into the member
+/// keeps the boundary visible. Without these rows, every dollar of a $1,700
+/// integrated deductible would be collected at the pharmacy counter, which
+/// overstates what members pay for drugs by roughly the medical share of their
+/// cost sharing.
+model AccumulatorTransfer {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  /// Which balance this amount lands in: "Deductible" | "OutOfPocket".
+  accumulatorType String
+  /// Date the underlying medical service was incurred, which is the date the
+  /// balance applies from. Pharmacy claims before it must not see it.
+  incurredAt      DateTime
+  amountCents     Int
+
+  /// The file this row arrived on, and when the processor loaded it. A claim
+  /// adjudicated before the file landed could not have known the balance, and
+  /// that lag is the source of real integrated-deductible disputes.
+  fileId     String
+  receivedAt DateTime
+
+  /// Plain description of the medical service, as the carrier sent it.
+  serviceDescription String
+
+  @@index([memberId, incurredAt])
+  @@index([fileId])
+}
+
+/// One accumulator file received from the medical carrier.
+model AccumulatorFile {
+  id           String   @id
+  /// Carrier that produced the file.
+  sender       String
+  receivedAt   DateTime
+  periodStart  DateTime
+  periodEnd    DateTime
+  recordCount  Int
+  totalCents   Int
+  /// SHA-256 of the file body, so the ledger is reproducible.
+  contentHash  String
+
+  @@index([receivedAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -245,15 +314,15 @@ model EligibilitySpan {
 // ---------------------------------------------------------------------------
 
 model Drug {
-  id           String @id
+  id               String  @id
   /// Normalized 11-digit NDC.
-  ndc11        String @unique
-  name         String
-  genericName  String?
-  strength     String?
-  dosageForm   String?
-  route        String?
-  labeler      String?
+  ndc11            String  @unique
+  name             String
+  genericName      String?
+  strength         String?
+  dosageForm       String?
+  route            String?
+  labeler          String?
   /// The NDC description exactly as printed in the CMS NADAC file. Kept
   /// verbatim because it carries package form ("4 PACK", "KIT", "TABLET")
   /// that determines how a dispensed quantity maps onto the pricing unit.
@@ -261,23 +330,38 @@ model Drug {
 
   /// Medi-Span style multi-source code: N | M | O | Y. Drives brand/generic
   /// classification together with the DAW code and the contract ruleset.
-  monyCode      String @default("Y")
-  isBrandLabel  Boolean @default(false)
-  isSpecialty   Boolean @default(false)
-  isBiosimilar  Boolean @default(false)
+  monyCode            String  @default("Y")
+  isBrandLabel        Boolean @default(false)
+  isSpecialty         Boolean @default(false)
+  isBiosimilar        Boolean @default(false)
   referenceProductNdc String?
-  therapeuticClass String?
+  therapeuticClass    String?
   /// Units per package, used to convert dispensed quantity to billable units.
-  packageSize  Float @default(1)
-  unitOfMeasure String @default("EA")
-  isOtc        Boolean @default(false)
-  deaSchedule  String?
+  packageSize         Float   @default(1)
+  unitOfMeasure       String  @default("EA")
+  /// How much each named container holds, in unitOfMeasure, as a JSON object
+  /// keyed by the container noun: {"TUBE":60,"CARTON":60}. Read from the FDA
+  /// NDC Directory. A formulary limit written "12 tubes/year" is unenforceable
+  /// without it, and enforcing it anyway against a quantity billed in grams
+  /// refuses fills the member is nowhere near the limit of.
+  packageContainers   String?
+  /// The FDA PACKAGEDESCRIPTION verbatim, so a converted limit can be traced
+  /// back to the sentence it came from.
+  packageDescription  String?
+  isOtc               Boolean @default(false)
+  deaSchedule         String?
+  /// The active ingredient, so brand and generic of the same drug resolve to
+  /// one thing. Derived rather than transcribed: see lib/clinical/molecules.
+  molecule            String?
 
-  prices       DrugPrice[]
+  prices           DrugPrice[]
   formularyEntries FormularyEntry[]
-  claims       Claim[]
-  priorAuths   PriorAuthorization[]
-  rebateTerms  RebateTerm[]
+  claims           Claim[]
+  priorAuths       PriorAuthorization[]
+  rebateTerms      RebateTerm[]
+  macPrices        MacPrice[]
+  macPriceChanges  MacPriceChange[]
+  macAppeals       MacAppeal[]
 
   @@index([name])
   @@index([therapeuticClass])
@@ -285,19 +369,19 @@ model Drug {
 
 /// Effective-dated per-unit reference price. Float preserves published decimals.
 model DrugPrice {
-  id        String @id @default(cuid())
-  drugId    String
-  drug      Drug   @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  drugId          String
+  drug            Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
   /// "NADAC" | "AWP" | "WAC" | "MAC"
-  priceType String
-  unitPrice Float
-  effectiveDate DateTime
+  priceType       String
+  unitPrice       Float
+  effectiveDate   DateTime
   terminationDate DateTime?
   /// "CMS NADAC" | "Derived" — derived prices are badged in the UI.
-  source    String
+  source          String
   /// True when this price is modeled rather than observed, because the
   /// underlying benchmark is proprietary. Surfaced everywhere it is used.
-  isSimulated Boolean @default(false)
+  isSimulated     Boolean   @default(false)
 
   sourceDocumentId String?
   sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
@@ -310,9 +394,9 @@ model DrugPrice {
 // ---------------------------------------------------------------------------
 
 model Formulary {
-  id        String @id
-  name      String
-  version   String
+  id            String   @id
+  name          String
+  version       String
   effectiveDate DateTime
 
   entries      FormularyEntry[]
@@ -320,11 +404,11 @@ model Formulary {
 }
 
 model FormularyEntry {
-  id          String @id @default(cuid())
+  id          String    @id @default(cuid())
   formularyId String
   formulary   Formulary @relation(fields: [formularyId], references: [id], onDelete: Cascade)
   drugId      String
-  drug        Drug @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  drug        Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
 
   /// Wisconsin Level as printed: "1" | "2" | "3" | "4" | "$0" | "NC" | "100%/EX" | "20%"
   level       String
@@ -333,24 +417,37 @@ model FormularyEntry {
   category    String?
 
   /// Decoded flags from the special code legend.
-  requiresPA        Boolean @default(false)
-  requiresStep      Boolean @default(false)
-  hasQuantityLimit  Boolean @default(false)
-  diagnosisRestricted Boolean @default(false)
+  requiresPA           Boolean @default(false)
+  requiresStep         Boolean @default(false)
+  hasQuantityLimit     Boolean @default(false)
+  diagnosisRestricted  Boolean @default(false)
   specialistRestricted Boolean @default(false)
-  mandatorySpecialty  Boolean @default(false)
-  limitedDistribution Boolean @default(false)
-  notCovered          Boolean @default(false)
-  planExclusion       Boolean @default(false)
-  isVaccine           Boolean @default(false)
+  mandatorySpecialty   Boolean @default(false)
+  limitedDistribution  Boolean @default(false)
+  notCovered           Boolean @default(false)
+  planExclusion        Boolean @default(false)
+  isVaccine            Boolean @default(false)
 
   /// Parsed from the inline parenthetical, e.g. "(QL= 1 pack/28 days)".
-  qlQuantity Float?
-  qlDays     Int?
-  qlRawText  String?
+  qlQuantity             Float?
+  /// The period in days. Null with a quantity present means "per fill", which
+  /// is a limit on the single fill rather than a rate over time.
+  qlDays                 Int?
+  qlRawText              String?
+  /// The noun the limit counts, as printed: "caps", "tubes", "days", "fills".
+  qlUnit                 String?
+  /// What that noun means for enforcement: dispensing-unit | package |
+  /// days-supply | fill-count. Without it the engine cannot tell "12 tubes"
+  /// from "12 capsules", and comparing either against a quantity in grams
+  /// produces a confident, wrong refusal.
+  qlBasis                String?
   /// Parsed ICD-10 prefixes from "Diagnosis Restricted – Type 2 Diabetes (E11)".
-  requiredDiagnosisCodes String @default("[]")
+  requiredDiagnosisCodes String  @default("[]")
   diagnosisRawText       String?
+  /// "Restricted to Infectious Disease Specialist", as printed. Its own column
+  /// because it is a different edit from the diagnosis restriction; the two
+  /// shared this field once and the diagnosis text was the one that lost.
+  specialistRawText      String?
 
   criteriaTreeId String?
   criteriaTree   PACriteriaTree? @relation(fields: [criteriaTreeId], references: [id])
@@ -360,6 +457,9 @@ model FormularyEntry {
   citation         String?
 
   @@unique([formularyId, drugId])
+  // The unique index leads with formularyId, so a lookup by drug alone cannot
+  // use it. Adjudication does exactly that on every claim.
+  @@index([drugId])
   @@index([level])
 }
 
@@ -368,47 +468,50 @@ model FormularyEntry {
 // ---------------------------------------------------------------------------
 
 model Pharmacy {
-  id           String @id
-  npi          String @unique
-  ncpdpId      String?
-  name         String
-  chainName    String?
+  id                    String  @id
+  npi                   String  @unique
+  ncpdpId               String?
+  name                  String
+  chainName             String?
   /// "Independent" | "Chain" | "Mail" | "Specialty" | "LTC"
-  pharmacyType String
-  city         String?
-  state        String?
-  zip          String?
-  latitude     Float?
-  longitude    Float?
-  phone        String?
-  is340B       Boolean @default(false)
+  pharmacyType          String
+  city                  String?
+  state                 String?
+  zip                   String?
+  latitude              Float?
+  longitude             Float?
+  phone                 String?
+  is340B                Boolean @default(false)
   /// True for Lumicera and UW Health, the designated specialty pharmacies.
   isDesignatedSpecialty Boolean @default(false)
 
-  networkLinks NetworkPharmacy[]
-  claims       Claim[]
+  networkLinks    NetworkPharmacy[]
+  claims          Claim[]
+  remittanceLines RemittanceLine[]
+  macAppeals      MacAppeal[]
+  macPriceChanges MacPriceChange[]
 }
 
 model Network {
-  id     String @id
-  name   String
+  id    String  @id
+  name  String
   /// "Limited" | "Broad" | "Specialty" | "Mail"
-  type   String
-  notes  String?
+  type  String
+  notes String?
 
   pharmacies   NetworkPharmacy[]
   benefitPlans BenefitPlan[]
 }
 
 model NetworkPharmacy {
-  id         String @id @default(cuid())
-  networkId  String
-  network    Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
-  pharmacyId String
-  pharmacy   Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  networkId       String
+  network         Network   @relation(fields: [networkId], references: [id], onDelete: Cascade)
+  pharmacyId      String
+  pharmacy        Pharmacy  @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
   /// "Participating" | "Preferred" | "NonParticipating"
-  status     String @default("Participating")
-  effectiveDate DateTime
+  status          String    @default("Participating")
+  effectiveDate   DateTime
   terminationDate DateTime?
 
   @@unique([networkId, pharmacyId])
@@ -422,27 +525,27 @@ model NetworkPharmacy {
 /// side. Under pass-through the two must be the same row, which the engine
 /// asserts as an invariant.
 model ContractRate {
-  id           String @id @default(cuid())
-  contractId   String
-  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   /// "Pharmacy" | "Client"
-  rateSide     String
+  rateSide       String
   /// "Commercial" | "EGWP"
   lineOfBusiness String
   /// "Retail" | "Retail90" | "Mail" | "Specialty"
-  channel      String
+  channel        String
   /// "Brand" | "Generic" | "All"
-  drugClass    String
+  drugClass      String
 
   /// AWP discount in basis points. 18.20% is 1820.
-  awpDiscountBps Int?
-  dispensingFeeCents Int @default(0)
+  awpDiscountBps     Int?
+  dispensingFeeCents Int     @default(0)
   /// Ordered JSON array naming which arms enter the lesser-of, e.g.
   /// ["AWP_MINUS","MAC","SUBMITTED"]. Explicit because omitting U&C is
   /// precisely how spread is manufactured.
-  lesserOfArms   String @default("[\"AWP_MINUS\",\"MAC\",\"UANDC\",\"SUBMITTED\"]")
-  includeUandC   Boolean @default(true)
+  lesserOfArms       String  @default("[\"AWP_MINUS\",\"MAC\",\"UANDC\",\"SUBMITTED\"]")
+  includeUandC       Boolean @default(true)
 
   /// Minimum rebate guarantee per qualifying brand claim, in cents.
   minRebatePerBrandClaimCents Int?
@@ -458,13 +561,13 @@ model ContractRate {
 }
 
 model Contract {
-  id          String @id
-  name        String
-  pbmName     String
-  sponsorName String
+  id              String    @id
+  name            String
+  pbmName         String
+  sponsorName     String
   /// "PassThrough" | "Traditional"
-  model       String
-  effectiveDate DateTime
+  model           String
+  effectiveDate   DateTime
   terminationDate DateTime?
 
   adminFeePmpmCommercialCents Int @default(0)
@@ -474,20 +577,20 @@ model Contract {
   rebatePassThroughBps        Int @default(10000)
 
   /// Retail is 1-83 days supply; Retail90 is 84 or more. Exhibit C footnote.
-  retailMaxDaysSupply Int @default(83)
+  retailMaxDaysSupply           Int    @default(83)
   /// Guarantees only apply to a category with at least this many claims.
-  minClaimsPerCategory Int @default(1000)
+  minClaimsPerCategory          Int    @default(1000)
   /// JSON array of rule identifiers that exclude a claim from discount guarantees.
-  discountExclusions String @default("[]")
+  discountExclusions            String @default("[]")
   /// JSON array of rule identifiers that exclude a claim from rebate guarantees.
-  rebateExclusions   String @default("[]")
+  rebateExclusions              String @default("[]")
   /// A claim where the member pays more than this share may forfeit its rebate.
-  rebateMemberShareThresholdBps Int @default(5000)
+  rebateMemberShareThresholdBps Int    @default(5000)
 
   notes String?
 
-  rates    ContractRate[]
-  claims   Claim[]
+  rates       ContractRate[]
+  claims      Claim[]
   rebateTerms RebateTerm[]
 }
 
@@ -496,35 +599,35 @@ model Contract {
 // ---------------------------------------------------------------------------
 
 model Claim {
-  id        String @id @default(cuid())
+  id          String @id @default(cuid())
   claimNumber String @unique
 
   /// "B1" billing | "B2" reversal | "B3" rebill
   transactionCode String @default("B1")
 
-  sponsorId     String
-  sponsor       PlanSponsor @relation(fields: [sponsorId], references: [id])
-  memberId      String
-  member        Member @relation(fields: [memberId], references: [id])
+  sponsorId         String
+  sponsor           PlanSponsor      @relation(fields: [sponsorId], references: [id])
+  memberId          String
+  member            Member           @relation(fields: [memberId], references: [id])
   eligibilitySpanId String?
   eligibilitySpan   EligibilitySpan? @relation(fields: [eligibilitySpanId], references: [id])
-  benefitPlanId String
-  benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
-  pharmacyId    String
-  pharmacy      Pharmacy @relation(fields: [pharmacyId], references: [id])
-  drugId        String
-  drug          Drug @relation(fields: [drugId], references: [id])
-  contractId    String
-  contract      Contract @relation(fields: [contractId], references: [id])
+  benefitPlanId     String
+  benefitPlan       BenefitPlan      @relation(fields: [benefitPlanId], references: [id])
+  pharmacyId        String
+  pharmacy          Pharmacy         @relation(fields: [pharmacyId], references: [id])
+  drugId            String
+  drug              Drug             @relation(fields: [drugId], references: [id])
+  contractId        String
+  contract          Contract         @relation(fields: [contractId], references: [id])
 
-  dateOfService DateTime
-  rxNumber      String
-  fillNumber    Int @default(0)
+  dateOfService     DateTime
+  rxNumber          String
+  fillNumber        Int      @default(0)
   quantityDispensed Float
-  daysSupply    Int
-  dawCode       String @default("0")
-  prescriberNpi String?
-  compoundCode  String @default("1")
+  daysSupply        Int
+  dawCode           String   @default("0")
+  prescriberNpi     String?
+  compoundCode      String   @default("1")
 
   /// Submitted pricing, in cents.
   ingredientCostSubmittedCents Int @default(0)
@@ -536,16 +639,16 @@ model Claim {
   /// "P" paid | "R" rejected | "A" approved reversal | "D" duplicate
   responseStatus String
   /// JSON array of NCPDP reject codes.
-  rejectCodes    String @default("[]")
+  rejectCodes    String  @default("[]")
   rejectMessage  String?
 
   /// Pharmacy side, in cents.
-  allowedIngredientCostCents Int @default(0)
-  allowedDispensingFeeCents  Int @default(0)
-  totalAllowedCents          Int @default(0)
+  allowedIngredientCostCents Int     @default(0)
+  allowedDispensingFeeCents  Int     @default(0)
+  totalAllowedCents          Int     @default(0)
   /// NCPDP 522-FM: which arm of the lesser-of won.
   basisOfReimbursement       String?
-  pharmacyPaidCents          Int @default(0)
+  pharmacyPaidCents          Int     @default(0)
 
   /// Client side. Identical to the pharmacy side under pass-through.
   billedIngredientCostCents Int @default(0)
@@ -560,12 +663,12 @@ model Claim {
   brandSelectionPenaltyCents Int @default(0)
 
   /// Benchmarks captured at adjudication so the claim reproduces later.
-  awpUnitAtDos   Float?
-  awpTotalCents  Int?
-  nadacUnitAtDos Float?
+  awpUnitAtDos    Float?
+  awpTotalCents   Int?
+  nadacUnitAtDos  Float?
   nadacTotalCents Int?
-  macUnitAtDos   Float?
-  awpIsSimulated Boolean @default(false)
+  macUnitAtDos    Float?
+  awpIsSimulated  Boolean @default(false)
 
   /// Derived classification under the contract ruleset.
   brandGenericClass String?
@@ -578,7 +681,7 @@ model Claim {
   discountExclusionReason       String?
   rebateEligible                Boolean @default(false)
   rebateExclusionReason         String?
-  estimatedRebateCents          Int @default(0)
+  estimatedRebateCents          Int     @default(0)
 
   /// Set when this claim is part of a seeded audit-replication scenario.
   scenarioTag String?
@@ -595,17 +698,110 @@ model Claim {
   /// unit, always for exactly one claim, and never aggregated.
   traceJson String?
 
-  traceSteps TraceStep[]
+  traceSteps              TraceStep[]
   accumulatorTransactions AccumulatorTransaction[]
-  rebateAccruals RebateAccrual[]
+  rebateAccruals          RebateAccrual[]
 
   reversalOfClaimId String?
 
   @@index([memberId, dateOfService])
+  // Covers the member directory rollup so it never touches the claim table.
+  @@index([memberId, dateOfService, responseStatus, totalBilledCents, patientPayCents])
   @@index([dateOfService])
   @@index([responseStatus])
   @@index([scenarioTag])
   @@index([channel])
+  @@index([transactionCode])
+  @@index([reversalOfClaimId])
+  // Answers "what did this pharmacy dispense of this drug", which is the shape
+  // of every MAC appeal and every network question about one store.
+  @@index([pharmacyId, drugId, dateOfService])
+}
+
+// ---------------------------------------------------------------------------
+// Daily rollup
+// ---------------------------------------------------------------------------
+
+/// One row per day of the plan year, summarising the claims dated that day.
+///
+/// The book is large enough that summing it per page load is not viable, and
+/// the simulation clock means every dashboard is really asking "the book as of
+/// today", which is a running total over these rows. Nothing here is a new
+/// fact: every column is a sum of claim columns, and the invariant suite
+/// checks the rollup against the claims it summarises so the two cannot drift.
+model BookDay {
+  id        String   @id
+  sponsorId String
+  /// Midnight UTC on the day being summarised.
+  date      DateTime @unique
+
+  claimsSubmitted Int @default(0)
+  claimsPaid      Int @default(0)
+  claimsRejected  Int @default(0)
+
+  totalBilledCents     Int @default(0)
+  planPaidCents        Int @default(0)
+  patientPayCents      Int @default(0)
+  pharmacyPaidCents    Int @default(0)
+  estimatedRebateCents Int @default(0)
+
+  genericClaims        Int @default(0)
+  brandClaims          Int @default(0)
+  specialtyClaims      Int @default(0)
+  specialtyBilledCents Int @default(0)
+
+  mailClaims     Int @default(0)
+  retailClaims   Int @default(0)
+  retail90Claims Int @default(0)
+
+  /// Distinct members with at least one claim dated this day.
+  membersFilling Int @default(0)
+
+  /// Reversals of fills dated this day, carried separately because they are
+  /// negative and would otherwise silently net against the day's activity. A
+  /// day's true cost is the paid columns plus these.
+  reversalsProcessed      Int @default(0)
+  reversalBilledCents     Int @default(0)
+  reversalPlanPaidCents   Int @default(0)
+  reversalPatientPayCents Int @default(0)
+  reversalRebateCents     Int @default(0)
+
+  @@index([date])
+}
+
+/// The same day, cut by one dimension: channel, benefit level, pricing basis,
+/// drug, therapeutic class, or reject code.
+///
+/// The sponsor dashboard asks for half a dozen group-bys over the book, and at
+/// this volume each one is a full scan of the claim table. Precomputing them
+/// per day turns every one of those into a scan of a small, narrow table, and
+/// makes them cheap to cut against the clock, since "as of today" is a range
+/// on the date column. Like the daily rollup, these are sums of claim columns
+/// and nothing else, and the invariant suite checks them against the claims.
+model BookDayDimension {
+  id        String   @id
+  date      DateTime
+  /// One of: channel, level, basis, drug, class, reject.
+  dimension String
+  /// The value within that dimension, e.g. "Mail" or a drug id.
+  key       String
+
+  claims              Int @default(0)
+  billedCents         Int @default(0)
+  planPaidCents       Int @default(0)
+  memberPaidCents     Int @default(0)
+  rebateCents         Int @default(0)
+  nadacCents          Int @default(0)
+  dispensingFeeCents  Int @default(0)
+  allowedCents        Int @default(0)
+  /// Ingredient cost and AWP are carried separately because the Exhibit C
+  /// guarantees are stated as a discount off AWP on the ingredient alone, not
+  /// off the total with the dispensing fee in it.
+  ingredientCostCents Int @default(0)
+  awpCents            Int @default(0)
+
+  @@index([dimension, date])
+  @@index([date])
 }
 
 // ---------------------------------------------------------------------------
@@ -613,18 +809,18 @@ model Claim {
 // ---------------------------------------------------------------------------
 
 model Accumulator {
-  id            String @id @default(cuid())
+  id            String      @id @default(cuid())
   memberId      String
-  member        Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member        Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   benefitPlanId String
   benefitPlan   BenefitPlan @relation(fields: [benefitPlanId], references: [id])
 
   /// "RxOopIndividual" | "RxOopFamily" | "FederalOopIndividual"
   /// | "FederalOopFamily" | "DeductibleIndividual" | "DeductibleFamily"
-  accumulatorType String
-  planYear      Int
-  limitCents    Int
-  accumulatedCents Int @default(0)
+  accumulatorType  String
+  planYear         Int
+  limitCents       Int
+  accumulatedCents Int    @default(0)
 
   transactions AccumulatorTransaction[]
 
@@ -634,14 +830,14 @@ model Accumulator {
 /// Signed delta per claim. Stored so a reversal unwinds exactly and
 /// re-adjudication is safe.
 model AccumulatorTransaction {
-  id            String @id @default(cuid())
+  id            String      @id @default(cuid())
   accumulatorId String
   accumulator   Accumulator @relation(fields: [accumulatorId], references: [id], onDelete: Cascade)
   claimId       String?
-  claim         Claim? @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  claim         Claim?      @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   /// "Apply" | "Reverse" | "Adjustment"
-  transactionType String @default("Apply")
+  transactionType String   @default("Apply")
   amountCents     Int
   appliedAt       DateTime @default(now())
 
@@ -654,26 +850,26 @@ model AccumulatorTransaction {
 // ---------------------------------------------------------------------------
 
 model RebateContract {
-  id            String @id
-  manufacturer  String
+  id                String    @id
+  manufacturer      String
   /// "PBM" | "GPO" | "Aggregator"
-  contractingEntity String @default("GPO")
-  entityDomicile String?
-  effectiveDate DateTime
-  terminationDate DateTime?
+  contractingEntity String    @default("GPO")
+  entityDomicile    String?
+  effectiveDate     DateTime
+  terminationDate   DateTime?
 
   terms    RebateTerm[]
   accruals RebateAccrual[]
 }
 
 model RebateTerm {
-  id               String @id @default(cuid())
+  id               String         @id @default(cuid())
   rebateContractId String
   rebateContract   RebateContract @relation(fields: [rebateContractId], references: [id], onDelete: Cascade)
   contractId       String?
-  contract         Contract? @relation(fields: [contractId], references: [id])
+  contract         Contract?      @relation(fields: [contractId], references: [id])
   drugId           String?
-  drug             Drug? @relation(fields: [drugId], references: [id])
+  drug             Drug?          @relation(fields: [drugId], references: [id])
 
   /// "BaseRebate" | "PriceProtection" | "AdminFee" | "FormularyPlacementFee"
   /// | "DataFee" | "GPOServiceFee" | "RebateSubstitution"
@@ -688,9 +884,9 @@ model RebateTerm {
   /// Is this remuneration type inside the client contract's definition of
   /// the word "rebate"?
   inPlanRebateDefinition Boolean @default(true)
-  passThroughBps         Int @default(10000)
+  passThroughBps         Int     @default(10000)
   /// "None" | "PBM" | "GPO"
-  retainedByEntity       String @default("None")
+  retainedByEntity       String  @default("None")
 
   sourceDocumentId String?
   sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
@@ -698,19 +894,19 @@ model RebateTerm {
 }
 
 model RebateAccrual {
-  id       String @id @default(cuid())
-  claimId  String
-  claim    Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  id               String          @id @default(cuid())
+  claimId          String
+  claim            Claim           @relation(fields: [claimId], references: [id], onDelete: Cascade)
   rebateContractId String?
   rebateContract   RebateContract? @relation(fields: [rebateContractId], references: [id])
 
-  remunerationType String
-  basisAmountCents Int @default(0)
-  amountCents      Int
+  remunerationType  String
+  basisAmountCents  Int    @default(0)
+  amountCents       Int
   passedToPlanCents Int
-  retainedCents    Int @default(0)
-  accrualPeriod    String
-  status           String @default("Accrued")
+  retainedCents     Int    @default(0)
+  accrualPeriod     String
+  status            String @default("Accrued")
 
   @@index([claimId])
   @@index([accrualPeriod])
@@ -722,14 +918,14 @@ model RebateAccrual {
 
 /// A published clinical criteria document, encoded as an executable tree.
 model PACriteriaTree {
-  id          String @id
-  name        String
+  id                   String  @id
+  name                 String
   /// Drug or class the tree governs.
-  scopeLabel  String
+  scopeLabel           String
   /// JSON array of drug name patterns this tree applies to.
-  drugPatterns String @default("[]")
-  publishedDate String?
-  approvalDurationDays Int @default(365)
+  drugPatterns         String  @default("[]")
+  publishedDate        String?
+  approvalDurationDays Int     @default(365)
 
   sourceDocumentId String?
   sourceDocument   SourceDocument? @relation(fields: [sourceDocumentId], references: [id])
@@ -741,26 +937,26 @@ model PACriteriaTree {
 
 /// One numbered node in a published criteria decision tree.
 model CriteriaStep {
-  id       String @id @default(cuid())
-  treeId   String
-  tree     PACriteriaTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  id     String         @id @default(cuid())
+  treeId String
+  tree   PACriteriaTree @relation(fields: [treeId], references: [id], onDelete: Cascade)
 
   /// The step number as printed in the published document.
-  stepNumber Int
-  question   String
+  stepNumber    Int
+  question      String
   /// Machine-evaluable predicate identifier resolved by the criteria engine,
   /// e.g. "member.hasDiagnosis" with args.
-  predicate  String
+  predicate     String
   /// JSON args for the predicate.
   predicateArgs String @default("{}")
 
   /// "step" | "approve" | "deny"
-  yesOutcome String
-  yesStep    Int?
+  yesOutcome      String
+  yesStep         Int?
   yesApprovalDays Int?
-  noOutcome  String
-  noStep     Int?
-  noApprovalDays Int?
+  noOutcome       String
+  noStep          Int?
+  noApprovalDays  Int?
 
   /// Plain-language reason attached to a terminal outcome.
   denyReason String?
@@ -772,60 +968,61 @@ model CriteriaStep {
 }
 
 model PriorAuthorization {
-  id        String @id @default(cuid())
-  paNumber  String @unique
-  memberId  String
-  member    Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  drugId    String
-  drug      Drug @relation(fields: [drugId], references: [id])
-  treeId    String?
-  tree      PACriteriaTree? @relation(fields: [treeId], references: [id])
+  id       String          @id @default(cuid())
+  paNumber String          @unique
+  memberId String
+  member   Member          @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  drugId   String
+  drug     Drug            @relation(fields: [drugId], references: [id])
+  treeId   String?
+  tree     PACriteriaTree? @relation(fields: [treeId], references: [id])
 
   /// "PA" | "StepException" | "QuantityException" | "FormularyException"
-  requestType String @default("PA")
+  requestType         String  @default("PA")
   /// "Standard" | "Expedited"
-  urgency     String @default("Standard")
-  prescriberNpi  String?
-  prescriberName String?
-  requestedQuantity Float?
+  urgency             String  @default("Standard")
+  prescriberNpi       String?
+  prescriberName      String?
+  requestedQuantity   Float?
   requestedDaysSupply Int?
   /// JSON of the answered question set.
-  questionResponses String @default("{}")
+  questionResponses   String  @default("{}")
 
   /// "Received" | "PendingInfo" | "InReview" | "Approved" | "Denied" | "Expired"
-  status      String @default("Received")
-  determination String?
+  status                  String    @default("Received")
+  determination           String?
   /// The step number that produced the outcome. This is the citation.
-  decidingStepNumber Int?
-  denyReason  String?
-  approvedDays Int?
-  approvedEffectiveDate DateTime?
+  decidingStepNumber      Int?
+  denyReason              String?
+  approvedDays            Int?
+  approvedEffectiveDate   DateTime?
   approvedTerminationDate DateTime?
 
-  receivedAt DateTime @default(now())
+  receivedAt            DateTime  @default(now())
   prescriberStatementAt DateTime?
-  decisionDueAt DateTime?
-  decidedAt    DateTime?
+  decisionDueAt         DateTime?
+  decidedAt             DateTime?
   /// "AI" | "Pharmacist"
-  decidedBy    String?
-  reviewerNote String?
+  decidedBy             String?
+  reviewerNote          String?
   /// True when the AI routed this to a human rather than deciding.
-  escalated    Boolean @default(false)
+  escalated             Boolean   @default(false)
 
-  traceSteps TraceStep[]
+  traceSteps    TraceStep[]
   decisionSteps PADecisionStep[]
 
   @@index([memberId])
+  @@index([memberId, drugId])
   @@index([status])
 }
 
 /// The path actually traversed through the criteria tree.
 model PADecisionStep {
-  id       String @id @default(cuid())
-  paId     String
-  pa       PriorAuthorization @relation(fields: [paId], references: [id], onDelete: Cascade)
+  id             String             @id @default(cuid())
+  paId           String
+  pa             PriorAuthorization @relation(fields: [paId], references: [id], onDelete: Cascade)
   criteriaStepId String
-  criteriaStep   CriteriaStep @relation(fields: [criteriaStepId], references: [id])
+  criteriaStep   CriteriaStep       @relation(fields: [criteriaStepId], references: [id])
 
   seq      Int
   answer   Boolean
@@ -841,37 +1038,81 @@ model PADecisionStep {
 /// A content-addressed snapshot of benefit configuration, so any two
 /// versions can be compared and any claim can be replayed against either.
 model ConfigVersion {
-  id          String @id @default(cuid())
-  label       String
-  description String?
+  id            String   @id @default(cuid())
+  label         String
+  description   String?
   /// SHA-256 over the canonical JSON of the configuration.
-  contentHash String
+  contentHash   String
   /// JSON snapshot of the changed configuration.
-  payload     String
+  payload       String
   /// JSON list of human-readable change descriptions.
-  changeSummary String @default("[]")
-  createdBy   String @default("demo")
-  createdAt   DateTime @default(now())
-  isBaseline  Boolean @default(false)
+  changeSummary String   @default("[]")
+  createdBy     String   @default("demo")
+  createdAt     DateTime @default(now())
+  isBaseline    Boolean  @default(false)
 
   claims Claim[]
   runs   ReadjudicationRun[]
+  npsSnapshots NpsSnapshot[]
+}
+
+/// A reading of the modelled member experience score, kept so that readings
+/// taken weeks apart can be compared. Aggregates only: the per-member answers
+/// behind a reading are recomputable at any time from the book and the
+/// published schedule, so storing a hundred thousand rows per reading would be
+/// storing something derivable.
+model NpsSnapshot {
+  id      String   @id @default(cuid())
+  label   String
+  note    String?
+  takenAt DateTime @default(now())
+  /// Where the simulation clock stood, since the book fills up across the year
+  /// and a reading in March is measuring less of it than one in September.
+  clockAt DateTime
+
+  /// The schedule version this was scored under. Two readings under different
+  /// versions answer different questions, so the interface flags the boundary
+  /// rather than subtracting across it.
+  rubricVersion String
+
+  /// Set when the reading was taken by committing a benefit change, so the
+  /// score can be attributed to the change that moved it.
+  configVersionId String?
+  configVersion   ConfigVersion? @relation(fields: [configVersionId], references: [id], onDelete: SetNull)
+
+  /// Everybody who used the benefit.
+  scored      Int
+  promoters   Int
+  passives    Int
+  detractors  Int
+  npsCensus   Float
+
+  /// What a real questionnaire would have reported.
+  responded   Int
+  npsSurveyed Float
+
+  /// JSON array of eleven counts, one per whole-number answer.
+  distribution String
+  /// JSON array of {id, membersAffected, totalPoints} per schedule term.
+  drivers      String
+
+  @@index([takenAt])
 }
 
 model ReadjudicationRun {
-  id          String @id @default(cuid())
-  configVersionId String
-  configVersion   ConfigVersion @relation(fields: [configVersionId], references: [id], onDelete: Cascade)
-  baselineLabel String
-  claimsEvaluated Int
-  claimsChanged   Int
-  membersAffected Int
-  planCostDeltaCents Int
+  id                   String        @id @default(cuid())
+  configVersionId      String
+  configVersion        ConfigVersion @relation(fields: [configVersionId], references: [id], onDelete: Cascade)
+  baselineLabel        String
+  claimsEvaluated      Int
+  claimsChanged        Int
+  membersAffected      Int
+  planCostDeltaCents   Int
   memberCostDeltaCents Int
-  newRejects      Int
+  newRejects           Int
   /// JSON array of per-claim diffs.
-  diffPayload     String
-  createdAt DateTime @default(now())
+  diffPayload          String
+  createdAt            DateTime      @default(now())
 }
 
 // ---------------------------------------------------------------------------
@@ -881,10 +1122,10 @@ model ReadjudicationRun {
 /// A finding published by Wisconsin's independent PBM auditor that our
 /// engine should independently reproduce.
 model AuditFinding {
-  id          String @id
-  title       String
-  auditor     String @default("PillarRx Consulting")
-  auditYear   Int
+  id               String  @id
+  title            String
+  auditor          String  @default("PillarRx Consulting")
+  auditYear        Int
   /// What the published report said.
   publishedFinding String
   /// How our engine detects the same thing.
@@ -899,14 +1140,14 @@ model AuditFinding {
 }
 
 model AuditFindingResult {
-  id        String @id @default(cuid())
+  id        String       @id @default(cuid())
   findingId String
   finding   AuditFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
   detected  Boolean
   detail    String
   /// JSON of the claims that triggered detection.
-  evidence  String @default("[]")
-  runAt     DateTime @default(now())
+  evidence  String       @default("[]")
+  runAt     DateTime     @default(now())
 }
 
 // ---------------------------------------------------------------------------
@@ -914,26 +1155,26 @@ model AuditFindingResult {
 // ---------------------------------------------------------------------------
 
 model ChatSession {
-  id       String @id @default(cuid())
-  memberId String?
-  member   Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
-  title    String?
+  id        String   @id @default(cuid())
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  title     String?
   createdAt DateTime @default(now())
 
   messages ChatMessage[]
 }
 
 model ChatMessage {
-  id        String @id @default(cuid())
+  id        String      @id @default(cuid())
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   role      String
   content   String
   /// JSON array of tool calls with arguments, results, and timings.
-  toolCalls String @default("[]")
+  toolCalls String      @default("[]")
   /// JSON array of citations the answer relied on.
-  citations String @default("[]")
-  createdAt DateTime @default(now())
+  citations String      @default("[]")
+  createdAt DateTime    @default(now())
 
   @@index([sessionId, createdAt])
 }
@@ -941,27 +1182,27 @@ model ChatMessage {
 /// A question whose correct answer is computed directly from the database,
 /// used to score the agent.
 model EvalCase {
-  id         String @id @default(cuid())
-  category   String
-  question   String
+  id             String  @id @default(cuid())
+  category       String
+  question       String
   /// JSON of the gold answer computed by the rules engine.
-  goldAnswer String
+  goldAnswer     String
   /// JSON array of tool names the agent is expected to use.
-  expectedTools String @default("[]")
+  expectedTools  String  @default("[]")
   /// For refusal cases, the agent is expected to decline rather than answer.
   expectsRefusal Boolean @default(false)
-  memberId   String?
-  drugId     String?
+  memberId       String?
+  drugId         String?
 
   results EvalResult[]
 }
 
 model EvalResult {
-  id       String @id @default(cuid())
-  caseId   String
-  case     EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  runId    String
-  passed   Boolean
+  id        String   @id @default(cuid())
+  caseId    String
+  case      EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  runId     String
+  passed    Boolean
   /// "exact" | "citation" | "trajectory" | "refusal"
   checkType String
   actual    String
@@ -969,4 +1210,723 @@ model EvalResult {
   createdAt DateTime @default(now())
 
   @@index([runId])
+}
+
+// ---------------------------------------------------------------------------
+// Prescribers
+// ---------------------------------------------------------------------------
+
+/// The writing prescriber on a claim.
+///
+/// Claims carry `prescriberNpi` as a bare string because that is what the
+/// NCPDP request carries, and because a foreign key across the whole claim
+/// table costs more than it buys. Everything that needs a name joins on the
+/// NPI.
+model Prescriber {
+  npi        String @id
+  firstName  String
+  lastName   String
+  credential String
+  specialty  String
+  city       String
+  state      String
+
+  /// Set when this prescriber exists to give a surveillance detector something
+  /// to find. The proof harness checks the detectors find them unaided.
+  seededCase String?
+
+  @@index([specialty])
+}
+
+// ---------------------------------------------------------------------------
+// Program integrity
+// ---------------------------------------------------------------------------
+
+/// One surveillance finding: an entity a named detector flagged, the peer
+/// distribution it was measured against, and the claims that made it flag.
+///
+/// Detectors are peer-relative, not threshold-absolute. A prescriber writing
+/// forty opioid scripts means nothing until you know what their specialty
+/// peers write, so every signal carries the median and 95th percentile it was
+/// scored against and the page shows them next to the observation.
+model IntegritySignal {
+  id           String @id
+  detectorId   String
+  /// "member" | "prescriber" | "pharmacy"
+  subjectType  String
+  subjectId    String
+  subjectLabel String
+  /// "High" | "Elevated" | "Watch"
+  severity     String
+  /// Standard deviations above the peer mean, or the detector's own scale.
+  score        Float
+
+  observed   Float
+  peerMedian Float
+  peerP95    Float
+
+  claimCount    Int
+  exposureCents Int
+
+  windowStart DateTime
+  windowEnd   DateTime
+
+  /// JSON array of evidence rows the detail view renders.
+  evidenceJson String
+
+  /// Set when the flagged entity was seeded as a deliberate case.
+  seededCase String?
+
+  @@unique([detectorId, subjectId])
+  @@index([detectorId, score])
+  @@index([severity])
+  @@index([subjectType])
+}
+
+// ---------------------------------------------------------------------------
+// Clinical: drug utilisation review
+// ---------------------------------------------------------------------------
+
+/// An opioid product's strength and its morphine-milligram-equivalent factor.
+///
+/// Strength is parsed out of the NDC description in the CMS NADAC file already
+/// in this repo, so it is a real attribute of a real NDC rather than an
+/// assumption. The conversion factor is the CDC's published table. Together
+/// they make daily MME computable from the claim's own quantity and days
+/// supply, with nothing invented in between.
+model OpioidProduct {
+  drugId            String  @id
+  molecule          String
+  /// Milligrams of the opioid ingredient per dispensing unit, as priced. For
+  /// transdermal products this is micrograms per hour instead.
+  strengthMg        Float
+  mmeFactor         Float
+  /// Patches are dosed by delivery rate, not by units consumed per day, so
+  /// they convert straight off the rate and ignore quantity.
+  isTransdermal     Boolean @default(false)
+  /// False where the CDC declines to publish a conversion, which is the case
+  /// for buprenorphine. Those products still count as opioid fills but are
+  /// left out of any morphine-equivalent total rather than guessed at.
+  convertible       Boolean @default(true)
+  /// Why, when it is not convertible.
+  exclusionReason   String?
+  /// The NADAC description the strength was read out of.
+  sourceDescription String
+}
+
+/// A concurrent drug utilisation review alert raised against a claim.
+///
+/// Reason codes are the NCPDP DUR/PPS conflict codes so the alert would carry
+/// on a real 5.1 response segment rather than being a private invention.
+model DurAlert {
+  id       String @id
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  /// NCPDP DUR conflict code: "DD" drug-drug, "TD" therapeutic duplication,
+  /// "HD" high dose, "ER" early refill, "MC" drug-disease.
+  reasonCode    String
+  /// "1" major | "2" moderate | "3" minor, per NCPDP severity index.
+  severityIndex String
+  severity      String
+
+  claimId        String
+  drugId         String
+  relatedClaimId String?
+  relatedDrugId  String?
+
+  dateOfService DateTime
+  /// Days the two therapies overlap, where the rule is an overlap rule.
+  overlapDays   Int      @default(0)
+  /// Daily MME on this date, where the rule is the opioid dose rule.
+  observedMme   Float?
+
+  message  String
+  /// The rule that fired, resolvable against the source registry.
+  ruleId   String
+  sourceId String?
+
+  @@index([memberId, dateOfService])
+  @@index([reasonCode, severity])
+  @@index([dateOfService])
+}
+
+// ---------------------------------------------------------------------------
+// Rebate lifecycle
+// ---------------------------------------------------------------------------
+
+/// A quarterly rebate invoice to a manufacturer, and what came back.
+///
+/// The waterfall report shows what the book accrued. This shows the part that
+/// matters to cash: rebates are invoiced a quarter in arrears and collected
+/// months after that, so at any moment most of what has been earned is still
+/// a receivable. The gap is the float.
+model RebateInvoice {
+  id           String   @id
+  manufacturer String
+  /// "2026Q1"
+  quarter      String
+  periodStart  DateTime
+  periodEnd    DateTime
+
+  /// The schedule, all three dates known in advance. Whether any of them has
+  /// happened is a question for the simulation clock, not a stored flag, so
+  /// the receivable ages on its own as the demo runs.
+  submittedAt DateTime
+  dueAt       DateTime
+  collectedAt DateTime?
+
+  claimCount     Int
+  invoicedCents  Int
+  /// What will be collected on collectedAt: the invoice less any dispute.
+  collectedCents Int @default(0)
+  disputedCents  Int @default(0)
+
+  @@index([quarter])
+  @@index([submittedAt])
+  @@index([collectedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Settlement
+// ---------------------------------------------------------------------------
+
+/// A payment cycle to the pharmacy network.
+///
+/// A PBM is a payments company wearing a clinical hat: it collects from the
+/// plan and pays the network on a contractual cycle. Under pass-through the
+/// two sides are equal by construction, and the invariant suite checks it.
+model RemittanceRun {
+  id         String   @id
+  cycleStart DateTime
+  cycleEnd   DateTime
+  /// Contractual payment date for the cycle. Whether it has been paid is
+  /// derived from the clock.
+  paidAt     DateTime
+
+  pharmacyCount Int
+  claimCount    Int
+  reversalCount Int
+
+  grossCents    Int
+  reversalCents Int
+  netCents      Int
+
+  lines RemittanceLine[]
+
+  @@index([paidAt])
+}
+
+model RemittanceLine {
+  id    String        @id
+  runId String
+  run   RemittanceRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  pharmacyId String
+  pharmacy   Pharmacy @relation(fields: [pharmacyId], references: [id])
+
+  claimCount    Int
+  reversalCount Int
+  grossCents    Int
+  reversalCents Int
+  netCents      Int
+
+  @@index([runId])
+  @@index([pharmacyId])
+}
+
+/// A monthly invoice to the plan sponsor.
+///
+/// Drug cost at pass-through plus the administrative fee on enrolled lives,
+/// less rebates actually collected in the period. Every line traces to a
+/// contract citation.
+model SponsorInvoice {
+  id          String   @id
+  sponsorId   String
+  periodStart DateTime
+  periodEnd   DateTime
+  issuedAt    DateTime
+  dueAt       DateTime
+
+  claimCount    Int
+  reversalCount Int
+  drugCostCents Int
+
+  memberMonths        Int
+  adminFeeCents       Int
+  rebateCreditCents   Int
+  /// The rebate administration fee Navitus retains, per Amendment 5A.
+  rebateAdminFeeCents Int @default(0)
+
+  totalDueCents Int
+  /// Scheduled settlement date. Payment is derived from the clock.
+  paidAt        DateTime
+
+  @@index([periodStart])
+}
+
+// ---------------------------------------------------------------------------
+// Eligibility maintenance
+// ---------------------------------------------------------------------------
+
+/// One ANSI X12 834 Benefit Enrollment and Maintenance file from the sponsor.
+///
+/// Membership does not appear in a PBM by magic. It arrives on a schedule, in
+/// a format written in 1991, from a payroll system that is nobody's idea of a
+/// source of truth, and the difference between a plan that pays correctly and
+/// one that does not is mostly what happens to these files. The weekly file
+/// carries changes only; the monthly full audit restates the whole population
+/// so the two sides can find what has drifted apart.
+// ---------------------------------------------------------------------------
+// Agents
+// ---------------------------------------------------------------------------
+
+/// The autonomy an agent is operating under, as a record rather than a setting.
+///
+/// The whole governance question about agents is "what is it allowed to do on
+/// its own, who decided that, and when did it change". Keeping the level in a
+/// table with an effective date answers all three, and means a run from March
+/// can be judged against the policy that was in force in March rather than the
+/// one in force when somebody asks.
+model AgentPolicy {
+  id      String @id
+  agentId String
+
+  /// "Propose" | "ActWithReview" | "Act" | "Suspended"
+  autonomy String
+  /// Why this level and not the next one up.
+  rationale String
+  setBy     String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+
+  @@index([agentId, effectiveFrom])
+}
+
+/// One invocation of an agent, start to finish.
+model AgentRun {
+  id      String @id
+  agentId String
+
+  startedAt DateTime
+  endedAt   DateTime
+  /// What it was asked to do, in the words the caller used.
+  goal      String
+  /// The record the run is about, where there is one.
+  subjectType String?
+  subjectId   String?
+
+  /// "Completed" | "Escalated" | "Refused" | "Failed"
+  outcome String
+  /// One line a human can read in a queue without opening the run.
+  summary String
+
+  /// "model" when a language model did the reasoning, "deterministic" when the
+  /// scripted planner did. Mixed runs report "mixed". Never inferred at read
+  /// time: whichever ran is what gets written.
+  brain       String
+  modelName   String?
+  inputTokens  Int @default(0)
+  outputTokens Int @default(0)
+  /// Cost of the run in tenths of a cent, because a run can cost less than one.
+  costMillicents Int @default(0)
+  elapsedMs      Int @default(0)
+
+  /// Autonomy in force when it ran, copied so history cannot be rewritten by
+  /// changing the policy afterwards.
+  autonomy String
+
+  steps     AgentStep[]
+  proposals AgentProposal[]
+
+  @@index([agentId, startedAt])
+  @@index([subjectType, subjectId])
+  @@index([outcome])
+}
+
+/// One step inside a run: a thought, a tool call, a piece of evidence, a
+/// proposal, or a gate where a human was asked.
+model AgentStep {
+  id    String   @id
+  runId String
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  ordinal Int
+  /// "Think" | "Tool" | "Evidence" | "Proposal" | "Gate" | "Refusal"
+  kind    String
+  /// Tool name, where kind is Tool.
+  tool    String?
+  /// Why this step happened, before it happened.
+  because String
+  /// One line of what came back.
+  summary String
+  /// Arguments and result, as JSON, so the step can be re-run by hand.
+  detail  String @default("{}")
+
+  /// Which brain produced this particular step.
+  brain      String
+  elapsedMs  Int @default(0)
+
+  @@unique([runId, ordinal])
+  @@index([runId])
+}
+
+/// Something an agent wants to happen, and what became of it.
+///
+/// Nothing an agent does reaches the book directly. It writes one of these,
+/// and either a human approves it or the policy in force allowed it to apply
+/// itself. Both paths leave the same record, which is what makes the override
+/// rate on the operations page a real number rather than a claim.
+model AgentProposal {
+  id      String   @id
+  runId   String
+  run     AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agentId String
+
+  /// "PriorAuthorization" | "IntegritySignal" | "EligibilityTransaction" |
+  /// "MacAppeal" | "PlanDesign" | "MemberQuestion"
+  subjectType String
+  subjectId   String
+
+  /// The action in a form the receiving system understands.
+  action  String
+  /// The action in a form a person understands.
+  headline String
+  rationale String
+  /// JSON payload the action needs if it is applied.
+  payload String @default("{}")
+
+  /// 0 to 10000. An agent that cannot say how sure it is has not finished
+  /// thinking.
+  confidenceBps Int
+
+  /// True when the action would move money or deny care. These can never
+  /// auto-apply, whatever the policy says, and the invariant suite checks it.
+  consequential Boolean @default(false)
+
+  /// "Proposed" | "Approved" | "Rejected" | "Applied" | "Withdrawn"
+  status     String
+  reviewedBy String?
+  reviewedAt DateTime?
+  /// Set when a human disagreed, and what they did instead. This is the column
+  /// that tells you whether the agent is any good.
+  overrideNote String?
+  appliedAt    DateTime?
+  /// True when the policy allowed it to apply without a human.
+  autoApplied  Boolean @default(false)
+
+  createdAt DateTime
+
+  @@index([agentId, status])
+  @@index([subjectType, subjectId])
+  @@index([createdAt])
+}
+
+/// A synthetic clinical note attached to a prior authorisation request.
+///
+/// Real prior authorisation arrives as a fax or a portal blob of prose, and
+/// the expensive human work is reading it to find six facts. The engine has
+/// always had the facts in structured form; this is the same facts written
+/// back out as a prescriber would have written them, with the ordinary
+/// distractions of a chart note, so the intake agent has something real to
+/// read and can be marked against a known answer.
+model ClinicalNote {
+  id     String @id
+  paId   String @unique
+
+  receivedAt DateTime
+  /// "Fax" | "Portal" | "ePA"
+  channel    String
+  author     String
+  body       String
+  /// The facts the note was generated from, as JSON. The agent never sees
+  /// this; it is the answer key the operations page marks extraction against.
+  groundTruth String
+
+  @@index([receivedAt])
+}
+
+/// A measured run of the adjudication engine.
+///
+/// Capacity is the last argument an incumbent has once pricing is on the table:
+/// that a claim processor is a decade of mainframe engineering and a sponsor
+/// could not possibly run one. It is checkable, so it is checked here. Every
+/// number on the throughput page is written by a benchmark that ran, on
+/// hardware named in the row, against the same engine that priced the book.
+model ThroughputRun {
+  id    String   @id
+  ranAt DateTime
+
+  /// "Adjudication" for the decision engine alone, "PointOfSale" for the whole
+  /// round trip including the database reads a real claim needs.
+  kind  String
+  /// Claims processed in the run.
+  sample Int
+  elapsedMs Float
+  claimsPerSecond Float
+
+  p50Ms  Float
+  p90Ms  Float
+  p99Ms  Float
+  p999Ms Float
+  maxMs  Float
+
+  /// JSON array of {upperMs, count}, so the page can draw the distribution
+  /// rather than assert a shape.
+  histogram String
+
+  machine  String
+  cores    Int
+  memoryGb Float
+  runtime  String
+  notes    String
+
+  @@index([kind, ranAt])
+}
+
+/// A degradation in service, with what it cost.
+///
+/// Every processor has these. What distinguishes them is whether the sponsor
+/// hears about it from the processor or from its own members. Recording the
+/// window as data means the guarantee scorecard can attribute a miss to a
+/// cause instead of reporting a bad month and leaving it there.
+model ServiceIncident {
+  id String @id
+
+  startedAt  DateTime
+  endedAt    DateTime
+  /// When the sponsor was told, which is the number that gets remembered.
+  notifiedAt DateTime
+
+  title    String
+  /// "Degraded" | "Outage"
+  severity String
+  /// What broke, in a sentence a non-engineer can act on.
+  summary  String
+  cause    String
+  remedy   String
+  /// The guarantee this incident put at risk, where there is one.
+  guaranteeId String?
+
+  @@index([startedAt])
+}
+
+model EligibilityFile {
+  id        String @id
+  sponsorId String
+
+  /// ISA13 interchange control number, which is what both sides argue over.
+  controlNumber String @unique
+  senderId      String
+  receiverId    String
+  /// "Change" weekly, or "Full audit" monthly.
+  fileType      String
+
+  /// BGN03: when the sponsor's system cut the file.
+  createdAt   DateTime
+  /// When it landed. Files are not processed the instant they arrive.
+  receivedAt  DateTime
+  /// When the transactions in it were applied. The gap is the exposure window.
+  processedAt DateTime
+
+  recordCount Int
+  addCount    Int
+  changeCount Int
+  termCount   Int
+  /// Transactions that could not be applied and went back to the sponsor.
+  rejectCount Int
+
+  transactions EligibilityTransaction[]
+
+  @@index([receivedAt])
+}
+
+/// One INS loop inside an 834: a single instruction about a single person.
+///
+/// The X12 itself is not stored. Every field it carries is here, and the
+/// segments are rebuilt on demand from these columns, on the same principle
+/// as claim derivations: keeping the inputs is honest, keeping a rendering of
+/// them is a second copy that can drift.
+model EligibilityTransaction {
+  id     String          @id
+  fileId String
+  file   EligibilityFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  /// INS03 maintenance type: 021 add, 001 change, 024 termination,
+  /// 025 reinstatement.
+  maintenanceType   String
+  /// INS04 maintenance reason, where the sponsor supplied one.
+  maintenanceReason String?
+
+  /// Null where the instruction was rejected before a member could be matched.
+  memberId         String?
+  cardholderId     String
+  personCode       String
+  /// INS02 individual relationship: 18 self, 01 spouse, 19 child.
+  relationshipCode String
+  memberName       String
+
+  benefitPlanId   String?
+  coverageTier    String?
+  /// DTP*348 benefit begin.
+  effectiveDate   DateTime?
+  /// DTP*349 benefit end.
+  terminationDate DateTime?
+
+  /// "Applied" | "Rejected" | "Pended"
+  status        String
+  /// Set when rejected: a short code and the sentence sent back to the sponsor.
+  rejectCode    String?
+  rejectReason  String?
+  /// Set when a later file carried a corrected version of this instruction.
+  correctedById String?
+  /// When the rejection stopped being somebody's problem, either because the
+  /// correction was applied or because the sponsor confirmed the instruction
+  /// should never have been sent. Null while it is still open.
+  resolvedAt    DateTime?
+  /// How it closed, for the ones that were not simply corrected.
+  resolution    String?
+
+  @@index([fileId])
+  @@index([status])
+  @@index([memberId])
+  @@index([cardholderId, personCode])
+}
+
+// ---------------------------------------------------------------------------
+// Maximum allowable cost
+// ---------------------------------------------------------------------------
+
+/// A published version of the maximum allowable cost list.
+///
+/// The MAC list is the single most consequential artefact a PBM controls and
+/// the one it is least willing to show: it sets the ceiling on 56% of the paid
+/// claims in this book. Under a spread contract there are two of them, one for
+/// what the plan is billed and a lower one for what the pharmacy is paid, and
+/// the gap is revenue. Under pass-through there is one, and it is published.
+///
+/// Wisconsin requires the list be refreshed at least every seven business days
+/// and be reviewable by contracted pharmacies, which is why versions exist as
+/// records rather than as a file somebody overwrites.
+model MacList {
+  id      String @id
+  version Int    @unique
+
+  effectiveDate DateTime
+  publishedAt   DateTime
+  supersededAt  DateTime?
+
+  drugCount   Int
+  /// How the ceiling is derived, in words a pharmacy can check.
+  basis       String
+  /// Rows whose ceiling moved from the previous version, and why.
+  changeCount Int    @default(0)
+
+  prices  MacPrice[]
+  changes MacPriceChange[]
+
+  @@index([effectiveDate])
+}
+
+/// One ceiling on one product, on the current list.
+///
+/// Only the live version carries rows. Earlier versions are recorded with
+/// their movement rather than duplicated in full, and the ceiling that priced
+/// any individual claim is on the claim itself.
+model MacPrice {
+  id     String  @id
+  listId String
+  list   MacList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  drugId String
+  drug   Drug   @relation(fields: [drugId], references: [id])
+
+  unitPrice      Float
+  /// The surveyed acquisition cost the ceiling was set from.
+  nadacUnitPrice Float
+  /// A product available at or at least this price, which the statute
+  /// requires be named when an appeal is denied.
+  sourceNdc      String
+
+  @@unique([listId, drugId])
+  @@index([drugId])
+}
+
+/// A row that moved between two versions of the list.
+model MacPriceChange {
+  id     String  @id
+  listId String
+  list   MacList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  drugId String
+  drug   Drug   @relation(fields: [drugId], references: [id])
+
+  /// The enacted statute requires a pricing adjustment, not a revision of the
+  /// list for every pharmacy, so a movement is held against the pharmacy that
+  /// won it. It is published all the same: any pharmacy can see that a ceiling
+  /// was successfully challenged and on what evidence.
+  pharmacyId String?
+  pharmacy   Pharmacy? @relation(fields: [pharmacyId], references: [id])
+
+  priorUnitPrice Float
+  newUnitPrice   Float
+  /// "Appeal" | "Survey" | "Availability"
+  reason         String
+  /// The appeal that forced it, where that is the reason.
+  appealId       String?
+
+  @@index([listId])
+  @@index([drugId])
+}
+
+/// A pharmacy's challenge to a ceiling, and what the plan did about it.
+///
+/// Wis. Stat. 632.865(2)(b) is unusually specific: twenty-one days to appeal
+/// from the claim, twenty-one days to investigate and resolve, a reason on
+/// every denial, the national drug code of a product available at or below the
+/// ceiling, and a pricing adjustment within one day of the determination. Each
+/// of those is a date on this record, and each is checked by the invariant
+/// suite rather than asserted in marketing copy.
+model MacAppeal {
+  id String @id
+
+  pharmacyId String
+  pharmacy   Pharmacy @relation(fields: [pharmacyId], references: [id])
+  claimId    String
+  drugId     String
+  drug       Drug     @relation(fields: [drugId], references: [id])
+
+  /// The fill being appealed. The right to appeal runs 21 days from here.
+  dateOfService     DateTime
+  submittedAt       DateTime
+  quantityDispensed Float
+
+  /// What the pharmacy says it paid, per unit, with an invoice attached.
+  invoiceUnitPrice Float
+  /// The ceiling that was applied.
+  macUnitPrice     Float
+
+  /// Scheduled determination. Whether it has happened is read off the clock.
+  decidedAt DateTime
+  /// "Upheld" | "Overturned"
+  outcome   String
+
+  /// Required on a denial: why, and a product available at or below the
+  /// ceiling, so the pharmacy can go and buy it.
+  denialReason    String?
+  citedNdc        String?
+  citedWholesaler String?
+
+  /// Set on an overturn: the ceiling the pharmacy is now paid at, and what it
+  /// is owed on every fill it already dispensed under the old one.
+  revisedUnitPrice Float?
+  adjustmentCents  Int       @default(0)
+  /// Fills the adjustment was paid on, the appealed one included.
+  affectedClaims   Int       @default(0)
+  /// The statute allows one day from determination to adjustment.
+  adjustedAt       DateTime?
+
+  @@index([submittedAt])
+  @@index([pharmacyId])
+  @@index([outcome])
 }

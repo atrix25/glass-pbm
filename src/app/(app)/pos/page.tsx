@@ -1,7 +1,8 @@
-import { Card, SectionTitle } from "@/components/ui";
+import { Card, IncumbentNote, SectionTitle } from "@/components/ui";
 import { PosTerminal } from "@/components/pos-terminal";
 import type { TraceSource } from "@/components/trace-viewer";
 import { getPosPickers } from "@/lib/queries/pos";
+import { getClock } from "@/lib/session";
 import { SOURCES } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,9 @@ const SOURCE_MAP: Record<string, TraceSource> = Object.fromEntries(
 );
 
 export default async function PosPage() {
-  const { members, drugs, pharmacies, defaultDate } = await getPosPickers();
+  const clock = await getClock();
+  const { members, drugs, pharmacies, prescribers, scenarios, defaultDate } =
+    await getPosPickers(clock.now);
 
   return (
     <div className="space-y-5">
@@ -28,14 +31,30 @@ export default async function PosPage() {
           on file, or the same fill twice in a week, or a brand with DAW 1 when
           a generic exists. Each produces a different NCPDP reject with the rule
           that caused it. That is the difference between a benefit that can be
-          explained and one that can only be appealed.
+          explained and one that can only be appealed. Clinical screening runs
+          on the same transmission and comes back in the DUR/PPS segment, which
+          advises the pharmacist without changing what the claim pays.
         </p>
       </Card>
+
+      <IncumbentNote>
+        Concurrent drug utilisation review is sold as a &ldquo;clinical
+        program&rdquo; and priced accordingly: a per-member-per-month line item
+        on top of administration, typically $0.30 to $1.00, sometimes bundled
+        into a safety package quoted in the low dollars. Contract ETG0013 does
+        not price it separately, and neither does this. What it takes is a rule
+        table, a query for therapy still inside its days supply, and the
+        discipline to return the conflict in the same response as the price
+        rather than in a report next month. The rule table is the part worth
+        licensing; the rest is the transaction you are already running.
+      </IncumbentNote>
 
       <PosTerminal
         members={members}
         drugs={drugs}
         pharmacies={pharmacies}
+        prescribers={prescribers}
+        scenarios={scenarios}
         sources={SOURCE_MAP}
         defaultDate={defaultDate}
       />

@@ -51,7 +51,14 @@ export function CardHeader({
           </p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {/* Card actions are text links, which on a phone are a 15px-tall target
+          sitting next to a heading. Padding them out on touch widths only
+          leaves the desktop layout exactly as it was. */}
+      {action ? (
+        <div className="-my-2 shrink-0 [&>a]:inline-flex [&>a]:min-h-[34px] [&>a]:items-center sm:my-0 sm:[&>a]:min-h-0">
+          {action}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -224,13 +231,20 @@ export function Td({
   children,
   className,
   align = "left",
+  title,
+  colSpan,
 }: {
   children?: ReactNode;
   className?: string;
   align?: "left" | "right" | "center";
+  /** Tooltip for cells whose content is truncated. */
+  title?: string;
+  colSpan?: number;
 }) {
   return (
     <td
+      title={title}
+      colSpan={colSpan}
       className={cn(
         "border-b border-ink-100 px-3 py-2 align-middle text-ink-800",
         align === "right" && "text-right tnum",
@@ -312,6 +326,78 @@ export function SectionTitle({
         ) : null}
       </div>
       {action}
+    </div>
+  );
+}
+
+/**
+ * A bar that grows left or right from a shared centre line.
+ *
+ * Trend drivers are signed, and the sign carries most of the meaning: a
+ * category that took cost out of the plan and one that put cost in are not
+ * distinguished by a longer or shorter bar, only by which side of zero it sits
+ * on. Every bar in a column shares one scale so the lengths can be compared
+ * down the table.
+ */
+export function DivergingBar({
+  value,
+  max,
+  className,
+}: {
+  value: number;
+  max: number;
+  className?: string;
+}) {
+  const magnitude = max > 0 ? Math.min(1, Math.abs(value) / max) : 0;
+  const width = `${magnitude * 50}%`;
+  const up = value > 0;
+  return (
+    <div
+      className={cn("relative h-2 w-full rounded-sm bg-ink-100/70", className)}
+    >
+      <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-ink-300" />
+      <div
+        className={cn(
+          "absolute inset-y-0 rounded-sm",
+          up ? "left-1/2 bg-rose-400" : "right-1/2 bg-emerald-500",
+        )}
+        style={{ width }}
+      />
+    </div>
+  );
+}
+
+/**
+ * What the capability on this page is worth to the people selling it.
+ *
+ * Every function in this build sits inside one number: the $2.10 per member
+ * per month administrative fee in Contract ETG0013. Clinical review, prior
+ * authorisation, surveillance, member service and reporting are not priced
+ * separately anywhere in the contract, because under a pass-through model
+ * there is nowhere else for the money to come from. Setting each capability
+ * against that fee is the most direct way to show what is actually being
+ * bought, and it is a published figure rather than an estimate.
+ */
+export function IncumbentNote({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-amber-300/60 bg-amber-50/60 px-5 py-4",
+        className,
+      )}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-amber-900">
+        What this is worth to a PBM
+      </div>
+      <div className="mt-1.5 max-w-4xl text-[13px] leading-relaxed text-amber-950">
+        {children}
+      </div>
     </div>
   );
 }

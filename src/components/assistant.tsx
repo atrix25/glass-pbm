@@ -29,6 +29,17 @@ interface WorkStep {
   summary: string | null;
   data: unknown;
   citations: Citation[];
+  /** True when the call was chosen after seeing an earlier result. */
+  followUp: boolean;
+}
+
+interface HandoffPacket {
+  reason: string;
+  memberName: string;
+  cardholderId: string;
+  question: string;
+  established: string[];
+  suggestedOwner: string;
 }
 
 interface Answer {
@@ -39,7 +50,10 @@ interface Answer {
   citations: Citation[];
   links: { label: string; href: string }[];
   handoff: string | null;
+  handoffPacket: HandoffPacket | null;
   work: WorkStep[];
+  runId: string;
+  autonomy: string;
   elapsedMs: number;
 }
 
@@ -238,6 +252,12 @@ function Welcome({
   );
 }
 
+/** The handoff reason is a label, and it has to end before the next sentence. */
+function sentence(s: string): string {
+  const t = s.trim();
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+}
+
 function Exchange({ turn }: { turn: Turn }) {
   return (
     <div className="space-y-3">
@@ -268,6 +288,30 @@ function Exchange({ turn }: { turn: Turn }) {
                   <ArrowUp className="h-3 w-3 rotate-45" />
                 </Link>
               ))}
+            </div>
+          ) : null}
+
+          {turn.answer.handoffPacket ? (
+            <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/60 px-3.5 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-amber-900">
+                Handed to a person, with the context attached
+              </div>
+              <p className="mt-1 text-[12.5px] leading-relaxed text-amber-950">
+                {sentence(turn.answer.handoffPacket.reason)} The ticket goes to{" "}
+                {turn.answer.handoffPacket.suggestedOwner.toLowerCase()}
+                {turn.answer.handoffPacket.established.length > 0
+                  ? `, with everything the agent already established, so nobody asks ${turn.answer.handoffPacket.memberName.split(" ")[0]} the same questions again.`
+                  : ", who is the only person who can answer it."}
+              </p>
+              {turn.answer.handoffPacket.established.length > 0 ? (
+                <ul className="mt-1.5 space-y-0.5">
+                  {turn.answer.handoffPacket.established.map((e, i) => (
+                    <li key={i} className="text-[11.5px] leading-snug text-amber-900">
+                      · {e}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 
@@ -319,7 +363,8 @@ function WorkPanel({ answer, busy }: { answer: Answer | null; busy: boolean }) {
           ) : null}
         </div>
         <p className="mt-1 text-[11.5px] leading-snug text-ink-500">
-          The model chooses which question to ask. The rules engine answers it.
+          The agent chooses one question at a time and looks at the answer
+          before choosing the next. The rules engine answers all of them.
         </p>
       </div>
 
@@ -328,6 +373,22 @@ function WorkPanel({ answer, busy }: { answer: Answer | null; busy: boolean }) {
           <p className="px-1 py-6 text-center text-[12px] text-ink-400">
             {busy ? "Working…" : "Ask something to see the tool calls."}
           </p>
+        ) : answer.work.length === 0 ? (
+          /*
+           * A refusal is the one answer that reaches no tools, and an empty
+           * panel next to it reads as a fault rather than as the point. The
+           * decision not to look anything up is itself the work.
+           */
+          <div className="rounded-lg border border-amber-300/70 bg-amber-50/50 px-3 py-2.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-amber-900">
+              No tool was called
+            </div>
+            <p className="mt-1 text-[12px] leading-relaxed text-amber-950">
+              The agent read the question, decided it was not one the plan&rsquo;s
+              data can answer, and stopped there. Looking up coverage would have
+              produced a confident reply to a question nobody asked.
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
             {answer.work.map((step, i) => (
@@ -347,7 +408,14 @@ function WorkPanel({ answer, busy }: { answer: Answer | null; busy: boolean }) {
               on <span className="font-medium text-ink-700">{answer.drug}</span>
             </>
           ) : null}
-          . No figure in the reply was produced by the language layer.
+          . No figure in the reply was produced by the language layer.{" "}
+          <Link
+            href={`/agents/runs/${answer.runId}`}
+            className="text-glass-700 hover:text-glass-900"
+          >
+            Full trace
+          </Link>
+          .
         </div>
       ) : null}
     </aside>
@@ -370,6 +438,11 @@ function WorkStepCard({ step, index }: { step: WorkStep; index: number }) {
           <span className="block text-[12.5px] font-medium leading-tight text-ink-900">
             {TOOL_LABEL[step.tool] ?? step.tool}
           </span>
+          {step.followUp ? (
+            <span className="mt-1 inline-block rounded bg-glass-50 px-1.5 py-0.5 text-[10.5px] font-medium text-glass-800 ring-1 ring-inset ring-glass-600/20">
+              chosen after reading the previous result
+            </span>
+          ) : null}
           <span className="mt-1 block text-[11.5px] leading-snug text-ink-500">
             {step.because}
           </span>

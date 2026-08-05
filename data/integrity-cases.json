@@ -1,0 +1,33 @@
+{
+  "members": [
+    {
+      "id": "mbr-W100000448-01",
+      "caseId": "opioid-overutilisation",
+      "story": "Three overlapping opioids taking the daily dose past the CDC ceiling, assembled from prescribers and pharmacies that rotate on every fill."
+    },
+    {
+      "id": "mbr-W100000924-04",
+      "caseId": "opioid-overutilisation",
+      "story": "Three overlapping opioids taking the daily dose past the CDC ceiling, assembled from prescribers and pharmacies that rotate on every fill."
+    },
+    {
+      "id": "mbr-W100001526-01",
+      "caseId": "opioid-overutilisation",
+      "story": "Three overlapping opioids taking the daily dose past the CDC ceiling, assembled from prescribers and pharmacies that rotate on every fill."
+    }
+  ],
+  "prescribers": [
+    {
+      "npi": "1007898020",
+      "caseId": "prescriber-concentration",
+      "story": "64 per cent of this family physician's prescriptions are controlled substances, against a specialty median near five per cent."
+    }
+  ],
+  "pharmacies": [
+    {
+      "id": "ph-ind-osh",
+      "caseId": "pharmacy-mix",
+      "story": "15 per cent of what this pharmacy dispenses is a controlled substance, against a network median near five per cent."
+    }
+  ]
+}

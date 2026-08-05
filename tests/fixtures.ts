@@ -65,6 +65,21 @@ export const PLAN: EngineBenefitPlan = {
   })),
 };
 
+/**
+ * The other plan Wisconsin offers, and the one where the deductible is not
+ * decoration. $1,700 individual, integrated with medical, with the two
+ * out-of-pocket limits set to the federal maximum.
+ */
+export const HDHP_PLAN: EngineBenefitPlan = {
+  ...PLAN,
+  id: "wi-hdhp-2026",
+  name: "High Deductible Health Plan",
+  deductibleIndividual: 170_000,
+  deductibleIntegratedWithMedical: true,
+  rxOopLimitIndividual: 250_000,
+  federalOopLimitIndividual: 250_000,
+};
+
 export const RETAIL_PHARMACY: EnginePharmacy = {
   id: "ph-test-retail",
   npi: "1111111111",
@@ -118,6 +133,10 @@ export function drug(over: Partial<EngineDrug> = {}): EngineDrug {
     isSpecialty: false,
     therapeuticClass: "Test class",
     nadacPerUnit: 1,
+    // Billed by the each, one unit to a package: a tablet, the simplest case,
+    // so a test that cares about package conversion has to say so.
+    packageSize: 1,
+    unitOfMeasure: "EA",
     ...over,
   };
 }
@@ -138,6 +157,8 @@ export function entry(
     qlQuantity: null,
     qlDays: null,
     qlRawText: null,
+    qlUnit: null,
+    qlBasis: null,
     requiredDiagnosisCodes: [],
     diagnosisRawText: null,
     ...over,
@@ -153,6 +174,10 @@ interface ContextOverrides {
   daysSupply?: number;
   dateOfService?: Date;
   dawCode?: string;
+  /** NCPDP 418-DK; "3" is how a pharmacy signals an emergency fill. */
+  levelOfService?: string;
+  /** NCPDP 462-EV, an authorization number supplied by the pharmacy. */
+  priorAuthNumber?: string;
   usualAndCustomaryCents?: number;
   ingredientCostSubmittedCents?: number;
   accumulators?: AdjudicationContext["accumulators"];
@@ -178,6 +203,8 @@ export function makeContext(o: ContextOverrides): AdjudicationContext {
       quantityDispensed: quantity,
       daysSupply: o.daysSupply ?? 30,
       dawCode: o.dawCode ?? "0",
+      levelOfService: o.levelOfService,
+      priorAuthNumber: o.priorAuthNumber,
       // A pharmacy bills its own price and lets the processor reprice it, so
       // the default here sits well above the contract and lets the lesser-of
       // actually choose. Tests that care about the cash-price arm set it.

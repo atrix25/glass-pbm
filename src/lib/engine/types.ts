@@ -79,6 +79,11 @@ export interface ClaimRequest {
   compoundCode?: string;
   /** NCPDP 462-EV */
   priorAuthNumber?: string;
+  /**
+   * NCPDP 418-DK. Value "3" is Emergency, which is how a pharmacy asks for the
+   * weekend and holiday emergency supply rather than the plan inferring it.
+   */
+  levelOfService?: string;
   transactionCode?: "B1" | "B2" | "B3";
 }
 

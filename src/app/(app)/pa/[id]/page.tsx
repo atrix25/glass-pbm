@@ -19,7 +19,9 @@ import {
   Td,
   Th,
 } from "@/components/ui";
-import { getPaClaims, getPriorAuthDetail } from "@/lib/queries/pa";
+import { EpaExchange } from "@/components/epa-exchange";
+import { getEpaExchange, getPaClaims, getPriorAuthDetail } from "@/lib/queries/pa";
+import { paDeadlines } from "@/lib/pa/engine";
 import { formatCents } from "@/lib/money";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getSource } from "@/lib/sources";
@@ -36,17 +38,41 @@ export default async function PriorAuthDetail({
   const detail = await getPriorAuthDetail(id);
   if (!detail) notFound();
   const { pa, path } = detail;
-  const claims = await getPaClaims(pa.memberId, pa.drugId);
+  const [claims, exchange] = await Promise.all([
+    getPaClaims(pa.memberId, pa.drugId),
+    getEpaExchange(id),
+  ]);
 
   const approved = pa.determination === "Approved";
   const denied = pa.determination === "Denied";
   const visited = path.filter((s) => s.visited);
+
+  /*
+   * Two deadlines, both real, and the request is held to the earlier one.
+   *
+   * The regulation that governs this request is not a single hardcoded pair of
+   * Part D citations: a commercial pre-service request is an ERISA claim with a
+   * 15-day clock, and an exception request does not start its clock until the
+   * prescriber's supporting statement arrives. Over the top of that sits the
+   * turnaround the plan actually bought, which on a standard request is twelve
+   * days shorter than the law allows. Showing only the statutory one would make
+   * a request that owes a performance credit look comfortably on time.
+   */
+  const deadlines = paDeadlines(
+    pa.receivedAt,
+    pa.urgency === "Expedited" ? "Expedited" : "Standard",
+    "Commercial",
+    {
+      requestType: pa.requestType,
+      supportingStatementAt: pa.prescriberStatementAt,
+    },
+  );
+  const sla = deadlines.binding;
   const turnaroundHours = pa.decidedAt
-    ? (pa.decidedAt.getTime() - pa.receivedAt.getTime()) / 3_600_000
+    ? (pa.decidedAt.getTime() - sla.startedAt.getTime()) / 3_600_000
     : null;
-  const expedited = pa.urgency === "Expedited";
-  const allowedHours = expedited ? 24 : 72;
-  const clock = getSource(expedited ? "cfr-423-572" : "cfr-423-568");
+  const allowedHours = sla.hours;
+  const clock = getSource("cfr-2560-503-1");
 
   return (
     <div className="space-y-5">
@@ -234,7 +260,7 @@ export default async function PriorAuthDetail({
           <Card>
             <CardHeader
               title="Turnaround"
-              description="Measured against the regulatory clock, not an internal service level."
+              description="Measured against the earlier of two deadlines: what the regulation allows and what the contract promised."
             />
             <div className="space-y-3 px-5 py-4">
               <div className="flex items-baseline justify-between">
@@ -261,12 +287,53 @@ export default async function PriorAuthDetail({
                 />
               </div>
               <p className="text-[12px] leading-relaxed text-ink-500">
-                A {pa.urgency.toLowerCase()} request allows {allowedHours} hours.
-                This one took{" "}
+                A {pa.urgency.toLowerCase()} {pa.requestType === "PA" ? "request" : "exception request"}{" "}
+                allows {allowedHours} hours. This one took{" "}
                 {turnaroundHours != null
                   ? `${turnaroundHours.toFixed(1)}`
                   : "—"}
                 .
+              </p>
+
+              {/*
+                Both clocks, named. The binding one is the number above; the
+                other is shown so the gap between what was promised and what is
+                permitted is visible rather than implied.
+              */}
+              <div className="space-y-1.5 rounded-lg bg-ink-50/70 px-3 py-2.5">
+                <DeadlineLine
+                  label="Contract"
+                  hours={deadlines.contractual.hours}
+                  binds={deadlines.bindingSource === "contractual"}
+                />
+                <DeadlineLine
+                  label="Regulation"
+                  hours={deadlines.regulatory.hours}
+                  binds={deadlines.bindingSource === "regulatory"}
+                />
+                <p className="pt-0.5 text-[11px] leading-relaxed text-ink-500">
+                  {deadlines.bindingSource === "contractual"
+                    ? "The contract is the binding number here. Missing it draws on the amount at risk in the guarantee schedule; missing the regulatory one would additionally vest the member's right to external review."
+                    : "The regulation is the binding number here."}
+                </p>
+              </div>
+              {sla.startedAt.getTime() !== pa.receivedAt.getTime() ? (
+                <p className="text-[11.5px] leading-relaxed text-ink-500">
+                  The clock started on {formatDateTime(sla.startedAt)}, when the
+                  prescriber&apos;s supporting statement arrived, rather than on
+                  receipt. An exception asks the plan to depart from its own
+                  formulary, which it cannot decide until the prescriber has said
+                  why it should.
+                </p>
+              ) : null}
+              {sla.awaitingSupportingStatement ? (
+                <p className="text-[11.5px] leading-relaxed text-amber-700">
+                  Waiting on the prescriber&apos;s supporting statement. The
+                  regulatory clock has not started.
+                </p>
+              ) : null}
+              <p className="text-[11.5px] leading-relaxed text-ink-500">
+                {sla.citation}
               </p>
               <SourceLink url={clock.url}>{clock.title}</SourceLink>
             </div>
@@ -299,6 +366,14 @@ export default async function PriorAuthDetail({
               </p>
             </div>
           </Card>
+
+          {exchange ? (
+            <EpaExchange
+              transactions={exchange.transactions}
+              questionnaire={exchange.questionnaire}
+              unusedAnswers={exchange.unusedAnswers}
+            />
+          ) : null}
 
           {claims.length > 0 ? (
             <Card>
@@ -411,6 +486,35 @@ function Meta({
         {label}
       </dt>
       <dd className="mt-0.5 text-ink-800">{children}</dd>
+    </div>
+  );
+}
+
+function DeadlineLine({
+  label,
+  hours,
+  binds,
+}: {
+  label: string;
+  hours: number;
+  binds: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-[12px]">
+      <span className={binds ? "font-medium text-ink-800" : "text-ink-500"}>
+        {label}
+      </span>
+      <span className="flex items-baseline gap-2">
+        <span
+          className={cn(
+            "tnum",
+            binds ? "font-semibold text-ink-900" : "text-ink-500",
+          )}
+        >
+          {hours >= 48 ? `${Math.round(hours / 24)} days` : `${hours} hours`}
+        </span>
+        {binds ? <Badge tone="accent">binds</Badge> : null}
+      </span>
     </div>
   );
 }

@@ -224,9 +224,17 @@ export function generatePopulation(
     const effectiveDate = startsMidYear
       ? new Date(Date.UTC(opts.planYear, rng.int(1, 8), 1))
       : yearStart;
-    const terminationDate = endsMidYear
-      ? new Date(Date.UTC(opts.planYear, rng.int(7, 11), 28))
-      : null;
+    /*
+     * A leaver has to leave after they arrived. Drawing the two dates
+     * independently produces a handful of contracts a year that end before
+     * they begin, which the engine handles correctly — every claim rejects —
+     * but which is not a thing an employer can do.
+     */
+    const firstTermMonth = Math.max(7, effectiveDate.getUTCMonth() + 1);
+    const terminationDate =
+      endsMidYear && firstTermMonth <= 11
+        ? new Date(Date.UTC(opts.planYear, rng.int(firstTermMonth, 11), 28))
+        : null;
 
     const addPerson = (
       personCode: string,
@@ -265,7 +273,7 @@ export function generatePopulation(
         state: "WI",
         zip,
         phone: `608${rng.int(2000000, 9999999)}`,
-        email: `${first.toLowerCase()}.${lastName.toLowerCase().replace(/'/g, "")}@example.wi.gov`,
+        email: `${first.toLowerCase()}.${lastName.toLowerCase().replace(/'/g, "")}@steelpotatoes.example`,
         diagnosisCodes,
         weightKg: Math.round((gender === "F" ? 68 : 84) + rng.next() * 34 - 12),
         profileId: profile.id,

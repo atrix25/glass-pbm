@@ -13,10 +13,14 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "ingest": "tsx scripts/ingest/index.ts",
+    "packages": "tsx scripts/attach-packages.ts --write",
     "seed": "tsx scripts/seed/index.ts",
-    "setup": "npm run db:generate && npm run db:push && npm run seed",
+    "enrich": "tsx scripts/assign-molecules.ts && tsx scripts/attach-labelers.ts && tsx scripts/build-opioid-table.ts && tsx scripts/attach-prescribers.ts && tsx scripts/seed-integrity-cases.ts && tsx scripts/run-dur.ts && tsx scripts/run-integrity.ts && tsx scripts/build-financials.ts && tsx scripts/build-eligibility-files.ts && tsx scripts/build-mac.ts && tsx scripts/seed-incident.ts && tsx scripts/benchmark-throughput.ts",
+    "benchmark": "tsx scripts/benchmark-throughput.ts",
+    "setup": "npm run db:generate && npm run db:push && npm run packages && npm run seed && npm run enrich",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy": "flyctl deploy --remote-only && flyctl machine start $(flyctl machine list --json | node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].id))\") && node scripts/wait-for-health.mjs"
   },
   "prisma": {
     "seed": "tsx scripts/seed/index.ts"
@@ -45,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "pdfjs-dist": "^5.5.207",
+    "playwright": "^1.62.1",
     "prisma": "^6.19.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",

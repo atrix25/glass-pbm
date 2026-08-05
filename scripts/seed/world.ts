@@ -19,7 +19,7 @@ import {
   MODELED_CLIENT_MAC_MULTIPLIER,
 } from "../../src/lib/contracts/michigan.js";
 
-export const SPONSOR_ID = "wi-etf";
+export const SPONSOR_ID = "steel-potatoes";
 export const NETWORK_LIMITED = "navicare-limited";
 export const NETWORK_SPECIALTY = "navicare-specialty";
 export const FORMULARY_ID = "navitus-etf-2026";
@@ -282,10 +282,15 @@ export async function seedPharmacies(prisma: PrismaClient) {
 export async function seedSponsorAndPlans(prisma: PrismaClient) {
   await prisma.planSponsor.upsert({
     where: { id: SPONSOR_ID },
+    // The employer is invented. The contract it buys on is not: Steel Potatoes
+    // is priced on the Wisconsin ETF / Navitus ETG0013 rate card, which is a
+    // published document, and every page that quotes a rate cites it. An
+    // invented employer on real terms is the honest way to show a commercial
+    // book, because the alternative is inventing the terms too.
     create: {
       id: SPONSOR_ID,
-      name: "State of Wisconsin Department of Employee Trust Funds",
-      shortName: "Wisconsin ETF",
+      name: "Steel Potatoes LLC",
+      shortName: "Steel Potatoes",
       fundingType: "Self-insured",
       situsState: "WI",
       planYearStart: "01-01",
@@ -293,7 +298,10 @@ export async function seedSponsorAndPlans(prisma: PrismaClient) {
       contractId: WISCONSIN_CONTRACT.id,
       contractName: "ETG0013",
     },
-    update: {},
+    update: {
+      name: "Steel Potatoes LLC",
+      shortName: "Steel Potatoes",
+    },
   });
 
   const plans = [

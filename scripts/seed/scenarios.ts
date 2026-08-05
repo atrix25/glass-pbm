@@ -20,7 +20,11 @@ import {
   type EngineContract,
   type EngineFormularyEntry,
 } from "../../src/lib/engine/adjudicate.js";
-import { determinePA, computeSla, type PAFacts } from "../../src/lib/pa/engine.js";
+import {
+  evaluateQuantityLimit,
+  type QuantityLimitBasis,
+} from "../../src/lib/engine/quantity-limit.js";
+import { determinePA, paDeadlines, type PAFacts } from "../../src/lib/pa/engine.js";
 import { CRITERIA_TREES, findTreeForDrug } from "../../src/lib/pa/criteria.js";
 import { PHARMACIES, SPONSOR_ID } from "./world.js";
 
@@ -110,6 +114,8 @@ interface DrugRow {
   isSpecialty: boolean;
   therapeuticClass: string | null;
   unitOfMeasure: string;
+  packageSize: number;
+  packageContainers: Record<string, number> | null;
   nadacDescription: string | null;
   nadacPerUnit: number;
   formulary: EngineFormularyEntry;
@@ -180,6 +186,10 @@ async function loadDrug(
     isSpecialty: entry.drug.isSpecialty,
     therapeuticClass: entry.drug.therapeuticClass,
     unitOfMeasure: entry.drug.unitOfMeasure,
+    packageSize: entry.drug.packageSize,
+    packageContainers: entry.drug.packageContainers
+      ? (JSON.parse(entry.drug.packageContainers) as Record<string, number>)
+      : null,
     nadacDescription: entry.drug.nadacDescription,
     nadacPerUnit: price.unitPrice,
     formulary: {
@@ -194,6 +204,8 @@ async function loadDrug(
       planExclusion: entry.planExclusion,
       qlQuantity: entry.qlQuantity,
       qlDays: entry.qlDays,
+      qlUnit: entry.qlUnit,
+      qlBasis: entry.qlBasis,
       qlRawText: entry.qlRawText,
       requiredDiagnosisCodes: JSON.parse(entry.requiredDiagnosisCodes),
       diagnosisRawText: entry.diagnosisRawText,
@@ -265,7 +277,15 @@ export async function seedScenarios(prisma: PrismaClient, deps: ScenarioDeps) {
   const lumicera = PHARMACIES.find((p) => p.id === "ph-lumicera")!;
   const oon = PHARMACIES.find((p) => p.id === "ph-oon-illinois")!;
 
-  let seq = 900000;
+  /*
+   * Numbered above the generated book rather than at a fixed offset inside
+   * it. The book is sized by the population, so any fixed offset is a
+   * collision waiting for the membership to grow past it.
+   */
+  const [{ maxSeq }] = await prisma.$queryRaw<Array<{ maxSeq: bigint | null }>>`
+    SELECT MAX(CAST(SUBSTR(claimNumber, 4) AS INTEGER)) AS maxSeq FROM Claim
+  `;
+  let seq = Number(maxSeq ?? 0) + 1000;
   const claimRows: Parameters<typeof prisma.claim.create>[0]["data"][] = [];
 
   interface RunArgs {
@@ -328,6 +348,14 @@ export async function seedScenarios(prisma: PrismaClient, deps: ScenarioDeps) {
         isSpecialty: args.drug.isSpecialty,
         therapeuticClass: args.drug.therapeuticClass,
         nadacPerUnit: args.drug.nadacPerUnit,
+        // Carried so a scenario claim adjudicates the same way here as it does
+        // when the replay engine loads it back out of the database. Omitting
+        // them let the engine fall back to "billed by the each", which made a
+        // quantity limit written in injections enforceable at seed time and
+        // unenforceable on replay.
+        unitOfMeasure: args.drug.unitOfMeasure,
+        packageSize: args.drug.packageSize,
+        packageContainers: args.drug.packageContainers,
       },
       formularyEntry: args.drug.formulary,
       pharmacy: {
@@ -690,19 +718,70 @@ export async function seedScenarios(prisma: PrismaClient, deps: ScenarioDeps) {
     });
   }
 
-  // A quantity limit breach, which is the audit finding we replicate.
-  const qlDrug = await prisma.formularyEntry.findFirst({
+  /*
+   * A quantity limit breach, which is the audit finding we replicate.
+   *
+   * The drug is chosen by asking the engine whether the limit would actually
+   * fire, rather than by taking the first row with numbers in it. A limit of
+   * "1 inj/84 days" on a drug the pharmacy bills by the millilitre cannot be
+   * enforced without knowing how many millilitres are in an injection, so a
+   * scenario built on one demonstrates nothing: it either passes, and the demo
+   * shows no breach, or it refuses on a unit mismatch, which is the bug rather
+   * than the finding.
+   */
+  const qlCandidates = await prisma.formularyEntry.findMany({
     where: {
       formularyId: "navitus-etf-2026",
       hasQuantityLimit: true,
       qlQuantity: { not: null },
       qlDays: { not: null },
       level: { in: ["1", "2", "3"] },
+      // Nothing else on the entry may reject first, or the claim would show a
+      // different finding than the one the scenario is named for.
+      requiresPA: false,
+      requiresStep: false,
+      diagnosisRestricted: false,
+      mandatorySpecialty: false,
+      notCovered: false,
+      planExclusion: false,
       drug: { prices: { some: { priceType: "NADAC" } } },
     },
     include: { drug: { include: { prices: true } } },
+    orderBy: { drug: { name: "asc" } },
+    take: 200,
   });
-  if (qlDrug) {
+
+  const breach = qlCandidates
+    .map((entry) => {
+      const containers = entry.drug.packageContainers
+        ? (JSON.parse(entry.drug.packageContainers) as Record<string, number>)
+        : null;
+      // Two and a half times the daily allowance over a thirty day supply, the
+      // same shape as Vascepa dispensed at ten a day against a limit of four.
+      const quantity = Math.ceil((entry.qlQuantity! / entry.qlDays!) * 30 * 2.5);
+      const verdict = evaluateQuantityLimit({
+        limit: {
+          quantity: entry.qlQuantity!,
+          unit: entry.qlUnit,
+          basis: (entry.qlBasis as QuantityLimitBasis | null) ?? "dispensing-unit",
+          periodDays: entry.qlDays,
+          rawText: entry.qlRawText,
+        },
+        quantityDispensed: quantity,
+        daysSupply: 30,
+        dateOfService: day(150),
+        packageSize: entry.drug.packageSize,
+        unitOfMeasure: entry.drug.unitOfMeasure,
+        packageContainers: containers,
+        priorFills: [],
+        planYearStart: new Date(yearStart),
+      });
+      return { entry, containers, quantity, verdict };
+    })
+    .find((c) => c.verdict.enforceable && !c.verdict.withinLimit);
+
+  if (breach) {
+    const { entry: qlDrug, containers, quantity } = breach;
     const price = qlDrug.drug.prices.find((p) => p.priceType === "NADAC")!;
     const drug: DrugRow = {
       id: qlDrug.drug.id,
@@ -713,6 +792,8 @@ export async function seedScenarios(prisma: PrismaClient, deps: ScenarioDeps) {
       isSpecialty: qlDrug.drug.isSpecialty,
       therapeuticClass: qlDrug.drug.therapeuticClass,
       unitOfMeasure: qlDrug.drug.unitOfMeasure,
+      packageSize: qlDrug.drug.packageSize,
+      packageContainers: containers,
       nadacDescription: qlDrug.drug.nadacDescription,
       nadacPerUnit: price.unitPrice,
       formulary: {
@@ -727,23 +808,22 @@ export async function seedScenarios(prisma: PrismaClient, deps: ScenarioDeps) {
         planExclusion: qlDrug.planExclusion,
         qlQuantity: qlDrug.qlQuantity,
         qlDays: qlDrug.qlDays,
+        qlUnit: qlDrug.qlUnit,
+        qlBasis: qlDrug.qlBasis,
         qlRawText: qlDrug.qlRawText,
         requiredDiagnosisCodes: [],
         diagnosisRawText: null,
       },
     };
-    const overLimit = Math.ceil(
-      (qlDrug.qlQuantity! / qlDrug.qlDays!) * 30 * 2.5,
-    );
     run({
       memberId: thomas.id,
       diagnosisCodes: [...thomas.diagnosisCodes],
       drug,
       pharmacy: walgreens,
       dateOfService: day(150),
-      quantity: overLimit,
+      quantity,
       daysSupply: 30,
-      uandcCents: Math.round(price.unitPrice * overLimit * 100 * 1.7),
+      uandcCents: Math.round(price.unitPrice * quantity * 100 * 1.7),
       scenarioTag: "audit-quantity-limit",
       rxNumber: "7300005",
     });
@@ -880,7 +960,7 @@ async function seedPriorAuths(
 
   for (const c of cases) {
     const determination = determinePA(tree, c.facts);
-    const sla = computeSla(c.receivedAt, c.urgency, "Commercial");
+    const sla = paDeadlines(c.receivedAt, c.urgency, "Commercial").binding;
     const decidedAt = new Date(
       c.receivedAt.getTime() + (c.urgency === "Expedited" ? 4 : 26) * 3_600_000,
     );

@@ -10,6 +10,7 @@ import {
   Th,
 } from "@/components/ui";
 import { listMembers } from "@/lib/queries/members";
+import { getClock } from "@/lib/session";
 import { DEMO_MEMBER_STORIES } from "@/lib/demo-members";
 import { formatCents } from "@/lib/money";
 import { formatNumber } from "@/lib/utils";
@@ -26,11 +27,14 @@ export default async function MembersPage({
   const page = Number(typeof sp.page === "string" ? sp.page : 1);
   const sort = sp.sort === "name" ? ("name" as const) : ("spend" as const);
 
-  const { rows, total, pages } = await listMembers({ q, page, sort });
+  const clock = await getClock();
+  const { rows, total, pages } = await listMembers({ q, page, sort }, clock);
 
   return (
     <div className="space-y-5">
-      <SectionTitle description="A synthetic population of 2,488 covered lives, generated to match the age, utilization, and spend distribution published in the ET-8933 pharmacy benefits fact sheet. Every claim on every member ran through the same engine.">
+      <SectionTitle
+        description={`A synthetic population of ${formatNumber(total)} covered lives, generated to match the age, utilization, and spend distribution published in the ET-8933 pharmacy benefits fact sheet. Every claim on every member ran through the same engine. Spend is year to date, through the simulation clock.`}
+      >
         Membership
       </SectionTitle>
 
@@ -60,14 +64,14 @@ export default async function MembersPage({
         </div>
       </Card>
 
-      <div className="flex items-center justify-between gap-4">
-        <form action="/members" className="relative">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <form action="/members" className="relative w-full sm:w-auto">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
           <input
             name="q"
             defaultValue={q}
             placeholder="Name or member ID"
-            className="w-[280px] rounded-lg border border-ink-200 bg-white py-[7px] pl-8 pr-3 text-[13px] outline-none transition placeholder:text-ink-400 focus:border-glass-400 focus:ring-2 focus:ring-glass-100"
+            className="w-full rounded-lg border border-ink-200 bg-white py-[7px] pl-8 pr-3 text-[13px] outline-none transition placeholder:text-ink-400 focus:border-glass-400 focus:ring-2 focus:ring-glass-100 sm:w-[280px]"
           />
         </form>
         <div className="flex items-center gap-2 text-[12.5px]">

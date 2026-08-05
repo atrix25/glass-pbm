@@ -20,10 +20,21 @@ import {
   type PriorFill,
 } from "../../src/lib/engine/adjudicate.js";
 import type { Channel } from "../../src/lib/engine/types.js";
+import {
+  medicalEncountersFor,
+  type MedicalEncounter,
+} from "../../src/lib/accumulators/medical-feed.js";
+import { moleculeKey } from "../../src/lib/clinical/molecules.js";
+import {
+  dispensingWeightForProduct,
+  dosageFormShare,
+  UNLISTED_MOLECULE_WEIGHT,
+} from "../../src/lib/clinical/dispensing-volume.js";
 import { Rng, type GeneratedMember, PROFILES } from "./population.js";
 import { PHARMACIES } from "./world.js";
 import {
   createPriorAuthDecider,
+  decideWithoutCriteria,
   isCriteriaGoverned,
   type DecidedPA,
 } from "./prior-auths.js";
@@ -34,6 +45,8 @@ export interface DrugCandidate {
   name: string;
   nadacDescription: string | null;
   unitOfMeasure: string;
+  packageSize: number;
+  packageContainers: Record<string, number> | null;
   nadacPerUnit: number;
   monyCode: string;
   isBrandLabel: boolean;
@@ -158,6 +171,141 @@ export interface ClaimGenerationInput {
   contract: EngineContract;
   planYear: number;
   seed: number;
+  /**
+   * Reusable state for generating the book one slice of members at a time.
+   *
+   * A hundred thousand lives produce more claims than fit comfortably in
+   * memory at once, so the seed walks the population in batches and writes
+   * each batch before generating the next. Passing the same generator and
+   * sequence counter through every call makes the batched run produce exactly
+   * the book a single call would have produced.
+   */
+  rng?: Rng;
+  claimSeqStart?: number;
+  pools?: DrugPools;
+}
+
+/**
+ * Class pools narrowed to routine therapy once, up front.
+ *
+ * Recomputing these per fill is what makes the naive generator quadratic in
+ * catalog size.
+ */
+export interface DrugPools {
+  routineByClass: Map<string, WeightedPool>;
+  allRoutine: WeightedPool;
+}
+
+/**
+ * A pool of drugs with a cumulative weight index over it.
+ *
+ * The weights are dispensing volumes, so a draw lands on the drugs people
+ * actually take. The cumulative array is built once per pool because a draw
+ * happens millions of times: summing weights per fill would make the seed
+ * quadratic in catalog size, which is the same trap the uniform version was
+ * written to avoid.
+ */
+export interface WeightedPool {
+  drugs: DrugCandidate[];
+  /** cumulative[i] is the summed weight of drugs 0..i. */
+  cumulative: number[];
+  total: number;
+}
+
+/**
+ * Weight for one product.
+ *
+ * The molecule's national dispensing volume, split between the products that
+ * carry it. Splitting matters: a molecule listed as a brand, a generic and two
+ * strengths would otherwise draw four times its real share.
+ *
+ * Within a molecule the generic takes the great majority of the weight, which
+ * is what a plan with a mandatory-generic provision and an 88% generic
+ * dispensing rate looks like. The brand is left reachable rather than zeroed,
+ * because brand fills at Level 2 and 3 are where member cost share and the
+ * DAW-1 penalty actually come from.
+ */
+const BRAND_SHARE_WITHIN_MOLECULE = 0.1;
+
+function buildWeightedPool(drugs: DrugCandidate[]): WeightedPool {
+  const byMolecule = new Map<string, DrugCandidate[]>();
+  for (const d of drugs) {
+    const key = moleculeKey(d.nadacDescription, d.name);
+    const list = byMolecule.get(key);
+    if (list) list.push(d);
+    else byMolecule.set(key, [d]);
+  }
+
+  const weightOf = new Map<string, number>();
+  for (const [, products] of byMolecule) {
+    const first = products[0]!;
+    const volume = dispensingWeightForProduct(
+      first.name,
+      first.nadacDescription,
+    );
+    const brands = products.filter((p) => p.isBrandLabel);
+    const generics = products.filter((p) => !p.isBrandLabel);
+
+    /*
+     * Split the molecule's volume across its products by dosage form first, so
+     * that a tablet and an oral solution of the same drug do not come out
+     * equally common, then by brand against generic.
+     */
+    const share = (group: DrugCandidate[], pool: number) => {
+      const forms = group.map((p) => dosageFormShare(p.name));
+      const denom = forms.reduce((a, b) => a + b, 0);
+      group.forEach((p, i) => {
+        weightOf.set(p.id, denom > 0 ? (pool * forms[i]!) / denom : 0);
+      });
+    };
+
+    // With nothing to split between, the molecule's whole volume goes to the
+    // products that exist.
+    if (brands.length === 0 || generics.length === 0) {
+      share(products, volume);
+      continue;
+    }
+    share(brands, volume * BRAND_SHARE_WITHIN_MOLECULE);
+    share(generics, volume * (1 - BRAND_SHARE_WITHIN_MOLECULE));
+  }
+
+  const cumulative: number[] = new Array(drugs.length);
+  let running = 0;
+  for (let i = 0; i < drugs.length; i++) {
+    running += weightOf.get(drugs[i]!.id) ?? UNLISTED_MOLECULE_WEIGHT;
+    cumulative[i] = running;
+  }
+  return { drugs, cumulative, total: running };
+}
+
+export function buildDrugPools(
+  drugsByClass: Map<string, DrugCandidate[]>,
+  allDrugs: DrugCandidate[],
+): DrugPools {
+  const routineByClass = new Map<string, WeightedPool>();
+  for (const [cls, drugs] of drugsByClass) {
+    const routine = drugs.filter(isRoutineTherapy);
+    if (routine.length > 0) routineByClass.set(cls, buildWeightedPool(routine));
+  }
+  return {
+    routineByClass,
+    allRoutine: buildWeightedPool(allDrugs.filter(isRoutineTherapy)),
+  };
+}
+
+/** Draw one drug from a pool, by dispensing volume. */
+function pickWeighted(pool: WeightedPool, rng: Rng): DrugCandidate | null {
+  if (pool.drugs.length === 0) return null;
+  const target = rng.next() * pool.total;
+  // Binary search over the cumulative weights.
+  let lo = 0;
+  let hi = pool.cumulative.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (pool.cumulative[mid]! < target) lo = mid + 1;
+    else hi = mid;
+  }
+  return pool.drugs[lo] ?? null;
 }
 
 export interface GeneratedClaim {
@@ -196,6 +344,19 @@ export interface ClaimGenerationResult {
   priorAuths: GeneratedPriorAuth[];
   /** Requests decided by walking published criteria, with their traversals. */
   decidedPriorAuths: DecidedPA[];
+  /**
+   * Deductible consumed by medical claims, per member on an integrated plan.
+   * Generated alongside the claims because adjudication had to see it, and
+   * written out so the ledger the engine priced against is inspectable.
+   */
+  medicalTransfers: MedicalTransfer[];
+  /** Where the next batch should resume numbering claims. */
+  nextClaimSeq: number;
+}
+
+export interface MedicalTransfer {
+  memberId: string;
+  encounters: MedicalEncounter[];
 }
 
 /** Therapeutic classes a member with this diagnosis is likely to fill from. */
@@ -276,20 +437,38 @@ const ACUTE_CLASS_WEIGHTS: Array<[string, number]> = [
 
 const ACUTE_CLASSES = ACUTE_CLASS_WEIGHTS.map(([c]) => c);
 
-function pickFromClasses(
-  classes: string[],
-  drugsByClass: Map<string, DrugCandidate[]>,
+/**
+ * Pick from several pre-filtered pools without materialising their union.
+ *
+ * Building a union and filtering it per fill is fine a few thousand times and
+ * ruinous a few million: at a hundred thousand lives this sits in the innermost
+ * loop of the whole seed. Drawing against the pools' summed weight and walking
+ * to the one that contains the draw gives the same distribution a union would,
+ * in time proportional to the number of classes rather than the number of
+ * drugs.
+ */
+function pickAcrossPools(
+  pools: WeightedPool[],
   rng: Rng,
-  filter?: (d: DrugCandidate) => boolean,
 ): DrugCandidate | null {
-  const pool: DrugCandidate[] = [];
-  for (const c of classes) {
-    const drugs = drugsByClass.get(c);
-    if (drugs) pool.push(...drugs);
+  let total = 0;
+  for (const p of pools) total += p.total;
+  if (total === 0) return null;
+  let target = rng.next() * total;
+  for (const p of pools) {
+    if (target < p.total) {
+      /*
+       * Re-draw inside the chosen pool rather than reusing the offset. The
+       * offset is a position in a summed weight, and pickWeighted needs its own
+       * draw against that pool's own total; carrying the remainder across would
+       * bias every pool after the first toward its low-weight drugs.
+       */
+      return pickWeighted(p, rng);
+    }
+    target -= p.total;
   }
-  const eligible = filter ? pool.filter(filter) : pool;
-  if (eligible.length === 0) return null;
-  return rng.pick(eligible);
+  const last = pools[pools.length - 1];
+  return last ? pickWeighted(last, rng) : null;
 }
 
 const COVERED_LEVELS = new Set(["1", "2", "3", "4", "$0"]);
@@ -304,6 +483,19 @@ const COVERED_LEVELS = new Set(["1", "2", "3", "4", "$0"]);
  */
 const SPECIALTY_PRICE_THRESHOLD_PER_UNIT = 100;
 
+/**
+ * Share of a specialty cohort who begin therapy during the plan year rather
+ * than carrying it in from the year before.
+ *
+ * Specialty therapy is chronic, so most utilisers in any year are continuing
+ * patients whose authorization renews at the plan-year boundary. The rest are
+ * incident starts spread through the calendar. The ratio matters for two
+ * separate reasons: it is what keeps criteria-governed authorizations arriving
+ * all year instead of only in January, and it sets how many fills a new
+ * starter gets before December, which feeds straight into specialty spend.
+ */
+const SPECIALTY_NEW_START_SHARE = 0.3;
+
 function isRoutineTherapy(d: DrugCandidate): boolean {
   return (
     COVERED_LEVELS.has(d.formulary.level) &&
@@ -316,10 +508,13 @@ function isRoutineTherapy(d: DrugCandidate): boolean {
 export function generateClaims(
   input: ClaimGenerationInput,
 ): ClaimGenerationResult {
-  const rng = new Rng(input.seed);
+  const rng = input.rng ?? new Rng(input.seed);
+  const pools =
+    input.pools ?? buildDrugPools(input.drugsByClass, input.allDrugs);
   const claims: GeneratedClaim[] = [];
   const grantedPAs: GeneratedPriorAuth[] = [];
   const decidedPAs: DecidedPA[] = [];
+  const medicalTransfers: MedicalTransfer[] = [];
   const decidePA = createPriorAuthDecider(rng);
   const yearStart = Date.UTC(input.planYear, 0, 1);
 
@@ -328,11 +523,15 @@ export function generateClaims(
   );
   const mailPharmacy = PHARMACIES.find((p) => p.pharmacyType === "Mail")!;
   const specialtyPharmacies = PHARMACIES.filter((p) => p.isDesignatedSpecialty);
+  const acuteFallbackPools = ACUTE_CLASSES.map((c) =>
+    pools.routineByClass.get(c),
+  ).filter((p): p is WeightedPool => Boolean(p));
+  const profileById = new Map(PROFILES.map((p) => [p.id, p]));
 
-  let claimSeq = 1;
+  let claimSeq = input.claimSeqStart ?? 1;
 
   for (const member of input.members) {
-    const profile = PROFILES.find((p) => p.id === member.profileId)!;
+    const profile = profileById.get(member.profileId)!;
     const plan = input.plans.get(member.benefitPlanId);
     if (!plan) continue;
 
@@ -343,16 +542,39 @@ export function generateClaims(
       (dx) => DIAGNOSIS_TO_CLASS[dx] ?? [],
     );
 
+    const chronicClasses =
+      relevantClasses.length > 0 ? relevantClasses : ACUTE_CLASSES;
+    const chronicPools = chronicClasses
+      .map((c) => pools.routineByClass.get(c))
+      .filter((p): p is WeightedPool => Boolean(p));
+
     for (let i = 0; i < chronicCount; i++) {
       const drug =
-        pickFromClasses(
-          relevantClasses.length > 0 ? relevantClasses : ACUTE_CLASSES,
-          input.drugsByClass,
-          rng,
-          isRoutineTherapy,
-        ) ?? rng.pick(input.allDrugs.filter(isRoutineTherapy));
+        pickAcrossPools(chronicPools, rng) ?? pickWeighted(pools.allRoutine, rng);
       if (drug && !chronicDrugs.some((d) => d.id === drug.id)) {
         chronicDrugs.push(drug);
+      }
+    }
+
+    /*
+     * Everything drawn above is prevalent therapy: the member was already on
+     * it when the plan year opened, so its first fill of the year falls in the
+     * first refill interval. Incident therapy is the other kind — a diagnosis
+     * arrives in August and a new maintenance drug starts in August.
+     *
+     * Modelling it as an additional drug rather than a later start for an
+     * existing one is what makes it incident rather than just delayed, and it
+     * is the difference between a prior authorization queue that empties out
+     * after January and one that has work in it every day of the year, since a
+     * request is filed when a gated drug is first dispensed.
+     */
+    const incidentStartDay = new Map<string, number>();
+    if (rng.bool(0.2)) {
+      const incident =
+        pickAcrossPools(chronicPools, rng) ?? pickWeighted(pools.allRoutine, rng);
+      if (incident && !chronicDrugs.some((d) => d.id === incident.id)) {
+        chronicDrugs.push(incident);
+        incidentStartDay.set(incident.id, rng.int(40, 320));
       }
     }
 
@@ -394,6 +616,25 @@ export function generateClaims(
       federalOopAccumulatedCents: 0,
       deductibleAccumulatedCents: 0,
     };
+
+    /*
+     * The medical half of an integrated deductible. On the High Deductible
+     * Health Plan the $1,700 deductible is shared with medical, and the
+     * medical side is not adjudicated here — it arrives on a carrier file. The
+     * encounters are generated for this member up front and folded into the
+     * deductible balance below as their dates pass, so a fill in March is
+     * priced against the medical care that had happened by March.
+     */
+    const medicalEncounters = plan.deductibleIntegratedWithMedical
+      ? medicalEncountersFor(member.id, plan.deductibleIndividual)
+      : [];
+    if (medicalEncounters.length > 0) {
+      medicalTransfers.push({
+        memberId: member.id,
+        encounters: medicalEncounters,
+      });
+    }
+    let medicalCursor = 0;
     const approvedPAs: { drugId: string; effectiveDate: Date; terminationDate: Date | null }[] = [];
 
     /*
@@ -406,8 +647,35 @@ export function generateClaims(
      * project has not transcribed the criteria would be an artifact of the
      * build rather than anything the plan does.
      */
+    /*
+     * One start day, shared by the authorization and the fill calendar below.
+     * Drawing them separately let a request be filed against a "first fill"
+     * that the calendar never scheduled.
+     *
+     * Most specialty patients were already on therapy when the plan year
+     * opened, and their request is a reauthorization filed against the year
+     * boundary. But not all of them: a share start during the year, on
+     * diagnosis, and those are the requests that keep criteria work arriving in
+     * March and August rather than only in January.
+     *
+     * Drawing every start inside the first four weeks, as this did, produced a
+     * review queue that was empty of criteria traversals for ten months of the
+     * year — the automation had decided all of them before February. The
+     * incident rate below is the share of a specialty cohort who are new
+     * starts rather than continuing patients, which is the same reason a real
+     * plan's authorization queue never goes quiet.
+     */
+    const specialtyIsNewStart = specialtyDrug
+      ? rng.bool(SPECIALTY_NEW_START_SHARE)
+      : false;
+    const specialtyStartDay = !specialtyDrug
+      ? 0
+      : specialtyIsNewStart
+        ? rng.int(28, 330)
+        : rng.int(0, 27);
+
     if (specialtyDrug) {
-      const firstFill = new Date(yearStart + rng.int(0, 45) * 86_400_000);
+      const firstFill = new Date(yearStart + specialtyStartDay * 86_400_000);
       const decided = isCriteriaGoverned(specialtyDrug.name)
         ? decidePA({
             memberId: member.id,
@@ -466,13 +734,19 @@ export function generateClaims(
     for (const [idx, drug] of chronicDrugs.entries()) {
       const daysSupply = uses90Day || usesMail ? 90 : 30;
       const interval = daysSupply === 90 ? 90 : 30;
-      const startDay = rng.int(0, interval - 1);
+      const startDay =
+        incidentStartDay.get(drug.id) ?? rng.int(0, interval - 1);
       const rxNumber = String(4_000_000 + claimSeq * 13 + idx);
       let fillNumber = 0;
       for (let day = startDay; day < 365; day += interval) {
-        // Adherence is not perfect; roughly a fifth of expected refills
-        // never happen, which is what makes adherence reporting meaningful.
-        if (fillNumber > 0 && rng.bool(0.18)) {
+        /*
+         * Adherence is not perfect: about a quarter of expected refills never
+         * happen, which is both what makes adherence reporting meaningful and
+         * what holds the book to the utilisation ET-8933 actually reports.
+         * Published proportion-of-days-covered figures for chronic
+         * maintenance therapy sit in the same range.
+         */
+        if (fillNumber > 0 && rng.bool(0.25)) {
           fillNumber++;
           continue;
         }
@@ -492,7 +766,7 @@ export function generateClaims(
       const daysSupply = 28;
       const rxNumber = String(4_500_000 + claimSeq * 7);
       let fillNumber = 0;
-      for (let day = rng.int(0, 27); day < 365; day += daysSupply) {
+      for (let day = specialtyStartDay; day < 365; day += daysSupply) {
         if (fillNumber > 0 && rng.bool(0.08)) {
           fillNumber++;
           continue;
@@ -518,13 +792,10 @@ export function generateClaims(
       // the formulary's uneven drug counts per class do not become the
       // utilization mix.
       const [className] = rng.weighted(ACUTE_CLASS_WEIGHTS, ([, w]) => w);
-      const drug =
-        pickFromClasses(
-          [className],
-          input.drugsByClass,
-          rng,
-          isRoutineTherapy,
-        ) ?? pickFromClasses(ACUTE_CLASSES, input.drugsByClass, rng, isRoutineTherapy);
+      const classPool = pools.routineByClass.get(className);
+      const drug = classPool
+        ? pickWeighted(classPool, rng)
+        : pickAcrossPools(acuteFallbackPools, rng);
       if (!drug) continue;
       planned.push({
         drug,
@@ -538,10 +809,75 @@ export function generateClaims(
 
     planned.sort((a, b) => a.day - b.day);
 
+    /*
+     * A fill of a drug the formulary gates rejects at the counter with NCPDP
+     * 75, and that reject is where prior authorization work actually comes
+     * from: the pharmacy calls the prescriber, a request is filed, and a later
+     * fill either pays or does not. Deciding the request here, before
+     * adjudication, is what makes that sequence real rather than decorative.
+     * The first fill still rejects, because the approval did not exist yet.
+     */
+    for (const gated of chronicDrugs) {
+      if (!gated.formulary.requiresPA) continue;
+      if (specialtyDrug && gated.id === specialtyDrug.id) continue;
+      // Not every reject is chased. Some members walk away, and some
+      // prescribers switch them to something the plan does not gate.
+      if (!rng.bool(0.72)) continue;
+
+      const firstDay = planned.find((f) => f.drug.id === gated.id)?.day;
+      if (firstDay === undefined) continue;
+      const rejectedAt = yearStart + Math.max(0, firstDay) * 86_400_000;
+      const receivedAt = new Date(rejectedAt + rng.int(4, 48) * 3_600_000);
+
+      const candidate = {
+        memberId: member.id,
+        drugId: gated.id,
+        drugName: gated.name,
+        firstFillDate: new Date(rejectedAt),
+        planYearEnd: new Date(Date.UTC(input.planYear, 11, 31)),
+        diagnosisCodes: member.diagnosisCodes,
+        filledDrugNames: chronicDrugs.map((d) => d.name),
+        ageYears: Math.floor(
+          (yearStart - member.dateOfBirth.getTime()) / 31_557_600_000,
+        ),
+        weightKg: member.weightKg,
+      };
+
+      const decided = isCriteriaGoverned(gated.name)
+        ? decidePA(candidate)
+        : decideWithoutCriteria(candidate, rng, receivedAt);
+
+      for (const d of decided) {
+        decidedPAs.push(d);
+        if (d.outcome === "Approved" && d.effectiveDate) {
+          approvedPAs.push({
+            drugId: gated.id,
+            effectiveDate: d.effectiveDate,
+            terminationDate: d.terminationDate,
+          });
+        }
+      }
+    }
+
     // --- Adjudicate ---------------------------------------------------------
     for (const fill of planned) {
       if (fill.day < 0 || fill.day > 364) continue;
       const dateOfService = new Date(yearStart + fill.day * 86_400_000);
+
+      /*
+       * Fold in every medical encounter that had happened by this fill. The
+       * fills are in date order, so the cursor only ever moves forward and the
+       * balance the engine sees is the balance the carrier would have reported
+       * on the day.
+       */
+      while (
+        medicalCursor < medicalEncounters.length &&
+        medicalEncounters[medicalCursor]!.day < fill.day
+      ) {
+        accumulators.deductibleAccumulatedCents +=
+          medicalEncounters[medicalCursor]!.amountCents;
+        medicalCursor++;
+      }
 
       if (dateOfService < member.effectiveDate) continue;
       if (member.terminationDate && dateOfService > member.terminationDate) {
@@ -584,6 +920,9 @@ export function generateClaims(
         isSpecialty: fill.drug.isSpecialty,
         therapeuticClass: fill.drug.therapeuticClass,
         nadacPerUnit: fill.drug.nadacPerUnit,
+        packageSize: fill.drug.packageSize,
+        unitOfMeasure: fill.drug.unitOfMeasure,
+        packageContainers: fill.drug.packageContainers,
       };
 
       // A pharmacy bills its own price and lets the processor reprice it, so
@@ -671,5 +1010,11 @@ export function generateClaims(
     }
   }
 
-  return { claims, priorAuths: grantedPAs, decidedPriorAuths: decidedPAs };
+  return {
+    claims,
+    priorAuths: grantedPAs,
+    decidedPriorAuths: decidedPAs,
+    medicalTransfers,
+    nextClaimSeq: claimSeq,
+  };
 }

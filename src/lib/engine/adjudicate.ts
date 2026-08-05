@@ -22,6 +22,16 @@ import { deriveUnitPrices, extendPrices, DEFAULT_ASSUMPTIONS, type BenchmarkAssu
 import { priceClaim, type RateTerms } from "./pricing";
 import { TraceBuilder } from "./trace";
 import {
+  EMERGENCY_SUPPLY,
+  emergencySupplyEligibility,
+  type EmergencySupplyDecision,
+} from "@/lib/pa/emergency-supply";
+import { PLAN_YEAR_START } from "@/lib/clock";
+import {
+  evaluateQuantityLimit,
+  type QuantityLimitBasis,
+} from "./quantity-limit";
+import {
   PRICING_ARM_LABEL,
   REJECT_MESSAGES,
   type AccumulatorDelta,
@@ -46,6 +56,12 @@ export interface EngineDrug {
   isSpecialty: boolean;
   therapeuticClass?: string | null;
   nadacPerUnit: number;
+  /** Units in one package, and the unit they are counted in, from the NDC.
+   *  Needed to turn a limit written in tubes into one written in grams. */
+  packageSize?: number | null;
+  unitOfMeasure?: string | null;
+  /** How much each named container holds, from the FDA NDC Directory. */
+  packageContainers?: Record<string, number> | null;
 }
 
 export interface EngineFormularyEntry {
@@ -61,6 +77,8 @@ export interface EngineFormularyEntry {
   qlQuantity?: number | null;
   qlDays?: number | null;
   qlRawText?: string | null;
+  qlUnit?: string | null;
+  qlBasis?: string | null;
   requiredDiagnosisCodes: string[];
   diagnosisRawText?: string | null;
 }
@@ -183,6 +201,7 @@ const SRC_COC = "etf-uniform-pharmacy-coc-2026";
 const SRC_FORMULARY = "navitus-etf-formulary-2026";
 const SRC_NADAC = "cms-nadac";
 const SRC_AWP = "simulated-awp";
+const SRC_PA_PROCESS = "navitus-pa-process";
 
 function reject(
   trace: TraceBuilder,
@@ -546,38 +565,88 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
   }
 
   // --- Quantity limit ------------------------------------------------------
-  if (
-    formularyEntry.hasQuantityLimit &&
-    formularyEntry.qlQuantity != null &&
-    formularyEntry.qlDays != null
-  ) {
-    const perDayAllowed = formularyEntry.qlQuantity / formularyEntry.qlDays;
-    const perDayRequested = request.quantityDispensed / request.daysSupply;
-    // Allow a small tolerance for rounding in package sizes.
-    const withinLimit = perDayRequested <= perDayAllowed * 1.0001;
+  if (formularyEntry.hasQuantityLimit && formularyEntry.qlQuantity != null) {
+    const printed =
+      formularyEntry.qlRawText ??
+      `${formularyEntry.qlQuantity} ${formularyEntry.qlUnit ?? "units"}${
+        formularyEntry.qlDays ? ` per ${formularyEntry.qlDays} days` : " per fill"
+      }`;
 
-    trace.cited({
-      ruleId: "um.quantity-limit",
-      stage: "um",
-      question: "Is the dispensed quantity within the plan's limit?",
-      inputs: {
-        limit: formularyEntry.qlRawText ?? `${formularyEntry.qlQuantity} per ${formularyEntry.qlDays} days`,
-        quantityDispensed: request.quantityDispensed,
-        daysSupply: request.daysSupply,
-        allowedPerDay: Number(perDayAllowed.toFixed(4)),
-        requestedPerDay: Number(perDayRequested.toFixed(4)),
+    const verdict = evaluateQuantityLimit({
+      limit: {
+        quantity: formularyEntry.qlQuantity,
+        unit: formularyEntry.qlUnit ?? null,
+        basis: (formularyEntry.qlBasis as QuantityLimitBasis | null) ?? "dispensing-unit",
+        periodDays: formularyEntry.qlDays ?? null,
+        rawText: formularyEntry.qlRawText ?? null,
       },
-      output: { withinLimit },
-      fired: !withinLimit,
-      detail: withinLimit
-        ? `Within the limit of ${formularyEntry.qlRawText ?? `${formularyEntry.qlQuantity} per ${formularyEntry.qlDays} days`}.`
-        : `Requested ${perDayRequested.toFixed(2)} per day exceeds the limit of ${perDayAllowed.toFixed(2)} per day.`,
-      sourceDocumentId: SRC_FORMULARY,
-      citation: `Formulary quantity limit: ${formularyEntry.qlRawText ?? ""}`,
+      quantityDispensed: request.quantityDispensed,
+      daysSupply: request.daysSupply,
+      dateOfService: dos,
+      packageSize: drug.packageSize ?? 1,
+      unitOfMeasure: drug.unitOfMeasure ?? "EA",
+      packageContainers: drug.packageContainers ?? null,
+      priorFills: priorFills.filter(
+        (f) => f.drugId === drug.id && f.dateOfService < dos,
+      ),
+      planYearStart: PLAN_YEAR_START,
     });
 
-    if (!withinLimit) {
-      return reject(trace, "76", channel, brandGeneric, level, drug.isSpecialty);
+    if (!verdict.enforceable) {
+      /*
+       * The limit stays on the record and off the claim.
+       *
+       * There are two ways to get this wrong and only one of them is loud.
+       * Dropping the limit silently is what let Vascepa pay above four a day
+       * for two years. Enforcing it on a unit conversion nobody supplied
+       * refuses medicine to a member who is inside their limit, and cites a
+       * real rule while doing it. So the claim passes, and the trace records
+       * the gap in terms an operator can act on.
+       */
+      trace.cited({
+        ruleId: "um.quantity-limit.not-enforceable",
+        stage: "um",
+        question: "Is the dispensed quantity within the plan's limit?",
+        inputs: {
+          limit: printed,
+          basis: verdict.basis,
+          quantityDispensed: request.quantityDispensed,
+          billedIn: drug.unitOfMeasure ?? "EA",
+          packageSize: drug.packageSize ?? 1,
+        },
+        output: { enforced: false },
+        fired: false,
+        detail: verdict.reason,
+        sourceDocumentId: SRC_FORMULARY,
+        citation: `Formulary quantity limit: ${printed}`,
+      });
+    } else {
+      trace.cited({
+        ruleId: "um.quantity-limit",
+        stage: "um",
+        question: "Is the dispensed quantity within the plan's limit?",
+        inputs: {
+          limit: printed,
+          basis: verdict.basis,
+          quantityDispensed: request.quantityDispensed,
+          daysSupply: request.daysSupply,
+          allowed: verdict.allowed,
+          used: verdict.used,
+          countedIn: verdict.comparedIn,
+          window: verdict.window,
+        },
+        output: { withinLimit: verdict.withinLimit },
+        fired: !verdict.withinLimit,
+        detail: verdict.withinLimit
+          ? `Within the limit of ${printed}: ${verdict.used} of ${verdict.allowed} ${verdict.comparedIn} over ${verdict.window}.`
+          : `This fill would take the member to ${verdict.used} ${verdict.comparedIn} against a limit of ${verdict.allowed} — ${printed}, measured over ${verdict.window}.`,
+        sourceDocumentId: SRC_FORMULARY,
+        citation: `Formulary quantity limit: ${printed}`,
+      });
+
+      if (!verdict.withinLimit) {
+        return reject(trace, "76", channel, brandGeneric, level, drug.isSpecialty);
+      }
     }
   }
 
@@ -648,6 +717,14 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
   }
 
   // --- Prior authorization -------------------------------------------------
+  /*
+   * Set when an authorization requirement is waived under the weekend and
+   * holiday emergency supply, which also makes the fill free to the member. The
+   * flag has to be carried down to cost sharing rather than handled here,
+   * because "the plan pays and the member does not" is a cost-share outcome.
+   */
+  let emergencySupply: EmergencySupplyDecision | null = null;
+
   if (formularyEntry.requiresPA) {
     const approved = approvedPAs.find(
       (pa) =>
@@ -676,7 +753,46 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
     });
 
     if (!hasPA) {
-      return reject(trace, "75", channel, brandGeneric, level, drug.isSpecialty);
+      const decision = emergencySupplyEligibility({
+        dateOfService: dos,
+        daysSupply: request.daysSupply,
+        levelOfService: request.levelOfService,
+      });
+
+      // Only worth a trace step when the pharmacy actually asked; otherwise
+      // every authorization reject would carry a paragraph about a rule nobody
+      // invoked.
+      if (decision.requested) {
+        trace.cited({
+          ruleId: "um.emergency-supply",
+          stage: "um",
+          question:
+            "May the pharmacy dispense an emergency supply because the prescriber cannot be reached?",
+          inputs: {
+            levelOfService: request.levelOfService ?? null,
+            dateOfService: dos.toISOString().slice(0, 10),
+            closure: decision.closure?.label ?? "business day",
+            daysSupply: request.daysSupply,
+            maxDaysSupply: decision.maxDaysSupply,
+          },
+          output: {
+            granted: decision.eligible,
+            memberPays: decision.eligible ? formatCents(0) : null,
+            authorizationWorkableOn:
+              decision.workableOn?.toISOString().slice(0, 10) ?? null,
+          },
+          fired: decision.eligible,
+          detail: decision.detail,
+          sourceDocumentId: SRC_PA_PROCESS,
+          citation: EMERGENCY_SUPPLY.citation,
+        });
+      }
+
+      if (decision.eligible) {
+        emergencySupply = decision;
+      } else {
+        return reject(trace, "75", channel, brandGeneric, level, drug.isSpecialty);
+      }
     }
   }
 
@@ -896,6 +1012,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
     dawCode: request.dawCode,
     brandGeneric,
     genericReferenceMicros: prices.macMicros ?? prices.nadacMicros,
+    emergencySupply,
   });
 
   // =======================================================================
@@ -1008,6 +1125,8 @@ interface CostShareArgs {
   dawCode: string;
   brandGeneric: BrandGeneric;
   genericReferenceMicros: Micros;
+  /** Set when the fill is an emergency supply, which the member does not pay for. */
+  emergencySupply?: EmergencySupplyDecision | null;
 }
 
 function computeCostShare(args: CostShareArgs): CostShareResult {
@@ -1021,6 +1140,7 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     dawCode,
     brandGeneric,
     genericReferenceMicros,
+    emergencySupply,
   } = args;
 
   const rule =
@@ -1028,6 +1148,39 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     plan.costShareRules.find((r) => r.level === level);
 
   const deltas: AccumulatorDelta[] = [];
+
+  /*
+   * An emergency supply is free to the member, which means it also contributes
+   * nothing to either out-of-pocket limit: there is no member payment to
+   * accumulate. Returning here rather than zeroing at the end keeps that true by
+   * construction instead of relying on a later subtraction.
+   */
+  if (emergencySupply?.eligible) {
+    trace.cited({
+      ruleId: "costshare.emergency-supply",
+      stage: "costshare",
+      question: "What does the member pay for an emergency supply?",
+      inputs: {
+        level,
+        channel,
+        closure: emergencySupply.closure?.label ?? null,
+        daysSupply: `up to ${emergencySupply.maxDaysSupply}`,
+      },
+      output: { patientPay: formatCents(0) },
+      fired: true,
+      detail:
+        "Nothing. The plan requires an authorization this member could not have obtained, so the fill is covered in full and nothing accumulates to either out-of-pocket limit.",
+      sourceDocumentId: SRC_PA_PROCESS,
+      citation: EMERGENCY_SUPPLY.citation,
+    });
+    return {
+      patientPayMicros: 0,
+      appliedToDeductibleMicros: 0,
+      copayCoinsuranceMicros: 0,
+      brandSelectionPenaltyMicros: 0,
+      accumulatorDeltas: deltas,
+    };
+  }
 
   if (!rule || rule.costShareType === "Zero") {
     trace.cited({
@@ -1076,9 +1229,12 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
           deductible: formatCents(plan.deductibleIndividual),
           alreadyMet: formatCents(accumulators.deductibleAccumulatedCents),
         },
-        output: { applied: formatCents(toCents(appliedToDeductibleMicros)) },
+        output: {
+          applied: formatCents(toCents(appliedToDeductibleMicros)),
+          memberOwes: formatCents(toCents(appliedToDeductibleMicros)),
+        },
         fired: true,
-        detail: `${formatCents(toCents(appliedToDeductibleMicros))} applied to the deductible.`,
+        detail: `${formatCents(toCents(appliedToDeductibleMicros))} of the ${formatCents(plan.deductibleIndividual)} deductible has not been met, so the member pays that much of this fill themselves. ${formatCents(accumulators.deductibleAccumulatedCents)} was met before today.`,
         sourceDocumentId: SRC_COC,
         citation: "Certificate of Coverage 2026, High Deductible Health Plan deductible.",
       });
@@ -1165,7 +1321,24 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     });
   }
 
-  let patientPayMicros = add(costShareMicros, brandPenaltyMicros);
+  /*
+   * What the member owes: the part of the fill that fell inside an unmet
+   * deductible, plus cost share on whatever was left, plus any brand penalty.
+   *
+   * The deductible term is the point. A deductible is the amount the member
+   * pays before the plan starts paying; leaving it out of member liability —
+   * as this function did until it was measured — produces a plan that pays the
+   * deductible on the member's behalf and then reports the member as having met
+   * it. Across this book that was $11.9m of member responsibility moved to the
+   * plan on 204,966 fills, every one of them tracing to a deductible the
+   * certificate says is $1,700. The arithmetic was self-consistent, which is
+   * why it survived: the accumulator was credited with the same amount nobody
+   * had paid.
+   */
+  let patientPayMicros = add(
+    appliedToDeductibleMicros,
+    add(costShareMicros, brandPenaltyMicros),
+  );
 
   // --- Out-of-pocket limits ------------------------------------------------
   // Wisconsin runs two limits with different eligibility. Level 1 and 2 cost
@@ -1232,6 +1405,19 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
   if (patientPayMicros > totalAllowedMicros) {
     patientPayMicros = totalAllowedMicros;
     cappedBy = "total-allowed";
+  }
+
+  /*
+   * A deductible is only met by money the member actually paid. When an
+   * out-of-pocket limit cuts their liability below the amount that fell inside
+   * the deductible, the credit has to be cut with it, or the ledger records
+   * progress toward a deductible out of funds nobody spent — the same error as
+   * charging the deductible to the plan, one step further down.
+   */
+  if (patientPayMicros < appliedToDeductibleMicros) {
+    appliedToDeductibleMicros = patientPayMicros;
+    const d = deltas.find((x) => x.accumulatorType === "DeductibleIndividual");
+    if (d) d.amountMicros = patientPayMicros;
   }
 
   return {

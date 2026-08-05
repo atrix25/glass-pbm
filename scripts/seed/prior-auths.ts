@@ -16,14 +16,14 @@
  * same determinations and every claim remains replayable.
  */
 
-import type { PrismaClient } from "../../src/generated/prisma/index.js";
+import type { Prisma, PrismaClient } from "../../src/generated/prisma/index.js";
 import {
   findTreeForDrug,
   type CriteriaTreeDef,
 } from "../../src/lib/pa/criteria.js";
 import {
-  computeSla,
   determinePA,
+  paDeadlines,
   type PAFacts,
 } from "../../src/lib/pa/engine.js";
 import type { Rng } from "./population.js";
@@ -335,7 +335,14 @@ function dupixentCondition(c: PACandidate): string {
 export interface DecidedPA {
   memberId: string;
   drugId: string;
-  treeId: string;
+  /**
+   * Null when no criteria form for this product has been transcribed. Such a
+   * request is still real work and still gets decided; it is decided by a
+   * pharmacist rather than by walking a tree, and it carries no traversal.
+   * Keeping the two kinds in one queue is what makes the automation rate on
+   * the queue an honest number instead of a flattering one.
+   */
+  treeId: string | null;
   urgency: "Standard" | "Expedited";
   prescriberName: string;
   prescriberSpecialty: string;
@@ -354,6 +361,13 @@ export interface DecidedPA {
   resubmissionOf?: string;
   /** Set when this request continues therapy an earlier approval started. */
   renewal?: boolean;
+  /**
+   * Set when the reviewer had to stop and ask the prescriber for something.
+   * While the clock sits inside that window the request shows as pended rather
+   * than in review, which is the distinction a plan sponsor asks about when
+   * turnaround times slip.
+   */
+  pendedForInformation?: boolean;
 }
 
 /**
@@ -517,6 +531,114 @@ function decidePriorAuth(
   return results;
 }
 
+/**
+ * Reasons a pharmacist turns down a request that has no transcribed form.
+ *
+ * These are review outcomes, not traversals, and the queue shows them as such.
+ */
+const MANUAL_DENIAL_REASONS = [
+  "Submitted documentation does not establish the diagnosis the product is indicated for.",
+  "No record of a trial of a formulary alternative, and no contraindication was documented.",
+  "Requested quantity exceeds the labelled maximum dose and no supporting rationale was supplied.",
+  "Request is for a cosmetic indication, which the plan excludes.",
+  "Prescriber did not respond to the request for additional clinical information.",
+];
+
+/**
+ * Decide a request for a product whose criteria form has not been transcribed.
+ *
+ * Most of the formulary's prior authorization requirements point at forms this
+ * project has not encoded. Pretending those requests do not exist would make
+ * the queue a small fraction of its real size and would make the engine look
+ * more complete than it is. They are generated, routed to a pharmacist, and
+ * marked as carrying no traversal, so the share of decisions the engine can
+ * actually justify from a published document stays visible and honest.
+ */
+export function decideWithoutCriteria(
+  c: PACandidate,
+  rng: Rng,
+  receivedAt: Date,
+): DecidedPA[] {
+  const results = [decideManuallyOnce(c, rng, receivedAt)];
+
+  /*
+   * An approval runs for a fixed term, and a member who stays on therapy has
+   * to be reauthorized before it lapses. This is the same chaining the
+   * criteria path does, and it is a large part of why a real prior
+   * authorization queue is never empty: the requests filed in January come
+   * back around when their terms run out.
+   */
+  let latest = results[results.length - 1];
+  while (latest.outcome === "Approved" && latest.terminationDate! < c.planYearEnd) {
+    const renewalReceived = new Date(
+      latest.terminationDate!.getTime() - rng.int(7, 21) * 86_400_000,
+    );
+    if (renewalReceived >= c.planYearEnd) break;
+
+    const renewal = decideManuallyOnce(c, rng, renewalReceived);
+    renewal.renewal = true;
+    results.push(renewal);
+    latest = renewal;
+  }
+
+  return results;
+}
+
+function decideManuallyOnce(
+  c: PACandidate,
+  rng: Rng,
+  receivedAt: Date,
+): DecidedPA {
+  const urgency: "Standard" | "Expedited" = rng.bool(0.1)
+    ? "Expedited"
+    : "Standard";
+  // The contract's 72 hours, not ERISA's fifteen days: the queue is held to the
+  // deadline the plan actually bought, which is the earlier of the two.
+  const sla = paDeadlines(receivedAt, urgency, "Commercial").binding;
+  const prescriber = rng.pick(PRESCRIBERS);
+
+  /*
+   * A human reads the chart, which takes longer than reading a decision tree,
+   * and some requests wait on the prescriber before anyone can read anything.
+   * Both still land inside the turnaround standard the harness holds this
+   * queue to: 72 hours standard, 24 expedited. Going to the prescriber for
+   * more information does not stop that clock, so a request that has to wait
+   * is slower but not late.
+   */
+  const waitsOnPrescriber = rng.bool(0.22);
+  const hours = waitsOnPrescriber
+    ? rng.int(urgency === "Expedited" ? 13 : 34, urgency === "Expedited" ? 22 : 68)
+    : rng.int(3, urgency === "Expedited" ? 12 : 40);
+  const decidedAt = new Date(receivedAt.getTime() + hours * 3_600_000);
+
+  const approved = rng.bool(0.76);
+  // Quarterly, semi-annual and annual terms, which is the spread the plan's
+  // own criteria documents use for products of this kind.
+  const approvedDays = rng.pick([90, 180, 365]);
+
+  return {
+    memberId: c.memberId,
+    drugId: c.drugId,
+    treeId: null,
+    urgency,
+    prescriberName: prescriber.name,
+    prescriberSpecialty: prescriber.specialty,
+    answers: {},
+    outcome: approved ? "Approved" : "Denied",
+    reason: approved ? undefined : rng.pick(MANUAL_DENIAL_REASONS),
+    approvedDays: approved ? approvedDays : undefined,
+    receivedAt,
+    decisionDueAt: sla.dueAt,
+    decidedAt,
+    effectiveDate: approved ? decidedAt : null,
+    terminationDate: approved
+      ? new Date(decidedAt.getTime() + approvedDays * 86_400_000)
+      : null,
+    path: [],
+    pendedForInformation: waitsOnPrescriber,
+  };
+}
+
 function decideOnce(
   c: PACandidate,
   tree: CriteriaTreeDef,
@@ -527,7 +649,7 @@ function decideOnce(
   rng: Rng,
 ): DecidedPA {
   const determination = determinePA(tree, facts);
-  const sla = computeSla(receivedAt, urgency, "Commercial");
+  const sla = paDeadlines(receivedAt, urgency, "Commercial").binding;
   // Decisions land well inside the regulatory window, which is the point of
   // automating the traversal in the first place.
   const decidedAt = new Date(
@@ -579,43 +701,64 @@ export async function persistPriorAuths(
     stepRows.map((r) => [`${r.treeId}|${r.stepNumber}`, r.id]),
   );
 
+  // Written in bulk rather than row by row. At this volume the awaited
+  // per-row create is the slowest thing in the seed by an order of magnitude.
   let seq = startingNumber;
+  const paRows: Prisma.PriorAuthorizationCreateManyInput[] = [];
+  const stepRowsToWrite: Prisma.PADecisionStepCreateManyInput[] = [];
+
   for (const d of decided) {
     const approved = d.outcome === "Approved";
     const denied = d.outcome === "Denied";
+    const viaCriteria = d.treeId !== null;
+    const id = `pa-${seq}`;
 
-    const pa = await prisma.priorAuthorization.create({
-      data: {
-        paNumber: `PA${String(seq).padStart(10, "0")}`,
-        memberId: d.memberId,
-        drugId: d.drugId,
-        treeId: d.treeId,
-        requestType: d.renewal ? "Reauthorization" : "PA",
-        urgency: d.urgency,
-        prescriberName: d.prescriberName,
-        prescriberNpi: String(1_500_000_000 + (seq % 400_000_000)),
-        requestedQuantity: 2,
-        requestedDaysSupply: 28,
-        questionResponses: JSON.stringify(d.answers),
-        status: d.outcome === "Escalated" ? "InReview" : d.outcome,
-        determination: d.outcome === "Escalated" ? null : d.outcome,
-        decidingStepNumber: d.decidingStep ?? null,
-        denyReason: d.reason ?? null,
-        approvedDays: d.approvedDays ?? null,
-        approvedEffectiveDate: d.effectiveDate,
-        approvedTerminationDate: d.terminationDate,
-        receivedAt: d.receivedAt,
-        decisionDueAt: d.decisionDueAt,
-        decidedAt: d.decidedAt,
-        /*
-         * Automation may confirm that published criteria are met, because that
-         * is a reading of a document. It may not issue an adverse
-         * determination: a denial carries appeal rights, so a pharmacist signs
-         * it after reviewing the same traversal.
-         */
-        decidedBy: approved ? "AI" : denied ? "Pharmacist" : null,
-        escalated: !approved,
-        reviewerNote: denied
+    paRows.push({
+      id,
+      paNumber: `PA${String(seq).padStart(10, "0")}`,
+      memberId: d.memberId,
+      drugId: d.drugId,
+      treeId: d.treeId,
+      requestType: d.renewal ? "Reauthorization" : "PA",
+      urgency: d.urgency,
+      prescriberName: d.prescriberName,
+      prescriberNpi: String(1_500_000_000 + (seq % 400_000_000)),
+      requestedQuantity: 2,
+      requestedDaysSupply: 28,
+      questionResponses: JSON.stringify(d.answers),
+      status: d.outcome === "Escalated" ? "InReview" : d.outcome,
+      determination: d.outcome === "Escalated" ? null : d.outcome,
+      decidingStepNumber: d.decidingStep ?? null,
+      denyReason: d.reason ?? null,
+      approvedDays: d.approvedDays ?? null,
+      approvedEffectiveDate: d.effectiveDate,
+      approvedTerminationDate: d.terminationDate,
+      receivedAt: d.receivedAt,
+      prescriberStatementAt: d.pendedForInformation
+        ? new Date(d.receivedAt.getTime() + 24 * 3_600_000)
+        : null,
+      decisionDueAt: d.decisionDueAt,
+      decidedAt: d.decidedAt,
+      /*
+       * Automation may confirm that published criteria are met, because that
+       * is a reading of a document. It may not issue an adverse
+       * determination: a denial carries appeal rights, so a pharmacist signs
+       * it after reviewing the same traversal. A request with no transcribed
+       * form is a pharmacist's from the start.
+       */
+      decidedBy: !viaCriteria
+        ? "Pharmacist"
+        : approved
+          ? "AI"
+          : denied
+            ? "Pharmacist"
+            : null,
+      escalated: !viaCriteria || !approved,
+      reviewerNote: !viaCriteria
+        ? approved
+          ? "No criteria form for this product has been transcribed into the engine, so the request was reviewed by a pharmacist against the plan document rather than by walking a published decision tree. This decision carries no step citation."
+          : "Reviewed by a pharmacist. No criteria form for this product has been transcribed into the engine, so there is no step citation behind this determination."
+        : denied
           ? `Criteria not met at step ${d.decidingStep}. A pharmacist reviewed the traversal and the submitted documentation before the determination was released.`
           : d.outcome === "Escalated"
             ? "Routed to a pharmacist for manual review."
@@ -624,23 +767,30 @@ export async function persistPriorAuths(
               : d.renewal
                 ? "Reauthorization filed before the prior approval lapsed. Criteria were walked again rather than the earlier decision being carried forward."
                 : null,
-      },
-      select: { id: true },
     });
 
     for (const [i, step] of d.path.entries()) {
       const criteriaStepId = stepIds.get(`${d.treeId}|${step.step}`);
       if (!criteriaStepId) continue;
-      await prisma.pADecisionStep.create({
-        data: {
-          paId: pa.id,
-          criteriaStepId,
-          seq: i,
-          answer: step.answer,
-          evidence: step.evidence,
-        },
+      stepRowsToWrite.push({
+        paId: id,
+        criteriaStepId,
+        seq: i,
+        answer: step.answer,
+        evidence: step.evidence,
       });
     }
     seq++;
+  }
+
+  for (let i = 0; i < paRows.length; i += 500) {
+    await prisma.priorAuthorization.createMany({
+      data: paRows.slice(i, i + 500),
+    });
+  }
+  for (let i = 0; i < stepRowsToWrite.length; i += 500) {
+    await prisma.pADecisionStep.createMany({
+      data: stepRowsToWrite.slice(i, i + 500),
+    });
   }
 }

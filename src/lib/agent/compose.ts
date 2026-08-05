@@ -40,16 +40,39 @@ function pickAll(runs: ToolRun[], tool: string): ToolResult<Data>[] {
     .map((r) => r.result as ToolResult<Data>);
 }
 
-/** Questions the agent should not answer, no matter how good the data is. */
+/**
+ * Questions the agent should not answer, no matter how good the data is.
+ *
+ * The line is not "is this about a drug", because every question here is about
+ * a drug. It is "does answering this require knowing something about this
+ * person's body". Coverage, price and channel do not. Whether a medicine suits
+ * them, at what dose, alongside what else, does, and a benefit administrator
+ * who answers those has quietly started practising without a licence.
+ *
+ * The list errs towards refusing. A member who is told to ask their prescriber
+ * about something the agent could have answered has lost a minute. The other
+ * kind of mistake is not recoverable, which is why the patterns cover the
+ * indirect phrasings — "is this okay with", "can I drink" — and not only the
+ * ones with the word "safe" in them.
+ */
 const CLINICAL = [
-  /should i (take|stop|switch|use)/i,
-  /is it safe/i,
+  /should i (take|stop|switch|use|be on|keep taking|continue)/i,
+  /(is|are) (it|this|that|they|these) safe/i,
+  /\bis \w[\w\s'-]{0,40} safe\b/i,
+  /safe (to|with|for) /i,
   /side effect/i,
-  /interact(ion)? with/i,
-  /dosage|how much should i take/i,
-  /am i allergic/i,
+  /interact(s|ion|ions)? with/i,
+  /\bwith my other (medication|med|drug|prescription)/i,
+  /\btake .{0,30}\btogether\b/i,
+  /dosage|what dose|which dose|how much should i take|how many should i take/i,
+  /\bdose .{0,20}(should|do) i\b/i,
+  /am i allergic|allergic to/i,
   /instead of my/i,
   /diagnos/i,
+  /\bcan i drink\b|\bwith alcohol\b/i,
+  /\bwhile (pregnant|breastfeeding|nursing)\b|\bif i('m| am) pregnant\b/i,
+  /\bis (it|this) working\b|\bwhy do i feel\b/i,
+  /\bskip a dose\b|\bmissed (a )?dose\b|\bdouble up\b/i,
 ];
 
 export function clinicalRefusal(question: string): string | null {

@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
+import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
 export interface ClaimFilters {
   q?: string;
@@ -45,8 +46,29 @@ export type ClaimListRow = Prisma.ClaimGetPayload<{
   select: typeof CLAIM_LIST_SELECT;
 }>;
 
-function buildWhere(f: ClaimFilters): Prisma.ClaimWhereInput {
-  const where: Prisma.ClaimWhereInput = {};
+/** True when nothing narrows the ledger beyond the clock. */
+function isUnfiltered(f: ClaimFilters): boolean {
+  return (
+    !f.q &&
+    (!f.status || f.status === "all") &&
+    (!f.channel || f.channel === "all") &&
+    (!f.level || f.level === "all") &&
+    !f.reject &&
+    !f.drug &&
+    !f.member &&
+    !f.scenario &&
+    !f.basis
+  );
+}
+
+function buildWhere(
+  f: ClaimFilters,
+  clock: SimulationClock,
+): Prisma.ClaimWhereInput {
+  // A claim dated after the simulation clock has not been submitted yet.
+  const where: Prisma.ClaimWhereInput = {
+    dateOfService: { lte: clock.today },
+  };
   const and: Prisma.ClaimWhereInput[] = [];
 
   if (f.status && f.status !== "all") where.responseStatus = f.status;
@@ -77,19 +99,74 @@ function buildWhere(f: ClaimFilters): Prisma.ClaimWhereInput {
   return where;
 }
 
-export async function listClaims(f: ClaimFilters) {
+export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
   const perPage = f.perPage ?? 40;
   const page = Math.max(1, f.page ?? 1);
-  const where = buildWhere(f);
+  const where = buildWhere(f, clock);
 
-  const [rows, total, sums] = await Promise.all([
-    prisma.claim.findMany({
-      where,
-      select: CLAIM_LIST_SELECT,
-      orderBy: [{ dateOfService: "desc" }, { claimNumber: "desc" }],
-      skip: (page - 1) * perPage,
-      take: perPage,
+  const rows = await prisma.claim.findMany({
+    where,
+    select: CLAIM_LIST_SELECT,
+    orderBy: [{ dateOfService: "desc" }, { claimNumber: "desc" }],
+    skip: (page - 1) * perPage,
+    take: perPage,
+  });
+
+  /*
+   * The header totals over an unfiltered ledger are the whole book, and
+   * counting a million and a half rows to display them would make the default
+   * page load the slowest one in the application. That exact sum is already in
+   * the daily rollup. Narrowed ledgers fall back to counting, over a set the
+   * filter has already made small.
+   */
+  const totals = isUnfiltered(f)
+    ? await totalsFromRollup(clock)
+    : await totalsFromClaims(where);
+
+  return {
+    rows,
+    total: totals.total,
+    page,
+    perPage,
+    pages: Math.max(1, Math.ceil(totals.total / perPage)),
+    sums: totals.sums,
+  };
+}
+
+async function totalsFromRollup(clock: SimulationClock) {
+  const [agg, nadac] = await Promise.all([
+    prisma.bookDay.aggregate({
+      where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
+      _sum: {
+        claimsSubmitted: true,
+        totalBilledCents: true,
+        planPaidCents: true,
+        patientPayCents: true,
+        estimatedRebateCents: true,
+      },
     }),
+    prisma.bookDayDimension.aggregate({
+      where: {
+        dimension: "channel",
+        date: { gte: PLAN_YEAR_START, lte: clock.today },
+      },
+      _sum: { nadacCents: true },
+    }),
+  ]);
+  return {
+    total: agg._sum.claimsSubmitted ?? 0,
+    sums: {
+      totalBilledCents: agg._sum.totalBilledCents ?? 0,
+      planPaidCents: agg._sum.planPaidCents ?? 0,
+      patientPayCents: agg._sum.patientPayCents ?? 0,
+      estimatedRebateCents: agg._sum.estimatedRebateCents ?? 0,
+      nadacTotalCents: nadac._sum.nadacCents ?? 0,
+    },
+  };
+}
+
+async function totalsFromClaims(where: Prisma.ClaimWhereInput) {
+  const [total, sums] = await Promise.all([
     prisma.claim.count({ where }),
     prisma.claim.aggregate({
       where,
@@ -102,13 +179,8 @@ export async function listClaims(f: ClaimFilters) {
       },
     }),
   ]);
-
   return {
-    rows,
     total,
-    page,
-    perPage,
-    pages: Math.max(1, Math.ceil(total / perPage)),
     sums: {
       totalBilledCents: sums._sum.totalBilledCents ?? 0,
       planPaidCents: sums._sum.planPaidCents ?? 0,

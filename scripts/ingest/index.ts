@@ -14,7 +14,12 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { Prisma, PrismaClient } from "../../src/generated/prisma/index.js";
 import { SOURCES } from "../../src/lib/sources.js";
 import { extractPdfLines } from "./pdf.js";
-import { decodeFormularyRow, parseFormularyIndex } from "./formulary.js";
+import {
+  decodeFormularyRow,
+  formatParseCoverage,
+  parseCoverage,
+  parseFormularyIndex,
+} from "./formulary.js";
 import { buildNadacCatalog, resolveNadac, toIso } from "./nadac.js";
 
 const prisma = new PrismaClient();
@@ -109,8 +114,10 @@ async function main() {
     new Uint8Array(readFileSync(FORMULARY_PDF)),
     { maxPages: 106 },
   );
-  const rows = parseFormularyIndex(pages).map(decodeFormularyRow);
-  console.log(`  ${rows.length} rows parsed from the alphabetical index\n`);
+  const parsed = parseFormularyIndex(pages);
+  const rows = parsed.map(decodeFormularyRow);
+  console.log(`  ${rows.length} rows parsed from the alphabetical index`);
+  console.log(formatParseCoverage(parseCoverage(pages, rows)) + "\n");
 
   await prisma.formulary.upsert({
     where: { id: FORMULARY_ID },
@@ -201,8 +208,11 @@ async function main() {
       qlQuantity: row.qlQuantity ?? null,
       qlDays: row.qlDays ?? null,
       qlRawText: row.qlRawText ?? null,
-      requiredDiagnosisCodes: "[]",
-      diagnosisRawText: row.specialistRawText ?? null,
+      qlUnit: row.qlUnit ?? null,
+      qlBasis: row.qlBasis ?? null,
+      requiredDiagnosisCodes: JSON.stringify(row.requiredDiagnosisCodes),
+      diagnosisRawText: row.diagnosisRawText ?? null,
+      specialistRawText: row.specialistRawText ?? null,
       sourceDocumentId: "navitus-etf-formulary-2026",
       citation: `Alphabetical Index page ${row.page}: ${row.drugName.slice(0, 120)}`,
     });

@@ -265,22 +265,72 @@ export interface SlaClock {
   citation: string;
   /** What happens if the clock runs out. */
   onExpiry: string;
+  /** The moment the clock started, which is not always when the request arrived. */
+  startedAt: Date;
+  /** Set when the clock is waiting on the prescriber before it can start. */
+  awaitingSupportingStatement?: boolean;
+}
+
+/**
+ * The request types that need a prescriber's supporting statement.
+ *
+ * An exception asks the plan to depart from its own formulary, so it turns on a
+ * clinical assertion only the prescriber can make. The regulation reflects that:
+ * the clock does not begin when the member asks, it begins when the supporting
+ * statement arrives.
+ */
+const EXCEPTION_TYPES = new Set([
+  "FormularyException",
+  "StepException",
+  "QuantityException",
+  "TieringException",
+]);
+
+export function isExceptionRequest(requestType: string | null | undefined): boolean {
+  return EXCEPTION_TYPES.has(requestType ?? "");
 }
 
 export function computeSla(
   receivedAt: Date,
   urgency: "Standard" | "Expedited",
   lineOfBusiness: "Commercial" | "EGWP",
+  opts: {
+    requestType?: string | null;
+    /** When the prescriber's supporting statement was received, if it has been. */
+    supportingStatementAt?: Date | null;
+  } = {},
 ): SlaClock {
+  /*
+   * Where the clock starts.
+   *
+   * For an ordinary authorization it starts on receipt. For an exception it
+   * starts when the prescriber's supporting statement arrives, because the plan
+   * cannot decide whether to depart from its formulary until the prescriber has
+   * said why it should. Getting this wrong in either direction is a real
+   * failure: measure from receipt and the plan reports itself late on requests
+   * it could not lawfully have decided yet; measure from the statement on a
+   * request that needs none and every deadline silently disappears.
+   */
+  const needsStatement = isExceptionRequest(opts.requestType);
+  const awaiting = needsStatement && !opts.supportingStatementAt;
+  const startedAt = needsStatement
+    ? (opts.supportingStatementAt ?? receivedAt)
+    : receivedAt;
+
   if (lineOfBusiness === "EGWP") {
     const hours = urgency === "Expedited" ? 24 : 72;
     return {
-      dueAt: new Date(receivedAt.getTime() + hours * 3_600_000),
+      dueAt: new Date(startedAt.getTime() + hours * 3_600_000),
       hours,
+      startedAt,
+      awaitingSupportingStatement: awaiting || undefined,
       authority:
         urgency === "Expedited" ? "42 CFR 423.572" : "42 CFR 423.568",
-      citation:
-        urgency === "Expedited"
+      citation: needsStatement
+        ? urgency === "Expedited"
+          ? "42 CFR 423.572(a): expedited exception decided within 24 hours of receiving the prescriber's supporting statement."
+          : "42 CFR 423.568(b): exception decided within 72 hours of receiving the prescriber's supporting statement."
+        : urgency === "Expedited"
           ? "42 CFR 423.572: expedited coverage determination within 24 hours."
           : "42 CFR 423.568: standard coverage determination within 72 hours.",
       onExpiry:
@@ -290,8 +340,10 @@ export function computeSla(
 
   const hours = urgency === "Expedited" ? 72 : 15 * 24;
   return {
-    dueAt: new Date(receivedAt.getTime() + hours * 3_600_000),
+    dueAt: new Date(startedAt.getTime() + hours * 3_600_000),
     hours,
+    startedAt,
+    awaitingSupportingStatement: awaiting || undefined,
     authority: "29 CFR 2560.503-1",
     citation:
       urgency === "Expedited"
@@ -299,5 +351,81 @@ export function computeSla(
         : "29 CFR 2560.503-1(f)(2)(iii): pre-service claims decided within 15 days, with one 15-day extension available.",
     onExpiry:
       "The claimant is deemed to have exhausted internal appeals and may proceed to external review.",
+  };
+}
+
+/**
+ * The deadline the plan bought, which is shorter than the one the law sets.
+ *
+ * The performance guarantee schedule promises 24 hours on an expedited request
+ * and 72 on a standard one. ERISA allows 72 hours and fifteen days for the same
+ * two cases, so on a commercial request the contract is the binding number by a
+ * wide margin — twelve days wide on a standard request.
+ *
+ * Both are computed and both are shown, because they fail differently. Missing
+ * the contract deadline costs money out of the amount at risk. Missing the
+ * regulatory one gives the member the right to walk out of the process
+ * entirely. A queue that only tracks the second one looks healthy while owing
+ * credits, and one that only tracks the first has no idea when a member's
+ * appeal rights vest.
+ */
+export function contractualSla(
+  receivedAt: Date,
+  urgency: "Standard" | "Expedited",
+  opts: {
+    requestType?: string | null;
+    supportingStatementAt?: Date | null;
+  } = {},
+): SlaClock {
+  const needsStatement = isExceptionRequest(opts.requestType);
+  const awaiting = needsStatement && !opts.supportingStatementAt;
+  const startedAt = needsStatement
+    ? (opts.supportingStatementAt ?? receivedAt)
+    : receivedAt;
+
+  const hours = urgency === "Expedited" ? 24 : 72;
+  return {
+    dueAt: new Date(startedAt.getTime() + hours * 3_600_000),
+    hours,
+    startedAt,
+    awaitingSupportingStatement: awaiting || undefined,
+    authority: "Performance guarantee schedule",
+    citation:
+      urgency === "Expedited"
+        ? "Ninety-nine percent of expedited prior authorisation requests decided within 24 hours of receipt."
+        : "Ninety-eight percent of standard prior authorisation requests decided within 72 hours of receipt of a clean request.",
+    onExpiry:
+      "A miss counts against the guarantee and draws on the amount at risk. It does not by itself decide the request.",
+  };
+}
+
+export interface PaDeadlines {
+  /** What the regulation allows. */
+  regulatory: SlaClock;
+  /** What the contract promised. */
+  contractual: SlaClock;
+  /** Whichever falls first, which is the one the queue is measured against. */
+  binding: SlaClock;
+  /** Which of the two binds, for labelling. */
+  bindingSource: "regulatory" | "contractual";
+}
+
+export function paDeadlines(
+  receivedAt: Date,
+  urgency: "Standard" | "Expedited",
+  lineOfBusiness: "Commercial" | "EGWP",
+  opts: {
+    requestType?: string | null;
+    supportingStatementAt?: Date | null;
+  } = {},
+): PaDeadlines {
+  const regulatory = computeSla(receivedAt, urgency, lineOfBusiness, opts);
+  const contractual = contractualSla(receivedAt, urgency, opts);
+  const contractBinds = contractual.dueAt <= regulatory.dueAt;
+  return {
+    regulatory,
+    contractual,
+    binding: contractBinds ? contractual : regulatory,
+    bindingSource: contractBinds ? "contractual" : "regulatory",
   };
 }

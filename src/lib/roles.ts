@@ -12,7 +12,7 @@ export const ROLES: RoleDefinition[] = [
   {
     id: "sponsor",
     label: "Plan sponsor",
-    who: "Wisconsin ETF — Benefits Director",
+    who: "Steel Potatoes LLC — Benefits Director",
     blurb:
       "See the whole book: what the plan paid, what the pharmacy received, what the contract guaranteed, and where the two diverge.",
     landing: "/sponsor",

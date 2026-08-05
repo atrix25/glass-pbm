@@ -363,6 +363,21 @@ const LIMITATIONS = [
     detail:
       "It reads the artifact the suite last wrote. It does not run the tests inside a request, so it can never report a greener result than the tests actually produced, but it can report a stale one.",
   },
+  {
+    title: "The MAC list moves only when an appeal moves it",
+    detail:
+      "Ceilings are derived from a single NADAC snapshot, so the weekly versions carry identical base prices and the only recorded movements are adjustments won by pharmacies on appeal. A real list would also move every week as the survey does.",
+  },
+  {
+    title: "The service incident is modelled, not observed",
+    detail:
+      "One four-day degradation is written into the year so the guarantee machinery has something to fire on. The delays it produced are real records with real dates and the credit is computed from them, but the event itself was authored.",
+  },
+  {
+    title: "The throughput benchmark is one machine and one process",
+    detail:
+      "It measures the engine on a laptop core against this book, with no network, no clustered database and no failover. What it establishes is that compute is not the barrier, which is a narrower claim than being production ready.",
+  },
 ] as const;
 
 function Layer({

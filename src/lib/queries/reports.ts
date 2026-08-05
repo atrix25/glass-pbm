@@ -1,5 +1,18 @@
+/**
+ * Contract reconciliation, as of the simulation clock.
+ *
+ * Like the sponsor dashboard, these read the daily rollup rather than the
+ * claim table: the guarantee cut is stored per day as a "guarantee" dimension
+ * keyed by channel and brand class, so a report that would otherwise scan a
+ * million and a half claims sums a few thousand cells instead. Cutting at the
+ * clock also keeps the reconciliation honest, because reporting a full plan
+ * year of guarantee performance in March would be reporting on claims that
+ * have not been filled yet.
+ */
+
 import { prisma } from "@/lib/db";
 import { EXHIBIT_C_RATES, WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
+import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
 interface Row {
   channel: string;
@@ -12,6 +25,40 @@ interface Row {
   rebate: number;
 }
 
+function window(clock: SimulationClock) {
+  return { gte: PLAN_YEAR_START, lte: clock.today };
+}
+
+/** The stored guarantee cells, split back into channel and brand class. */
+async function guaranteeCells(clock: SimulationClock): Promise<Row[]> {
+  const cells = await prisma.bookDayDimension.groupBy({
+    by: ["key"],
+    where: { dimension: "guarantee", date: window(clock) },
+    _sum: {
+      claims: true,
+      ingredientCostCents: true,
+      awpCents: true,
+      dispensingFeeCents: true,
+      nadacCents: true,
+      rebateCents: true,
+    },
+  });
+
+  return cells.map((c) => {
+    const [channel, brandGeneric] = c.key.split("::");
+    return {
+      channel,
+      brandGeneric,
+      claims: c._sum.claims ?? 0,
+      billed: c._sum.ingredientCostCents ?? 0,
+      awp: c._sum.awpCents ?? 0,
+      fees: c._sum.dispensingFeeCents ?? 0,
+      nadac: c._sum.nadacCents ?? 0,
+      rebate: c._sum.rebateCents ?? 0,
+    };
+  });
+}
+
 /**
  * Reconcile realised pricing against the Exhibit C guarantees.
  *
@@ -21,21 +68,8 @@ interface Row {
  * per-claim discounts, which would weight a $4 generic the same as a $9,000
  * specialty fill and produce a number that reconciles to nothing.
  */
-export async function getGuaranteeReconciliation() {
-  const rows = await prisma.$queryRaw<Row[]>`
-    SELECT
-      channel,
-      brandGenericClass AS brandGeneric,
-      COUNT(*)                       AS claims,
-      SUM(billedIngredientCostCents) AS billed,
-      SUM(awpTotalCents)             AS awp,
-      SUM(billedDispensingFeeCents)   AS fees,
-      SUM(nadacTotalCents)           AS nadac,
-      SUM(estimatedRebateCents)      AS rebate
-    FROM Claim
-    WHERE responseStatus = 'P' AND awpTotalCents > 0
-    GROUP BY channel, brandGenericClass
-  `;
+export async function getGuaranteeReconciliation(clock: SimulationClock) {
+  const rows = await guaranteeCells(clock);
 
   const commercial = EXHIBIT_C_RATES.filter(
     (r) => r.lineOfBusiness === "Commercial",
@@ -135,22 +169,23 @@ export async function getGuaranteeReconciliation() {
     );
 }
 
-export async function getRebateWaterfall() {
+export async function getRebateWaterfall(clock: SimulationClock) {
   const [agg, members] = await Promise.all([
-    prisma.claim.aggregate({
-      where: { responseStatus: "P" },
-      _sum: { estimatedRebateCents: true },
-      _count: { _all: true },
+    prisma.bookDay.aggregate({
+      where: { date: window(clock) },
+      _sum: { estimatedRebateCents: true, brandClaims: true },
     }),
     prisma.member.count(),
   ]);
 
-  const brandClaims = await prisma.claim.count({
-    where: { responseStatus: "P", brandGenericClass: "Brand" },
-  });
-
+  const brandClaims = agg._sum.brandClaims ?? 0;
   const grossRebateCents = agg._sum.estimatedRebateCents ?? 0;
-  const memberMonths = members * 12;
+  /*
+   * Member months have to track the clock too. Charging a full twelve months
+   * of rebate administration against a partial year of rebates would show the
+   * plan underwater on a contract it is actually ahead on.
+   */
+  const memberMonths = Math.round(members * 12 * clock.yearElapsed);
   const rebateAdminFeeCents =
     memberMonths * WISCONSIN_CONTRACT.rebateAdminFeePmpmCents;
   const netToPlanCents = grossRebateCents - rebateAdminFeeCents;
@@ -187,33 +222,39 @@ export async function getRebateWaterfall() {
  * schedule from another state's PBM contract to this plan's own utilisation,
  * so the difference is a difference in contract terms and nothing else.
  */
-export async function getSpreadComparison() {
-  const rows = await prisma.$queryRaw<
-    { brandGeneric: string; claims: number; billed: number; awp: number }[]
-  >`
-    SELECT brandGenericClass AS brandGeneric,
-           COUNT(*)                     AS claims,
-           SUM(billedIngredientCostCents) AS billed,
-           SUM(awpTotalCents)           AS awp
-    FROM Claim
-    WHERE responseStatus = 'P' AND awpTotalCents > 0
-    GROUP BY brandGenericClass
-  `;
+export async function getSpreadComparison(clock: SimulationClock) {
+  // The guarantee cells already carry ingredient cost and AWP; collapsing the
+  // channel out of them is the same book cut one level coarser.
+  const byBrandGeneric = new Map<
+    string,
+    { claims: number; billed: number; awp: number }
+  >();
+  for (const cell of await guaranteeCells(clock)) {
+    const cur = byBrandGeneric.get(cell.brandGeneric) ?? {
+      claims: 0,
+      billed: 0,
+      awp: 0,
+    };
+    cur.claims += cell.claims;
+    cur.billed += cell.billed;
+    cur.awp += cell.awp;
+    byBrandGeneric.set(cell.brandGeneric, cur);
+  }
 
   // Michigan's OptumRx Schedule B, the closest published spread schedule.
   const SPREAD_BPS: Record<string, number> = { Brand: 1650, Generic: 7700 };
 
   let passThroughCents = 0;
   let spreadCents = 0;
-  const byClass = rows.map((r) => {
+  const byClass = [...byBrandGeneric.entries()].map(([brandGeneric, r]) => {
     const billed = Number(r.billed);
     const awp = Number(r.awp);
-    const bps = SPREAD_BPS[r.brandGeneric] ?? 0;
+    const bps = SPREAD_BPS[brandGeneric] ?? 0;
     const underSpread = Math.round(awp * (1 - bps / 10000));
     passThroughCents += billed;
     spreadCents += underSpread;
     return {
-      brandGeneric: r.brandGeneric,
+      brandGeneric,
       claims: Number(r.claims),
       passThroughCents: billed,
       spreadCents: underSpread,
@@ -237,22 +278,18 @@ export async function getSpreadComparison() {
  * whoever sets it, so the honest thing to report is not a savings figure but
  * the size of the exposure and how it moves.
  */
-export async function getAwpSensitivity() {
-  const rows = await prisma.$queryRaw<
-    { basis: string; claims: number; billed: number }[]
-  >`
-    SELECT basisOfReimbursement AS basis,
-           COUNT(*)                AS claims,
-           SUM(totalBilledCents)   AS billed
-    FROM Claim
-    WHERE responseStatus = 'P'
-    GROUP BY basisOfReimbursement
-  `;
+export async function getAwpSensitivity(clock: SimulationClock) {
+  const rows = await prisma.bookDayDimension.groupBy({
+    by: ["key"],
+    where: { dimension: "basis", date: window(clock) },
+    _sum: { billedCents: true },
+  });
 
-  const total = rows.reduce((s, r) => s + Number(r.billed), 0);
+  const total = rows.reduce((s, r) => s + (r._sum.billedCents ?? 0), 0);
+  // NCPDP basis of reimbursement 3 is AWP.
   const awpPriced = rows
-    .filter((r) => r.basis === "3")
-    .reduce((s, r) => s + Number(r.billed), 0);
+    .filter((r) => r.key === "3")
+    .reduce((s, r) => s + (r._sum.billedCents ?? 0), 0);
 
   /*
    * The comparison arm matters more than the level. Under this contract only
@@ -262,7 +299,7 @@ export async function getAwpSensitivity() {
    * actual argument for pass-through, and it survives being wrong about where
    * AWP sits today.
    */
-  const spread = await getSpreadComparison();
+  const spread = await getSpreadComparison(clock);
 
   const shifts = [-10, -5, 0, 5, 10, 15].map((pct) => ({
     shiftPercent: pct,

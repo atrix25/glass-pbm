@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -11,7 +12,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
-import { formatCents } from "@/lib/money";
+import { formatCents, formatCentsWhole } from "@/lib/money";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 import type { ConfigOverride } from "@/lib/engine/replay";
 
@@ -34,7 +35,17 @@ export interface BaselineConfig {
 }
 
 interface Draft extends BaselineConfig {
+  /*
+   * Utilisation edits, expressed as a drug-name match rather than a drug list.
+   *
+   * They live on the draft next to the copays so that a recommendation arriving
+   * from the member-experience page lands in a field the reader can see and
+   * edit, rather than being applied invisibly. A suggestion you cannot inspect
+   * or narrow is not a suggestion, it is an instruction.
+   */
   paRemovedFor: string;
+  quantityLimitRemovedFor: string;
+  stepTherapyRemovedFor: string;
 }
 
 interface ReplayResponse {
@@ -72,7 +83,42 @@ interface ReplayResponse {
     memberDeltaCents: number;
     kind: "cost" | "newly-rejected" | "newly-paid";
   }[];
+  nps?: {
+    before: NpsSide;
+    after: NpsSide;
+  };
+  /** One for a measured run, a fraction for a projection. */
+  sampleRate: number;
   elapsedMs: number;
+}
+
+interface NpsSide {
+  census: {
+    scored: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    nps: number;
+  };
+  surveyed: { scored: number; nps: number };
+  histogram: number[];
+  drivers: { id: string; membersAffected: number; totalPoints: number }[];
+}
+
+/**
+ * A change the member-experience page put forward, carried through to here.
+ *
+ * Shaped as a draft patch rather than a raw override so that applying one
+ * fills in the same fields a person would have typed, and can then be narrowed
+ * or widened by hand before it is priced.
+ */
+export interface ConsoleRecommendation {
+  id: string;
+  title: string;
+  rationale: string;
+  membersAffected: number;
+  caution: string;
+  patch: Partial<Draft>;
 }
 
 const PRESETS: {
@@ -127,9 +173,21 @@ const PRESETS: {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * The fraction of members a projection runs against.
+ *
+ * Chosen by measurement rather than by feel: across the changes worth modelling
+ * here, a sixth of the book lands within about two tenths of a point of the
+ * full run and answers in six seconds rather than thirty. Dropping to a twelfth
+ * saves barely a second and roughly doubles the error, so there is no reason to
+ * take it.
+ */
+const PROJECTION_SAMPLE = 0.15;
+
 export function ChangeConsole({
   baseline,
   history,
+  recommendations = [],
 }: {
   baseline: BaselineConfig;
   history: {
@@ -141,28 +199,71 @@ export function ChangeConsole({
     memberCostDeltaCents: number;
     claimsChanged: number;
   }[];
+  recommendations?: ConsoleRecommendation[];
 }) {
-  const initial: Draft = { ...baseline, paRemovedFor: "" };
+  const initial: Draft = {
+    ...baseline,
+    paRemovedFor: "",
+    quantityLimitRemovedFor: "",
+    stepTherapyRemovedFor: "",
+  };
   const [draft, setDraft] = useState<Draft>(initial);
   const [result, setResult] = useState<ReplayResponse | null>(null);
+  const [projection, setProjection] = useState<ReplayResponse | null>(null);
   const [running, setRunning] = useState(false);
+  const [projecting, setProjecting] = useState(false);
   const [committed, setCommitted] = useState<string | null>(null);
   const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
 
   const changes = describeChanges(baseline, draft);
   const dirty = changes.length > 0;
 
+  /*
+   * A projection is discarded the moment the configuration moves.
+   *
+   * Leaving the last one on screen while somebody edits is the worst behaviour
+   * available here: a stale projection looks exactly like a current one, and
+   * the reader has no way to tell that the number stopped describing what is
+   * in front of them.
+   */
+  const clearResults = () => {
+    setResult(null);
+    setProjection(null);
+    setCommitted(null);
+  };
+
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
-    setResult(null);
-    setCommitted(null);
+    clearResults();
   };
 
   const reset = () => {
     setDraft(initial);
-    setResult(null);
-    setCommitted(null);
+    clearResults();
     setAppliedPreset(null);
+  };
+
+  const applyDraft = (patch: Partial<Draft>, presetId: string | null) => {
+    setDraft({ ...initial, ...patch });
+    clearResults();
+    setAppliedPreset(presetId);
+  };
+
+  const project = async (d: Draft) => {
+    setProjecting(true);
+    try {
+      const res = await fetch("/api/replay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          override: buildOverride(baseline, d),
+          sampleRate: PROJECTION_SAMPLE,
+        }),
+      });
+      setProjection((await res.json()) as ReplayResponse);
+    } finally {
+      setProjecting(false);
+    }
   };
 
   const run = async () => {
@@ -172,13 +273,41 @@ export function ChangeConsole({
       const res = await fetch("/api/replay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOverride(baseline, draft)),
+        body: JSON.stringify({ override: buildOverride(baseline, draft) }),
       });
       setResult((await res.json()) as ReplayResponse);
     } finally {
       setRunning(false);
     }
   };
+
+  /*
+   * A recommendation arriving by link from the member-experience page.
+   *
+   * Applied and projected on arrival, because somebody who followed "model this
+   * change" has already asked the question and should not have to ask it again
+   * on landing. Runs once: re-applying whenever the parameter is still in the
+   * address bar would stamp on edits the reader had made since.
+   */
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("recommend");
+  const [intake, setIntake] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!requested || intake === requested) return;
+    const rec = recommendations.find((r) => r.id === requested);
+    if (!rec) return;
+
+    setIntake(requested);
+    const next = { ...initial, ...rec.patch };
+    setDraft(next);
+    clearResults();
+    setAppliedPreset(`rec:${rec.id}`);
+    void project(next);
+    // initial and project are rebuilt every render; depending on them would
+    // re-run this on every keystroke, which is the opposite of running once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requested, recommendations, intake]);
 
   const commit = async () => {
     if (!result) return;
@@ -200,6 +329,10 @@ export function ChangeConsole({
           newRejects: result.newRejects,
         },
         diffs: result.diffs.slice(0, 100),
+        // The member-experience reading the decision was taken against, so the
+        // history on /experience records what this change did rather than only
+        // that it happened.
+        nps: result.nps?.after ?? null,
       }),
     });
     const json = (await res.json()) as { contentHash: string };
@@ -208,6 +341,61 @@ export function ChangeConsole({
 
   return (
     <div className="space-y-5">
+      {recommendations.length > 0 ? (
+        <Card className="border-glass-500/25 bg-glass-50/30">
+          <CardHeader
+            title="What members are complaining about"
+            description="Drawn from the modelled member experience: the edits sitting on the largest numbers of turned-away members. Picking one loads it into the levers and projects it."
+            action={
+              <Link
+                href="/experience"
+                className="text-[12.5px] font-medium text-glass-700 hover:text-glass-800"
+              >
+                Where these come from
+              </Link>
+            }
+          />
+          <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-3">
+            {recommendations.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => {
+                  const next = { ...initial, ...r.patch };
+                  setDraft(next);
+                  clearResults();
+                  setAppliedPreset(`rec:${r.id}`);
+                  void project(next);
+                }}
+                className={cn(
+                  "bg-white px-4 py-3.5 text-left transition hover:bg-glass-50/60",
+                  appliedPreset === `rec:${r.id}` &&
+                    "bg-glass-50 ring-1 ring-inset ring-glass-400/40",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-[13px] font-medium leading-snug text-ink-900">
+                    {r.title}
+                  </div>
+                  <span className="tnum shrink-0 rounded bg-rose-50 px-1.5 py-0.5 text-[10.5px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/15">
+                    {formatNumber(r.membersAffected)}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-ink-500">
+                  {r.rationale}
+                </p>
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-ink-200/70 px-5 py-3">
+            <p className="text-[12.5px] leading-relaxed text-ink-600">
+              Ranked by members affected, not by how much each would move the
+              score. Ranking a list of fixes by the metric they are measured
+              against is how the metric stops being worth measuring.
+            </p>
+          </div>
+        </Card>
+      ) : null}
+
       {/* Presets */}
       <Card>
         <CardHeader
@@ -218,12 +406,7 @@ export function ChangeConsole({
           {PRESETS.map((p) => (
             <button
               key={p.id}
-              onClick={() => {
-                setDraft({ ...initial, ...p.apply(baseline) });
-                setResult(null);
-                setCommitted(null);
-                setAppliedPreset(p.id);
-              }}
+              onClick={() => applyDraft(p.apply(baseline), p.id)}
               className={cn(
                 "bg-white px-4 py-3.5 text-left transition hover:bg-glass-50/60",
                 appliedPreset === p.id && "bg-glass-50 ring-1 ring-inset ring-glass-400/40",
@@ -401,12 +584,43 @@ export function ChangeConsole({
                 <>Model this change</>
               )}
             </button>
+            <button
+              onClick={() => project(draft)}
+              disabled={!dirty || running || projecting}
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-medium text-ink-600 transition hover:text-ink-900 disabled:cursor-not-allowed disabled:text-ink-300"
+            >
+              {projecting ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Projecting…
+                </>
+              ) : (
+                <>Quick projection instead</>
+              )}
+            </button>
           </div>
         </Card>
 
         {/* Results */}
         <div className="space-y-5">
-          {!result && !running ? (
+          {projecting && !running ? (
+            <Card>
+              <div className="flex items-center justify-center gap-3 px-6 py-10 text-[13px] text-ink-600">
+                <Loader2 className="h-4 w-4 animate-spin text-glass-600" />
+                Projecting from {Math.round(PROJECTION_SAMPLE * 100)}% of members…
+              </div>
+            </Card>
+          ) : null}
+
+          {projection && !projecting && !running ? (
+            <ProjectionPanel
+              projection={projection}
+              measured={result}
+              onRunFull={run}
+            />
+          ) : null}
+
+          {!result && !running && !projection && !projecting ? (
             <Card>
               <div className="px-6 py-14 text-center">
                 <h3 className="text-[14px] font-semibold text-ink-900">
@@ -534,12 +748,12 @@ function Results({
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-4">
           <Metric
             label="Annual plan cost"
-            value={<Delta cents={planDelta} invert big />}
+            value={<Delta cents={planDelta} invert big whole />}
             note={`${formatCents(result.planPaidBeforeCents)} to ${formatCents(result.planPaidAfterCents)}`}
           />
           <Metric
             label="Member out of pocket"
-            value={<Delta cents={memberDelta} invert big />}
+            value={<Delta cents={memberDelta} invert big whole />}
             note={`${formatCents(result.memberPaidBeforeCents)} to ${formatCents(result.memberPaidAfterCents)}`}
           />
           <Metric
@@ -586,6 +800,8 @@ function Results({
           </p>
         </div>
       </Card>
+
+      {result.nps ? <MemberExperiencePanel nps={result.nps} /> : null}
 
       {result.newRejects > 0 ? (
         <Card className="border-rose-600/25 bg-rose-50/40">
@@ -731,9 +947,20 @@ function buildOverride(base: BaselineConfig, d: Draft): ConfigOverride {
     specialtyChannelRestricted: d.specialtyChannelRestricted,
     refillThreshold: d.refillThreshold,
   };
-  if (d.paRemovedFor.trim()) {
-    o.formulary = [{ nameContains: d.paRemovedFor.trim(), requiresPA: false }];
-  }
+  const formulary: NonNullable<ConfigOverride["formulary"]> = [];
+  if (d.paRemovedFor.trim())
+    formulary.push({ nameContains: d.paRemovedFor.trim(), requiresPA: false });
+  if (d.quantityLimitRemovedFor.trim())
+    formulary.push({
+      nameContains: d.quantityLimitRemovedFor.trim(),
+      hasQuantityLimit: false,
+    });
+  if (d.stepTherapyRemovedFor.trim())
+    formulary.push({
+      nameContains: d.stepTherapyRemovedFor.trim(),
+      requiresStep: false,
+    });
+  if (formulary.length > 0) o.formulary = formulary;
   if (d.includeUandC !== base.includeUandC) {
     o.lesserOfArms = d.includeUandC
       ? ["AWP_MINUS", "MAC", "UANDC", "SUBMITTED"]
@@ -799,6 +1026,14 @@ function describeChanges(b: BaselineConfig, d: Draft): string[] {
     );
   if (d.paRemovedFor.trim())
     out.push(`Prior authorization removed from drugs matching "${d.paRemovedFor.trim()}".`);
+  if (d.quantityLimitRemovedFor.trim())
+    out.push(
+      `Quantity limit lifted on drugs matching "${d.quantityLimitRemovedFor.trim()}".`,
+    );
+  if (d.stepTherapyRemovedFor.trim())
+    out.push(
+      `Step therapy removed from drugs matching "${d.stepTherapyRemovedFor.trim()}".`,
+    );
   return out;
 }
 
@@ -1006,6 +1241,283 @@ function Toggle({
   );
 }
 
+/**
+ * The answer available in six seconds rather than thirty.
+ *
+ * The same engine over a fixed sixth of the members, which makes this an
+ * understatement of confidence rather than a different sort of claim. One thing
+ * has to be said carefully, and the panel says it: the sampled *level* is not
+ * the book's level, because a sixth of the members is a slightly different
+ * population. The sampled *movement* is reliable, because it is the same people
+ * scored twice and whatever makes the sample unrepresentative is present on
+ * both sides and cancels. So only the movement is shown.
+ */
+function ProjectionPanel({
+  projection,
+  measured,
+  onRunFull,
+}: {
+  projection: ReplayResponse;
+  measured: ReplayResponse | null;
+  onRunFull: () => void;
+}) {
+  const share = projection.sampleRate > 0 ? 1 / projection.sampleRate : 1;
+
+  /*
+   * Rounded to the nearest thousand dollars.
+   *
+   * A figure multiplied by seven to stand in for members who were never looked
+   * at does not know its own value to the cent, and printing it that way
+   * invites exactly the misreading the rest of the panel is trying to prevent.
+   * The measured run keeps its pennies because it has earned them.
+   */
+  const scaled = (before: number, after: number) =>
+    Math.round(((after - before) * share) / 100_000) * 100_000;
+
+  const planDelta = scaled(
+    projection.planPaidBeforeCents,
+    projection.planPaidAfterCents,
+  );
+  const memberDelta = scaled(
+    projection.memberPaidBeforeCents,
+    projection.memberPaidAfterCents,
+  );
+
+  const npsDelta = projection.nps
+    ? Math.round(
+        (projection.nps.after.census.nps - projection.nps.before.census.nps) *
+          10,
+      ) / 10
+    : null;
+
+  const measuredDelta =
+    measured?.nps
+      ? Math.round(
+          (measured.nps.after.census.nps - measured.nps.before.census.nps) * 10,
+        ) / 10
+      : null;
+
+  return (
+    <Card className="border-glass-500/30">
+      <CardHeader
+        title="Projected"
+        description={`Run against ${formatNumber(projection.nps?.before.census.scored ?? 0)} members, one in ${Math.round(share)}, in ${(projection.elapsedMs / 1000).toFixed(1)} seconds. The same engine on a smaller book.`}
+        action={
+          <button
+            onClick={onRunFull}
+            className="rounded-lg bg-ink-900 px-3 py-2 text-[12.5px] font-medium text-white transition hover:bg-ink-800"
+          >
+            Measure it properly
+          </button>
+        }
+      />
+      <div className="grid gap-px bg-ink-200/60 sm:grid-cols-3">
+        <Metric
+          label="Member experience"
+          value={
+            npsDelta === null ? (
+              <span className="text-[22px] font-semibold text-ink-400">—</span>
+            ) : (
+              <span
+                className={cn(
+                  "tnum text-[22px] font-semibold",
+                  Math.abs(npsDelta) <= 0.1
+                    ? "text-ink-900"
+                    : npsDelta > 0
+                      ? "text-emerald-700"
+                      : "text-rose-700",
+                )}
+              >
+                {Math.abs(npsDelta) <= 0.1
+                  ? "no change"
+                  : `${npsDelta > 0 ? "+" : "−"}${Math.abs(npsDelta).toFixed(1)}`}
+              </span>
+            )
+          }
+          note="NPS points, ±0.2 against a full run"
+        />
+        <Metric
+          label="Annual plan cost"
+          value={<Delta cents={planDelta} invert big whole />}
+          note="Scaled from the sample, to the nearest thousand"
+        />
+        <Metric
+          label="Member out of pocket"
+          value={<Delta cents={memberDelta} invert big whole />}
+          note="Scaled from the sample, to the nearest thousand"
+        />
+      </div>
+      <div className="border-t border-ink-200/70 px-5 py-3.5">
+        <p className="text-[13px] leading-relaxed text-ink-700">
+          {measuredDelta !== null && npsDelta !== null ? (
+            <>
+              The full run came back at{" "}
+              <strong className="font-semibold">
+                {measuredDelta > 0 ? "+" : ""}
+                {measuredDelta.toFixed(1)}
+              </strong>
+              , against a projection of {npsDelta > 0 ? "+" : ""}
+              {npsDelta.toFixed(1)}. The projection is shown next to the
+              measurement rather than replaced by it, because a shortcut nobody
+              ever checks is a shortcut nobody should trust.
+            </>
+          ) : (
+            <>
+              These are estimates. The money is scaled up from the sample and
+              carries the sampling error with it; the experience figure is a
+              movement rather than a level, which is the part sampling gets
+              right, because it is the same members scored on both sides.
+              Nothing here can be committed — press{" "}
+              <strong className="font-semibold">measure it properly</strong> to
+              re-adjudicate the whole book.
+            </>
+          )}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * What the change costs the people it happens to.
+ *
+ * Sits directly beneath the money on purpose. Every lever on this page has a
+ * member on the other end of it, and a saving is only a saving if you are
+ * willing to say what it was bought with. The figure is modelled rather than
+ * surveyed, which the panel says plainly rather than in a footnote.
+ */
+function MemberExperiencePanel({
+  nps,
+}: {
+  nps: NonNullable<ReplayResponse["nps"]>;
+}) {
+  const before = nps.before.census;
+  const after = nps.after.census;
+  const delta = Math.round((after.nps - before.nps) * 10) / 10;
+  const detractorDelta = after.detractors - before.detractors;
+
+  // A tenth of a point on ninety thousand members is noise from rounding, not
+  // a finding. Anything at or under it is reported as no movement.
+  const moved = Math.abs(delta) > 0.1;
+
+  return (
+    <Card>
+      <CardHeader
+        title="What it does to members"
+        description="Every member's full plan year, scored against the published schedule, before and after the change. Nobody was surveyed."
+        action={
+          <Link
+            href="/experience"
+            className="text-[12.5px] font-medium text-glass-700 hover:text-glass-800"
+          >
+            The schedule
+          </Link>
+        }
+      />
+      <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-3">
+        <Metric
+          label="Modelled NPS"
+          value={
+            <span
+              className={cn(
+                "tnum text-[22px] font-semibold",
+                !moved
+                  ? "text-ink-900"
+                  : delta > 0
+                    ? "text-emerald-700"
+                    : "text-rose-700",
+              )}
+            >
+              {!moved
+                ? "no change"
+                : `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}`}
+            </span>
+          }
+          note={`${before.nps.toFixed(1)} to ${after.nps.toFixed(1)}`}
+        />
+        <Metric
+          label="Detractors"
+          value={
+            <span
+              className={cn(
+                "tnum text-[22px] font-semibold",
+                detractorDelta === 0
+                  ? "text-ink-900"
+                  : detractorDelta > 0
+                    ? "text-rose-700"
+                    : "text-emerald-700",
+              )}
+            >
+              {detractorDelta === 0
+                ? "no change"
+                : `${detractorDelta > 0 ? "+" : "−"}${formatNumber(Math.abs(detractorDelta))}`}
+            </span>
+          }
+          note={`${formatNumber(before.detractors)} to ${formatNumber(after.detractors)} members scoring 6 or below`}
+        />
+        <Metric
+          label="Promoters"
+          value={
+            <span
+              className={cn(
+                "tnum text-[22px] font-semibold",
+                after.promoters === before.promoters
+                  ? "text-ink-900"
+                  : after.promoters > before.promoters
+                    ? "text-emerald-700"
+                    : "text-rose-700",
+              )}
+            >
+              {after.promoters === before.promoters
+                ? "no change"
+                : `${after.promoters > before.promoters ? "+" : "−"}${formatNumber(Math.abs(after.promoters - before.promoters))}`}
+            </span>
+          }
+          note={`${formatNumber(before.promoters)} to ${formatNumber(after.promoters)} members scoring 9 or 10`}
+        />
+      </div>
+      <div className="border-t border-ink-200/70 px-5 py-3.5">
+        <p className="text-[13px] leading-relaxed text-ink-700">
+          {!moved ? (
+            <>
+              This change does not move member experience. It shifts money
+              without changing what anybody is told at a counter, waits for, or
+              pays enough to notice.
+            </>
+          ) : delta < 0 ? (
+            <>
+              This change makes the benefit worse for the people using it, by{" "}
+              <strong className="font-semibold">
+                {Math.abs(delta).toFixed(1)} points
+              </strong>
+              . Whatever it saves, that is what it is being bought with.
+            </>
+          ) : (
+            <>
+              This change makes the benefit better for the people using it, by{" "}
+              <strong className="font-semibold">
+                {delta.toFixed(1)} points
+              </strong>
+              . If it also costs money, that is the price of the improvement.
+            </>
+          )}{" "}
+          Scored across {formatNumber(before.scored)} members over the whole
+          plan year, on the same basis as the money above. The{" "}
+          <Link
+            href="/experience"
+            className="font-medium text-glass-700 hover:text-glass-900"
+          >
+            member experience page
+          </Link>{" "}
+          reads higher against the year so far, because a year that is only
+          part run has had fewer chances to go wrong. Compare the movement
+          here, not the level.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 function Metric({
   label,
   value,
@@ -1030,11 +1542,18 @@ function Delta({
   cents,
   invert,
   big,
+  whole,
 }: {
   cents: number;
   /** Cost going down is good, so invert the colour of the sign. */
   invert?: boolean;
   big?: boolean;
+  /**
+   * Drop the pennies. For figures scaled up from a sample, where two decimal
+   * places on a number rounded to the nearest thousand claims a precision the
+   * measurement does not have.
+   */
+  whole?: boolean;
 }) {
   if (cents === 0)
     return <span className="tnum text-ink-400">{big ? "no change" : "—"}</span>;
@@ -1048,7 +1567,7 @@ function Delta({
       )}
     >
       {cents > 0 ? "+" : "−"}
-      {formatCents(Math.abs(cents))}
+      {whole ? formatCentsWhole(Math.abs(cents)) : formatCents(Math.abs(cents))}
     </span>
   );
 }

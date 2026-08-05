@@ -67,6 +67,22 @@ body {
   color: var(--color-ink-950);
 }
 
+/*
+ * Grid children may shrink below their content.
+ *
+ * By default a grid item refuses to get narrower than its own min-content, and
+ * the min-content of a table of drug names is around 600px. On a laptop that
+ * never shows; on a phone one such table dragged the whole document to 871px
+ * and every page scrolled sideways. Setting this per grid was the alternative,
+ * and it would have had to be remembered on every grid written from here on.
+ *
+ * The panes that hold wide data already declare `overflow-x-auto`, so the
+ * effect is that they scroll inside their card rather than widening the page.
+ */
+.grid > * {
+  min-width: 0;
+}
+
 /* Thin, unobtrusive scrollbars inside data panes. */
 .scroll-thin::-webkit-scrollbar {
   width: 8px;

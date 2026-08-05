@@ -14,18 +14,26 @@ import {
 } from "@/components/ui";
 import { ClaimFilters } from "@/components/claim-filters";
 import { listClaims, type ClaimListRow } from "@/lib/queries/claims";
+import { getClock } from "@/lib/session";
 import { formatCents } from "@/lib/money";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
-import { PRICING_ARM_LABEL } from "@/lib/engine/types";
 
 export const dynamic = "force-dynamic";
 
+/*
+ * Short forms of the pricing arm names, for the ledger only.
+ *
+ * The full names are right on a claim's derivation, where there is one of
+ * them and room to read it. In a nine-column ledger they wrap to two lines on
+ * most rows, which makes the row heights ragged and the column hard to scan
+ * for the thing that actually matters: which arm won.
+ */
 const BASIS_LABEL: Record<string, string> = {
-  "3": PRICING_ARM_LABEL.AWP_MINUS,
-  "7": PRICING_ARM_LABEL.MAC,
-  "20": PRICING_ARM_LABEL.NADAC,
-  "5": PRICING_ARM_LABEL.UANDC,
-  "1": PRICING_ARM_LABEL.SUBMITTED,
+  "3": "AWP discount",
+  "7": "MAC ceiling",
+  "20": "NADAC",
+  "5": "Usual & customary",
+  "1": "Submitted cost",
 };
 
 export default async function ClaimsPage({
@@ -39,18 +47,22 @@ export default async function ClaimsPage({
     return typeof v === "string" ? v : undefined;
   };
 
-  const result = await listClaims({
-    q: str("q"),
-    status: str("status"),
-    channel: str("channel"),
-    level: str("level"),
-    reject: str("reject"),
-    drug: str("drug"),
-    member: str("member"),
-    scenario: str("scenario"),
-    basis: str("basis"),
-    page: Number(str("page") ?? 1),
-  });
+  const clock = await getClock();
+  const result = await listClaims(
+    {
+      q: str("q"),
+      status: str("status"),
+      channel: str("channel"),
+      level: str("level"),
+      reject: str("reject"),
+      drug: str("drug"),
+      member: str("member"),
+      scenario: str("scenario"),
+      basis: str("basis"),
+      page: Number(str("page") ?? 1),
+    },
+    clock,
+  );
 
   const markup =
     result.sums.nadacTotalCents > 0
@@ -149,7 +161,7 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
           <span className="tnum font-medium text-ink-900 group-hover:text-glass-700">
             {c.claimNumber}
           </span>
-          <span className="block text-[11.5px] text-ink-500">
+          <span className="block whitespace-nowrap text-[11.5px] text-ink-500">
             {formatDate(c.dateOfService)} · {c.channel}
           </span>
         </Link>
@@ -157,7 +169,7 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
       <Td>
         <Link
           href={`/members/${c.member.id}`}
-          className="text-ink-800 hover:text-glass-700"
+          className="whitespace-nowrap text-ink-800 hover:text-glass-700"
         >
           {c.member.firstName} {c.member.lastName}
         </Link>
@@ -172,7 +184,7 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
         </span>
       </Td>
       <Td>
-        <span className="line-clamp-1 max-w-[160px] text-[12.5px] text-ink-600">
+        <span className="block w-[11.5rem] truncate whitespace-nowrap text-[12.5px] text-ink-600">
           {c.pharmacy.name}
         </span>
       </Td>
@@ -201,12 +213,12 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
       </Td>
       <Td>
         {rejected ? (
-          <span className="line-clamp-1 max-w-[180px] text-[12px] text-rose-700">
+          <span className="block max-w-[15rem] truncate text-[12px] text-rose-700">
             {c.rejectMessage}
           </span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <span className="text-[12px] text-ink-600">
+            <span className="whitespace-nowrap text-[12px] text-ink-600">
               {BASIS_LABEL[c.basisOfReimbursement ?? ""] ?? "—"}
             </span>
             {c.basisOfReimbursement === "3" ? <SimulatedBadge /> : null}

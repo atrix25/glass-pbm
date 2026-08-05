@@ -12,6 +12,11 @@ import { cn } from "@/lib/utils";
  */
 export const DEMO_STEPS = [
   {
+    href: "/operations",
+    label: "The plan today",
+    claim: "A hundred thousand lives, and what happened on them this morning.",
+  },
+  {
     href: "/sponsor",
     label: "The book of business",
     claim: "What the plan spent, and where it went.",
@@ -44,7 +49,7 @@ export const DEMO_STEPS = [
   {
     href: "/proof",
     label: "Prove it is correct",
-    claim: "Invariants, golden cases, and four published audit findings reproduced.",
+    claim: "Golden cases, book-wide invariants, and criteria branch coverage.",
   },
 ];
 
@@ -58,10 +63,10 @@ export function DemoRail() {
 
   if (dismissed) {
     return (
-      <div className="flex justify-end border-b border-ink-200/70 bg-white/60 px-8 py-1.5">
+      <div className="flex justify-end border-b border-ink-200/70 bg-white/60 px-4 sm:px-6 lg:px-8">
         <button
           onClick={() => setDismissed(false)}
-          className="inline-flex items-center gap-1.5 text-[12px] text-ink-500 transition hover:text-ink-800"
+          className="inline-flex items-center gap-1.5 py-2 text-[12px] text-ink-500 transition hover:text-ink-800 sm:py-1.5"
         >
           <Presentation className="h-3.5 w-3.5" />
           Show guided demo
@@ -76,11 +81,15 @@ export function DemoRail() {
 
   return (
     <div className="border-b border-ink-200/70 bg-white/80 backdrop-blur">
-      <div className="flex items-center gap-4 px-8 py-2">
-        <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-500">
+      <div className="flex items-center gap-2 px-4 py-1.5 sm:gap-4 sm:px-6 sm:py-2 lg:px-8">
+        <Link
+          href="/walkthrough"
+          title="The full walkthrough: every page, what it is, and what to check"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-500 transition hover:bg-ink-100 hover:text-ink-800 sm:py-1"
+        >
           <Presentation className="h-3.5 w-3.5 text-glass-600" />
           Guided demo
-        </span>
+        </Link>
 
         <ol className="scroll-thin flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {DEMO_STEPS.map((step, i) => {
@@ -92,7 +101,7 @@ export function DemoRail() {
                   href={step.href}
                   title={step.claim}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] transition",
+                    "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-[12px] transition sm:py-1",
                     active
                       ? "bg-glass-600 font-medium text-white"
                       : done
@@ -123,7 +132,7 @@ export function DemoRail() {
           {prev ? (
             <Link
               href={prev.href}
-              className="rounded-md p-1 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+              className="rounded-md p-2.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700 sm:p-1"
               title={`Back: ${prev.label}`}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -132,7 +141,7 @@ export function DemoRail() {
           {next ? (
             <Link
               href={next.href}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-glass-700 transition hover:bg-glass-50"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-[12px] font-medium text-glass-700 transition hover:bg-glass-50 sm:py-1"
               title={next.claim}
             >
               Next
@@ -141,7 +150,7 @@ export function DemoRail() {
           ) : null}
           <button
             onClick={() => setDismissed(true)}
-            className="rounded-md p-1 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+            className="rounded-md p-2.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700 sm:p-1"
             title="Hide"
           >
             <X className="h-3.5 w-3.5" />

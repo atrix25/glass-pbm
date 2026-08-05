@@ -20,6 +20,17 @@ import {
 } from "./adjudicate";
 import { loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
+import {
+  screenFill,
+  type ConcurrentFill,
+  type DurConflict,
+} from "@/lib/clinical/prospective";
+import { dailyMme } from "@/lib/clinical/opioids";
+import {
+  dayOfPlanYear,
+  medicalDeductibleAsOf,
+  medicalEncountersFor,
+} from "@/lib/accumulators/medical-feed";
 
 export interface PosRequest {
   memberId: string;
@@ -29,10 +40,34 @@ export interface PosRequest {
   quantityDispensed: number;
   daysSupply: number;
   dawCode: string;
+  /** 411-DB. Optional: without it the DUR segment cannot say "other prescriber". */
+  prescriberNpi?: string | null;
+  /**
+   * 418-DK. Value "3" is Emergency, which is how the pharmacy asks for the
+   * weekend and holiday supply. The plan does not infer it, because dispensing
+   * an emergency supply is the pharmacist's call and inferring it would reprice
+   * fills that were never submitted that way.
+   */
+  levelOfService?: string | null;
 }
 
 export interface PosResponse {
   outcome: AdjudicationOutcome;
+  /**
+   * The NCPDP DUR/PPS response segment. Advisory: a conflict is transmitted
+   * alongside the pricing, and for a major one the pharmacy is expected to
+   * intervene and send a professional service code back. Nothing here changes
+   * what the claim pays.
+   */
+  dur: DurConflict[];
+  /** Fills still inside their days supply on the date of service. */
+  activeTherapy: Array<{
+    name: string;
+    dateOfService: string;
+    daysSupply: number;
+    dailyMme: number | null;
+    samePharmacy: boolean;
+  }>;
   /** What the member's position looked like when the claim was priced. */
   context: {
     memberName: string;
@@ -67,7 +102,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
 
   const dateOfService = new Date(`${req.dateOfService}T00:00:00.000Z`);
 
-  const [member, history] = await Promise.all([
+  const [member, history, sameDay, opioids] = await Promise.all([
     prisma.member.findUnique({
       where: { id: req.memberId },
       select: { firstName: true, lastName: true, cardholderId: true },
@@ -79,10 +114,13 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
         dateOfService: { lt: dateOfService },
       },
       select: {
+        claimNumber: true,
         dateOfService: true,
         daysSupply: true,
         quantityDispensed: true,
         drugId: true,
+        prescriberNpi: true,
+        pharmacyId: true,
         patientPayCents: true,
         appliedToDeductibleCents: true,
         formularyLevel: true,
@@ -90,8 +128,50 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
       },
       orderBy: { dateOfService: "asc" },
     }),
+    /*
+     * Fills dispensed the same day are concurrent therapy for clinical
+     * purposes and are not part of pricing, so they are fetched separately.
+     * Two prescriptions started the same morning at two pharmacies is the
+     * exact case only the processor can see, and cutting the window strictly
+     * before the date of service would drop it.
+     *
+     * A same-day fill of the same product is excluded: that is a duplicate
+     * submission, which the engine answers with a reject code rather than a
+     * clinical conflict.
+     */
+    prisma.claim.findMany({
+      where: {
+        memberId: req.memberId,
+        responseStatus: "P",
+        dateOfService,
+        drugId: { not: req.drugId },
+      },
+      select: {
+        claimNumber: true,
+        dateOfService: true,
+        daysSupply: true,
+        quantityDispensed: true,
+        drugId: true,
+        prescriberNpi: true,
+        pharmacyId: true,
+      },
+    }),
+    prisma.opioidProduct.findMany({ where: { convertible: true } }),
   ]);
   if (!member) throw new Error("Unknown member");
+
+  const opioidByDrug = new Map(opioids.map((o) => [o.drugId, o]));
+  const mmeOf = (drugId: string, quantity: number, days: number) => {
+    const product = opioidByDrug.get(drugId);
+    if (!product) return null;
+    return dailyMme({
+      strengthMg: product.strengthMg,
+      mmeFactor: product.mmeFactor,
+      isTransdermal: product.isTransdermal,
+      quantityDispensed: quantity,
+      daysSupply: days,
+    });
+  };
 
   /*
    * The accumulator is rebuilt from the claims that precede this date rather
@@ -103,6 +183,20 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
   );
   let rxOop = 0;
   let deductible = 0;
+
+  /*
+   * The medical side of an integrated deductible, which this system receives
+   * rather than adjudicates. Counted as of the date of service for the same
+   * reason the pharmacy balance is rebuilt from dated claims: a fill in March
+   * is priced against the deductible as it stood in March.
+   */
+  if (plan.deductibleIntegratedWithMedical) {
+    deductible += medicalDeductibleAsOf(
+      medicalEncountersFor(req.memberId, plan.deductibleIndividual),
+      dayOfPlanYear(dateOfService),
+    );
+  }
+
   const priorFills: PriorFill[] = [];
   for (const c of history) {
     deductible += c.appliedToDeductibleCents;
@@ -148,6 +242,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
       usualAndCustomaryCents,
       ingredientCostSubmittedCents: Math.round(usualAndCustomaryCents * 0.98),
       compoundCode: "1",
+      levelOfService: req.levelOfService ?? undefined,
     },
     member: {
       id: req.memberId,
@@ -172,8 +267,63 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
   const outcome = adjudicate(ctx);
   const lastFill = history[history.length - 1];
 
+  /*
+   * Clinical screening runs on the submitted fill whether or not it paid. A
+   * claim rejected for a quantity limit is still a claim the pharmacy may
+   * resubmit, and a major interaction is worth transmitting either way.
+   */
+  const concurrent: ConcurrentFill[] = [...history, ...sameDay].map((c) => {
+    const filled = world.drugs.get(c.drugId);
+    return {
+      claimNumber: c.claimNumber,
+      drugId: c.drugId,
+      name: filled?.name ?? c.drugId,
+      molecule: filled?.molecule ?? null,
+      therapeuticClass: filled?.therapeuticClass ?? null,
+      dateOfService: c.dateOfService,
+      daysSupply: c.daysSupply,
+      quantityDispensed: c.quantityDispensed,
+      prescriberNpi: c.prescriberNpi,
+      pharmacyId: c.pharmacyId,
+      dailyMme: mmeOf(c.drugId, c.quantityDispensed, c.daysSupply),
+    };
+  });
+
+  const candidateMme = mmeOf(req.drugId, req.quantityDispensed, req.daysSupply);
+  const dur = screenFill(
+    {
+      drugId: req.drugId,
+      name: drug.name,
+      molecule: drug.molecule,
+      therapeuticClass: drug.therapeuticClass ?? null,
+      dateOfService,
+      daysSupply: req.daysSupply,
+      quantityDispensed: req.quantityDispensed,
+      prescriberNpi: req.prescriberNpi ?? null,
+      pharmacyId: req.pharmacyId,
+      dailyMme: candidateMme,
+    },
+    concurrent,
+  );
+
+  const activeTherapy = concurrent
+    .filter(
+      (f) =>
+        f.dateOfService.getTime() + f.daysSupply * 86_400_000 >
+        dateOfService.getTime(),
+    )
+    .map((f) => ({
+      name: f.name,
+      dateOfService: f.dateOfService.toISOString().slice(0, 10),
+      daysSupply: f.daysSupply,
+      dailyMme: f.dailyMme,
+      samePharmacy: f.pharmacyId === req.pharmacyId,
+    }));
+
   return {
     outcome,
+    dur,
+    activeTherapy,
     context: {
       memberName: `${member.firstName} ${member.lastName}`,
       cardholderId: member.cardholderId,

@@ -14,6 +14,7 @@ import {
 import { TraceViewer, type TraceSource } from "@/components/trace-viewer";
 import { NcpdpPanel } from "@/components/ncpdp-panel";
 import { getClaimDetail, getRelatedFills } from "@/lib/queries/claims";
+import { reproduceClaim } from "@/lib/engine/reproduce";
 import { SOURCES } from "@/lib/sources";
 import { formatCents, formatUnitPrice } from "@/lib/money";
 import { formatDate, formatPercent, levelMeta } from "@/lib/utils";
@@ -37,9 +38,16 @@ export default async function ClaimProofPage({
   const claim = await getClaimDetail(id);
   if (!claim) notFound();
 
+  /*
+   * Traces are not stored, they are re-derived. A claim seeded before that
+   * change still carries one, so it is used when present; everything else runs
+   * back through the engine here. The reproduction reports whether it landed
+   * on the same money the book recorded, and that answer is shown on the page.
+   */
+  const reproduced = claim.traceJson ? null : await reproduceClaim(claim.id);
   const trace: TraceStepInput[] = claim.traceJson
     ? (JSON.parse(claim.traceJson) as TraceStepInput[])
-    : [];
+    : (reproduced?.outcome.trace ?? []);
   const related = await getRelatedFills(claim.memberId, claim.drugId);
   const rejected = claim.responseStatus === "R";
   const rejectCodes: string[] = JSON.parse(claim.rejectCodes);
@@ -146,6 +154,7 @@ export default async function ClaimProofPage({
             title="The derivation"
             description="Every rule the engine evaluated, in the order it ran. Rules that changed the outcome are marked. Open any rule to see the values it read and the document it came from."
           />
+          {reproduced ? <ReproductionNotice reproduced={reproduced} /> : null}
           <TraceViewer steps={trace} sources={SOURCE_MAP} />
         </Card>
 
@@ -281,6 +290,91 @@ export default async function ClaimProofPage({
 }
 
 type ClaimDetail = NonNullable<Awaited<ReturnType<typeof getClaimDetail>>>;
+
+/**
+ * Say plainly that the derivation below was recomputed, and whether it agreed.
+ *
+ * A reproduction that silently disagreed with the book would be worse than no
+ * reproduction at all, so the comparison is stated rather than assumed.
+ */
+function ReproductionNotice({
+  reproduced,
+}: {
+  reproduced: NonNullable<Awaited<ReturnType<typeof reproduceClaim>>>;
+}) {
+  const { matches, fields } = reproduced.agreement;
+  const disagreements = fields.filter((f) => f.stored !== f.reproduced);
+  const { reversalOf } = reproduced;
+
+  return (
+    <div
+      className={`mb-4 rounded-lg border px-4 py-3 ${
+        matches
+          ? "border-emerald-200 bg-emerald-50/60"
+          : "border-rose-300 bg-rose-50"
+      }`}
+    >
+      <div className="flex items-start gap-2.5">
+        {matches ? (
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+        ) : (
+          <Ban className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" />
+        )}
+        <div className="min-w-0">
+          <p
+            className={`text-[13px] font-medium ${
+              matches ? "text-emerald-900" : "text-rose-900"
+            }`}
+          >
+            {matches
+              ? `Recomputed just now, in ${reproduced.elapsedMs} ms, and it agrees with the book.`
+              : "Recomputed just now, and it does not agree with the book."}
+          </p>
+          <p
+            className={`mt-1 text-[12.5px] leading-relaxed ${
+              matches ? "text-emerald-900/70" : "text-rose-900/75"
+            }`}
+          >
+            {matches ? (
+              reversalOf ? (
+                <>
+                  A reversal has no pricing of its own, so the rules below are
+                  the ones that priced{" "}
+                  <Link
+                    href={`/claims/${reversalOf.id}`}
+                    className="font-medium underline decoration-emerald-700/30 hover:decoration-emerald-700"
+                  >
+                    {reversalOf.claimNumber}
+                  </Link>
+                  , the fill this backs out. That fill was re-adjudicated just
+                  now and every figure on it was negated, which is how the book
+                  recorded this reversal and why the money above is negative.
+                </>
+              ) : (
+                <>
+                  This derivation was not read from a log. The engine was run
+                  again against the inputs stored on the claim, and it landed on
+                  the same {fields.length} figures the plan actually paid.
+                </>
+              )
+            ) : (
+              <>
+                {disagreements
+                  .map(
+                    (f) =>
+                      `${f.field}: book ${f.stored}, recomputed ${f.reproduced}`,
+                  )
+                  .join("; ")}
+                . That is a defect, not a rounding artifact, and it should be
+                treated as one.
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MoneyPanel({
   claim,

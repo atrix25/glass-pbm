@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { SimulationClock } from "@/lib/clock";
 
 export interface MemberListRow {
   id: string;
@@ -15,22 +16,28 @@ export interface MemberListRow {
   isDemo: boolean;
 }
 
-export async function listMembers(opts: {
-  q?: string;
-  page?: number;
-  perPage?: number;
-  sort?: "spend" | "name";
-}): Promise<{ rows: MemberListRow[]; total: number; pages: number; page: number }> {
+/** The membership directory, with each member's book as of the clock. */
+export async function listMembers(
+  opts: {
+    q?: string;
+    page?: number;
+    perPage?: number;
+    sort?: "spend" | "name";
+  },
+  clock: SimulationClock,
+): Promise<{ rows: MemberListRow[]; total: number; pages: number; page: number }> {
   const perPage = opts.perPage ?? 30;
   const page = Math.max(1, opts.page ?? 1);
   const q = opts.q?.trim() ?? "";
-  const like = `%${q}%`;
+  const like = `%${q.replace(/['%_]/g, "")}%`;
   const orderBy =
     opts.sort === "name" ? "m.lastName ASC, m.firstName ASC" : "billedCents DESC";
 
   const where = q
-    ? `WHERE (m.lastName LIKE '${like.replace(/'/g, "")}' OR m.firstName LIKE '${like.replace(/'/g, "")}' OR m.cardholderId LIKE '${like.replace(/'/g, "")}')`
+    ? `WHERE (m.lastName LIKE '${like}' OR m.firstName LIKE '${like}' OR m.cardholderId LIKE '${like}')`
     : "";
+
+  const day = clock.today.getTime();
 
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
     SELECT m.id, m.firstName, m.lastName, m.cardholderId, m.personCode, m.city,
@@ -40,7 +47,7 @@ export async function listMembers(opts: {
            COALESCE(SUM(c.totalBilledCents), 0) AS billedCents,
            COALESCE(SUM(c.patientPayCents), 0)  AS memberPaidCents
     FROM Member m
-    LEFT JOIN Claim c ON c.memberId = m.id
+    LEFT JOIN Claim c ON c.memberId = m.id AND c.dateOfService <= ${day}
     LEFT JOIN EligibilitySpan es ON es.memberId = m.id
     LEFT JOIN BenefitPlan bp ON bp.id = es.benefitPlanId
     ${where}

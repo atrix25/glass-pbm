@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { ConfigOverride } from "@/lib/engine/replay";
+import type { NpsReading } from "@/lib/nps/reading";
+import { RUBRIC_VERSION } from "@/lib/nps/rubric";
+import { getClock } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -19,6 +22,8 @@ interface CommitBody {
     newRejects: number;
   };
   diffs: unknown[];
+  /** The post-change reading from the replay this decision was taken against. */
+  nps?: NpsReading | null;
 }
 
 export async function POST(request: Request) {
@@ -33,7 +38,7 @@ export async function POST(request: Request) {
       contentHash,
       payload,
       changeSummary: JSON.stringify(body.changeSummary),
-      createdBy: "Wisconsin ETF — Benefits Director",
+      createdBy: "Steel Potatoes LLC — Benefits Director",
     },
   });
 
@@ -50,6 +55,39 @@ export async function POST(request: Request) {
       diffPayload: JSON.stringify(body.diffs.slice(0, 100)),
     },
   });
+
+  /*
+   * Record where member experience lands under the new configuration, tagged
+   * to the version that caused it.
+   *
+   * Taken from the replay the decision was actually made against rather than
+   * recomputed here, for two reasons. Recomputing would score the stored book,
+   * which still reflects the old design and would therefore file the old
+   * number against the new version. And the number on the screen when somebody
+   * pressed commit is the number they committed to; storing a different one
+   * afterwards would make the history a record of something nobody saw.
+   */
+  if (body.nps) {
+    const clock = await getClock();
+    await prisma.npsSnapshot.create({
+      data: {
+        label: body.label,
+        note: "Recorded automatically on committing this change.",
+        clockAt: clock.now,
+        rubricVersion: RUBRIC_VERSION,
+        configVersionId: version.id,
+        scored: body.nps.census.scored,
+        promoters: body.nps.census.promoters,
+        passives: body.nps.census.passives,
+        detractors: body.nps.census.detractors,
+        npsCensus: body.nps.census.nps,
+        responded: body.nps.surveyed.scored,
+        npsSurveyed: body.nps.surveyed.nps,
+        distribution: JSON.stringify(body.nps.histogram),
+        drivers: JSON.stringify(body.nps.drivers),
+      },
+    });
+  }
 
   return NextResponse.json({ id: version.id, contentHash });
 }

@@ -47,6 +47,46 @@ const SUITE_PURPOSE: Record<string, { name: string; purpose: string }> = {
     purpose:
       "Routing picks the question actually asked, every figure in an answer traces to a tool result, and the agent declines what it should decline.",
   },
+  "formulary.test.ts": {
+    name: "Formulary parse",
+    purpose:
+      "The 259-page benefit document decodes to enforceable rules: every legend code is accounted for, no rule clause leaks into a product name, and no drug is marked restricted to a diagnosis without the ICD-10 code that restriction needs in order to ever refuse a claim.",
+  },
+  "quantity-limit.test.ts": {
+    name: "Quantity limits",
+    purpose:
+      "A limit fires when it can be measured and is reported as a gap when it cannot. Twelve tubes a year and sixty grams dispensed are not the same scale, and the engine refuses to compare them rather than denying a member on a unit conversion nobody supplied.",
+  },
+  "ndc-packages.test.ts": {
+    name: "Package sizes",
+    purpose:
+      "Package sizes are read out of the FDA NDC Directory rather than assumed, so a limit written in tubes converts to the grams a claim is billed in, and the conversion cites the sentence it came from.",
+  },
+  "deductible.test.ts": {
+    name: "Deductible",
+    purpose:
+      "A deductible is money the member pays before the plan starts paying. The member owes what falls inside it, credit accrues only for money actually paid, and preventive drugs are exempt.",
+  },
+  "pa-review.test.ts": {
+    name: "Review authority",
+    purpose:
+      "Automation may approve and only a licensed reviewer may refuse, checked as a function every write path passes through rather than as a paragraph on a page. Also that an exception's deadline runs from the prescriber's supporting statement, so the plan is not reported late on a request it was not permitted to decide.",
+  },
+  "emergency-supply.test.ts": {
+    name: "Emergency supply",
+    purpose:
+      "Where an authorization is required and the prescriber cannot be reached, a five-day supply pays at no member cost. The pharmacy has to ask for it in the level-of-service field, and the window follows the observed holiday rather than the calendar date.",
+  },
+  "questionnaire.test.ts": {
+    name: "Question sets",
+    purpose:
+      "The FHIR questionnaires the prescriber fills in are generated from the criteria trees, so a question cannot drift from the rule it feeds: every branch condition in the form matches the edge the engine actually walks.",
+  },
+  "feedback.test.ts": {
+    name: "Member experience",
+    purpose:
+      "Survey comments quote only terms the member's own record contains, complaint themes count each member once, recommendations name drugs that exist, and a sampled projection agrees with the full run on how far a change moves the score.",
+  },
 };
 
 interface VitestJson {

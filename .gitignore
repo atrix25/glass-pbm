@@ -49,6 +49,10 @@ next-env.d.ts
 /prisma/dev.db-journal
 /prisma/*.db-shm
 /prisma/*.db-wal
+# hand-made copies of the book taken before a risky migration. Same reason,
+# and they grow faster than the book itself.
+/prisma/*.db.backup*
+/prisma/*.db.bak*
 
 # ingest inputs: a 75 MB NADAC extract and the formulary PDF
 /data/raw

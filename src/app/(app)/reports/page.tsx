@@ -19,6 +19,7 @@ import {
   getSpreadComparison,
 } from "@/lib/queries/reports";
 import { getBookTotals } from "@/lib/queries/sponsor";
+import { getClock } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
@@ -28,17 +29,24 @@ export const dynamic = "force-dynamic";
 const bps = (n: number) => `${(n / 100).toFixed(2)}%`;
 
 export default async function ReportsPage() {
+  const clock = await getClock();
   const [guarantees, rebates, spread, awp, totals] = await Promise.all([
-    getGuaranteeReconciliation(),
-    getRebateWaterfall(),
-    getSpreadComparison(),
-    getAwpSensitivity(),
-    getBookTotals(),
+    getGuaranteeReconciliation(clock),
+    getRebateWaterfall(clock),
+    getSpreadComparison(clock),
+    getAwpSensitivity(clock),
+    getBookTotals(clock),
   ]);
 
   const missed = guarantees.filter((g) => g.met === false);
-  const adminFeeCents =
-    totals.members * 12 * WISCONSIN_CONTRACT.adminFeePmpmCommercialCents;
+  // Administrative fees accrue per member per month, so only the months that
+  // have elapsed have been billed.
+  const monthsElapsed = Math.max(1, clock.yearElapsed * 12);
+  const adminFeeCents = Math.round(
+    totals.members *
+      monthsElapsed *
+      WISCONSIN_CONTRACT.adminFeePmpmCommercialCents,
+  );
 
   return (
     <div className="space-y-6">
@@ -175,8 +183,8 @@ export default async function ReportsPage() {
                   {formatPercent(1 - awp.awpShare)}
                 </div>
                 <p className="mt-0.5 text-[12px] text-ink-500">
-                  {formatCentsCompact(awp.verifiableCents)} priced off MAC or the
-                  pharmacy&apos;s own cash price
+                  {formatCentsCompact(awp.verifiableCents)}{" "}
+                  priced off MAC or the pharmacy&apos;s own cash price
                 </p>
               </div>
             </div>
@@ -202,7 +210,8 @@ export default async function ReportsPage() {
           </div>
           <div className="border-t border-ink-100 px-5 py-3 text-[12px] leading-relaxed text-ink-500">
             The pass-through line is flatter because only{" "}
-            {formatPercent(awp.awpShare)} of this book is priced off AWP; the
+            {formatPercent(awp.awpShare)}{" "}
+            of this book is priced off AWP; the
             MAC ceiling and the pharmacy&apos;s cash price cap the rest. Under a
             spread schedule every claim tracks the file. The gap between the
             slopes is the exposure the contract removes.
@@ -278,7 +287,8 @@ export default async function ReportsPage() {
                 claim, a floor of {formatCents(rebates.minGuaranteeCents)} on
                 this volume. Actual collections were{" "}
                 {formatCents(rebates.grossRebateCents)}. Under this contract the
-                plan keeps the higher of the two rather than the guarantee alone.
+                plan keeps the higher of the two rather than the guarantee
+                alone.
               </p>
             </div>
           </div>
@@ -323,9 +333,7 @@ export default async function ReportsPage() {
             <tr className="bg-ink-50/70 font-medium">
               <Td>Total</Td>
               <Td align="right">
-                {formatNumber(
-                  spread.byClass.reduce((s, c) => s + c.claims, 0),
-                )}
+                {formatNumber(spread.byClass.reduce((s, c) => s + c.claims, 0))}
               </Td>
               <Td align="right">{formatCents(spread.passThroughCents)}</Td>
               <Td align="right">{formatCents(spread.spreadCents)}</Td>
@@ -380,7 +388,8 @@ export default async function ReportsPage() {
           <span className="font-medium text-ink-900">
             {formatCents(adminFeeCents + rebates.rebateAdminFeeCents)}
           </span>
-          , or {formatPercent(
+          , or{" "}
+          {formatPercent(
             (adminFeeCents + rebates.rebateAdminFeeCents) /
               totals.totalBilledCents,
           )}{" "}
@@ -408,7 +417,9 @@ function Line({
       <div className="flex items-baseline justify-between gap-3">
         <span
           className={
-            strong ? "text-[13.5px] font-medium text-ink-900" : "text-[13px] text-ink-700"
+            strong
+              ? "text-[13.5px] font-medium text-ink-900"
+              : "text-[13px] text-ink-700"
           }
         >
           {label}

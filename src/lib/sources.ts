@@ -191,6 +191,37 @@ export const SOURCES: SourceDefinition[] = [
       "Commercial 211,424 eligible participants, 3,062,138 prescriptions, $321,911,357 total cost. Channel mix and top therapeutic categories by PMPM used to calibrate the synthetic population.",
   },
   {
+    id: "clincalc-drugstats-2023",
+    title: "The Top 300 Drugs of 2023 — ClinCalc DrugStats Database",
+    publisher: "ClinCalc LLC, from the Medical Expenditure Panel Survey (AHRQ)",
+    url: "https://clincalc.com/DrugStats/Top300Drugs.aspx",
+    kind: "report",
+    publishedDate: "2025-08-10",
+    notes:
+      "Annual United States prescription counts by molecule, standardised from the federal MEPS prescribed-medicines file. Used as the relative weight for which drug inside a therapeutic class a member fills, so the book's most-dispensed products are the ones people actually take rather than whichever obscure entries the formulary happens to list. National rather than sponsor-specific.",
+  },
+  {
+    id: "kff-cost-sharing-2023",
+    title:
+      "How much do people with employer plans spend out-of-pocket on cost-sharing?",
+    publisher: "Peterson-KFF Health System Tracker",
+    url: "https://www.healthsystemtracker.org/chart-collection/how-much-do-people-with-employer-plans-spend-out-of-pocket-on-cost-sharing/",
+    kind: "report",
+    publishedDate: "2025-01-15",
+    notes:
+      "Analysis of MarketScan claims for large employer plans. Enrollees paid an average $453 in deductibles, $193 in copayments and $223 in coinsurance in 2023; by service type, $60 inpatient, $678 outpatient and $177 prescription drugs. Used to size the medical share of an integrated deductible, which this system does not adjudicate and can only receive.",
+  },
+  {
+    id: "kff-deductible-relief-day",
+    title:
+      "Deductible Relief Day: How rising deductibles are affecting people with employer coverage",
+    publisher: "Peterson-KFF Health System Tracker",
+    url: "https://www.healthsystemtracker.org/brief/deductible-relief-day-how-rising-deductibles-are-affecting-people-with-employer-coverage/",
+    kind: "report",
+    notes:
+      "Two-thirds (66%) of large employer plan enrollees who used health care services had deductible spending. Sets the share of members whose integrated deductible is partly consumed by medical claims before pharmacy sees it.",
+  },
+  {
     id: "etf-performance-guarantees",
     title: "Appendix 2 — Pharmacy Performance Guarantees",
     publisher: "State of Wisconsin Department of Employee Trust Funds",

@@ -22,6 +22,7 @@ import {
   getRejectMix,
   getTopDrugs,
 } from "@/lib/queries/sponsor";
+import { getClock } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent, levelMeta } from "@/lib/utils";
 import { PRICING_ARM_LABEL } from "@/lib/engine/types";
@@ -38,19 +39,27 @@ const BASIS_TO_ARM: Record<string, keyof typeof PRICING_ARM_LABEL> = {
 };
 
 export default async function SponsorDashboard() {
+  const clock = await getClock();
   const [totals, channels, levels, trend, rejects, topDrugs, basis] =
     await Promise.all([
-      getBookTotals(),
-      getChannelMix(),
-      getLevelMix(),
-      getMonthlyTrend(),
-      getRejectMix(),
-      getTopDrugs(10),
-      getBasisMix(),
+      getBookTotals(clock),
+      getChannelMix(clock),
+      getLevelMix(clock),
+      getMonthlyTrend(clock),
+      getRejectMix(clock),
+      getTopDrugs(clock, 10),
+      getBasisMix(clock),
     ]);
 
   const netPlanCostCents = totals.planPaidCents - totals.rebateCents;
-  const pmpm = Math.round(netPlanCostCents / totals.members / 12);
+  /*
+   * Per member per month is a rate, so it has to divide by the months that
+   * have actually elapsed rather than by twelve. Dividing a partial year by a
+   * full one would understate the plan's true run rate by nearly half in
+   * midsummer, which is the kind of error a sponsor notices.
+   */
+  const monthsElapsed = Math.max(1, clock.yearElapsed * 12);
+  const pmpm = Math.round(netPlanCostCents / totals.members / monthsElapsed);
   const gdr =
     totals.genericClaims / Math.max(1, totals.genericClaims + totals.brandClaims);
   const specialtyShare =
@@ -63,7 +72,7 @@ export default async function SponsorDashboard() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description="Wisconsin Department of Employee Trust Funds, commercial line of business, plan year 2026. Every figure on this page is a sum over individual adjudicated claims, and every claim carries the derivation that produced it."
+        description="Steel Potatoes LLC, self-insured commercial line of business, plan year 2026, priced on the published Navitus ETG0013 rate card. Every figure on this page is a sum over individual adjudicated claims, and any claim will show the derivation that produced it."
         action={
           <Link
             href="/claims"
@@ -412,7 +421,7 @@ export default async function SponsorDashboard() {
       <Card>
         <CardHeader
           title="Contract at a glance"
-          description="Contract ETG0013 between Wisconsin ETF and Navitus Health Solutions, as published."
+          description="The terms this plan is priced on: contract ETG0013 between Wisconsin ETF and Navitus Health Solutions, as published. Steel Potatoes is an invented employer; these rates are not."
         />
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-4">
           <Fact
