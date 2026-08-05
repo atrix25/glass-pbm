@@ -31,7 +31,7 @@ export const PROFILES: UtilizationProfile[] = [
   {
     id: "healthy",
     label: "Occasional user",
-    share: 0.42,
+    share: 0.401,
     scriptsPerYear: [0, 4],
     specialtyProbability: 0,
     chronicDrugs: [0, 1],
@@ -41,7 +41,7 @@ export const PROFILES: UtilizationProfile[] = [
     id: "chronic-single",
     label: "Single chronic condition",
     share: 0.28,
-    scriptsPerYear: [8, 16],
+    scriptsPerYear: [8, 15],
     specialtyProbability: 0.01,
     chronicDrugs: [1, 2],
     diagnosisPool: ["I10", "E78", "F32", "J45", "K21"],
@@ -50,19 +50,32 @@ export const PROFILES: UtilizationProfile[] = [
     id: "chronic-multi",
     label: "Multiple chronic conditions",
     share: 0.275,
-    scriptsPerYear: [18, 38],
+    scriptsPerYear: [17, 36],
     specialtyProbability: 0.005,
     chronicDrugs: [3, 6],
     diagnosisPool: ["I10", "E11", "E78", "F32", "J44", "N18", "I48", "M17"],
   },
   {
-    // Roughly 1% of members. ET-8933 implies specialty is around 1% of
-    // prescriptions and about half of total cost, and that concentration is
-    // the single most important thing to get right: a specialty share that is
-    // too high makes every per-member cost figure meaningless.
+    /*
+     * The share is derived rather than chosen, because it is the single most
+     * important number here: specialty is under one per cent of prescriptions
+     * and about half of all cost, so getting it wrong makes every per-member
+     * figure meaningless.
+     *
+     * ET-8933 reports $1,523 per member per year. A member on a biologic in
+     * this book costs about $47,000 a year, which is what the published prices
+     * of these drugs come to over a year of monthly fills. For specialty to be
+     * half of $1,523 across 103,000 lives, roughly 1.6% of them have to be on
+     * one — and that is inside the 1-2% that the pharmacy benefit trend reports
+     * put specialty utilisation at, so the two sources agree.
+     *
+     * This share is larger than that 1.6% because not everyone drawn into the
+     * profile ends up on a specialty drug: some are not enrolled long enough,
+     * and some draw a diagnosis the specialty catalogue does not treat.
+     */
     id: "specialty",
     label: "Specialty therapy",
-    share: 0.012,
+    share: 0.031,
     scriptsPerYear: [16, 30],
     specialtyProbability: 0.92,
     chronicDrugs: [2, 5],

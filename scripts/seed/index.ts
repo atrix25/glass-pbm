@@ -5,7 +5,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { Prisma, PrismaClient } from "../../src/generated/prisma/index.js";
+import { Prisma } from "../../src/generated/prisma/index.js";
+import { prisma as sharedPrisma } from "../../src/lib/db.js";
 import { formatCents } from "../../src/lib/money.js";
 import type {
   EngineBenefitPlan,
@@ -38,28 +39,7 @@ import { seedAuditFindings } from "./audit.js";
 import { seedScenarios } from "./scenarios.js";
 import { seedExceptions } from "./exceptions.js";
 
-/*
- * One connection, deliberately.
- *
- * Prisma opens a pool sized to the machine, which is right for a server and
- * wrong for SQLite: there is only ever one writer, and in write-ahead-log mode
- * each pooled connection holds its own read snapshot. A seed of this size then
- * fails in ways that look like data bugs and are not. Members would be written
- * on one connection and the eligibility spans that reference them attempted on
- * another whose snapshot predated the commit, producing a foreign key violation
- * against rows that plainly exist; batches of claims would time out waiting for
- * a write lock held by a sibling connection. Both appeared only once the
- * database was large enough for commits to take real time, and both moved
- * around between runs, which is the signature of a race rather than a defect in
- * the data.
- */
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: `${process.env.DATABASE_URL ?? "file:./prisma/dev.db"}?connection_limit=1&socket_timeout=120`,
-    },
-  },
-});
+const prisma = sharedPrisma;
 
 const PLAN_YEAR = 2026;
 /**

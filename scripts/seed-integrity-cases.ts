@@ -496,10 +496,21 @@ async function spliceIntoYear(
       approvedPAs: world.approvedPAs.get(memberId) ?? [],
     });
 
+    /*
+     * Plan and member pay matching is not enough. On an HDHP a fill can cost
+     * the member the same dollar amount before and after the deductible is met
+     * (the copay is simply capped at the total), while appliedToDeductible
+     * flips from the whole fill to zero. Leaving that unchecked let planted
+     * early-year fills consume the deductible on paper while the member's
+     * existing claims kept their old appliedToDeductible figures — so every
+     * derivation for those claims disagreed with the book.
+     */
     if (
       outcome.responseStatus !== c.responseStatus ||
       outcome.planPaidCents !== c.planPaidCents ||
-      outcome.patientPayCents !== c.patientPayCents
+      outcome.patientPayCents !== c.patientPayCents ||
+      outcome.appliedToDeductibleCents !== c.appliedToDeductibleCents ||
+      outcome.totalBilledCents !== c.totalBilledCents
     ) {
       return null;
     }

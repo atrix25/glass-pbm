@@ -11,7 +11,8 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { Prisma, PrismaClient } from "../../src/generated/prisma/index.js";
+import { Prisma } from "../../src/generated/prisma/index.js";
+import { prisma } from "../../src/lib/db.js";
 import { SOURCES } from "../../src/lib/sources.js";
 import { extractPdfLines } from "./pdf.js";
 import {
@@ -22,7 +23,6 @@ import {
 } from "./formulary.js";
 import { buildNadacCatalog, resolveNadac, toIso } from "./nadac.js";
 
-const prisma = new PrismaClient();
 
 const FORMULARY_PDF = "data/raw/navitus-etf-formulary-2026.pdf";
 const NADAC_CSV = "data/raw/nadac-2026-07-29.csv";

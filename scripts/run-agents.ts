@@ -11,11 +11,10 @@
  *   tsx scripts/run-agents.ts pa-intake  one agent
  */
 
-import { PrismaClient } from "../src/generated/prisma/index.js";
+import { prisma } from "../src/lib/db.js";
 import { seedPolicies } from "./agents/policies.js";
 import { resolveClock, PLAN_YEAR } from "../src/lib/clock.js";
 
-const prisma = new PrismaClient();
 
 const only = process.argv[2];
 const wanted = (id: string) => !only || only === id;

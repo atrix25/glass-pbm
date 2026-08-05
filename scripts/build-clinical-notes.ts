@@ -22,11 +22,10 @@
  *     matter, exactly as they do in practice.
  */
 
-import { PrismaClient } from "../src/generated/prisma/index.js";
+import { prisma } from "../src/lib/db.js";
 import { Rng } from "./seed/population.js";
 import { fieldsFor, type NoteField } from "../src/lib/agents/pa-intake/fields.js";
 
-const prisma = new PrismaClient();
 
 const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
   {

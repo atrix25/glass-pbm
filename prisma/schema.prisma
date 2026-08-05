@@ -716,6 +716,18 @@ model Claim {
   // Answers "what did this pharmacy dispense of this drug", which is the shape
   // of every MAC appeal and every network question about one store.
   @@index([pharmacyId, drugId, dateOfService])
+  /*
+   * Answers "what happened to this drug across the book", which is the shape of
+   * every question asked by manufacturer, molecule or therapeutic class:
+   * rebate accrual by labeler, the most dispensed products, generic
+   * substitution rates.
+   *
+   * The pharmacy index above cannot serve those, because drugId is not its
+   * leading column. Without this one, joining 1,518 drugs to the claim history
+   * degenerated into a scan of every B1 claim per drug — two billion row visits
+   * for a twelve-row summary, which is slow enough to look like a hung process.
+   */
+  @@index([drugId])
 }
 
 // ---------------------------------------------------------------------------
