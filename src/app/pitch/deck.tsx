@@ -54,7 +54,7 @@ export function PitchDeck({ slides }: { slides: PitchSlide[] }) {
   return (
     <div
       className={cn(
-        "relative flex min-h-dvh flex-col overflow-hidden transition-colors duration-500",
+        "relative flex min-h-dvh flex-col transition-colors duration-500",
         slide.tone === "dark"
           ? "bg-ink-950 text-white"
           : "bg-[radial-gradient(120%_80%_at_10%_-10%,#d3f5f3_0%,transparent_45%),radial-gradient(90%_70%_at_100%_0%,#eceef2_0%,transparent_40%),linear-gradient(180deg,#f8f9fb_0%,#eef2f6_100%)] text-ink-950",
@@ -101,11 +101,11 @@ export function PitchDeck({ slides }: { slides: PitchSlide[] }) {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pb-6 sm:px-8 sm:pb-8">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col overflow-y-auto px-5 pb-6 sm:px-8 sm:pb-8">
         <div
           key={slide.id}
           className={cn(
-            "flex flex-1 flex-col justify-center py-4 sm:py-8",
+            "flex flex-1 flex-col justify-center py-3 sm:py-6",
             entered ? "pitch-enter" : "opacity-0",
           )}
         >
@@ -233,17 +233,17 @@ export function PitchDeck({ slides }: { slides: PitchSlide[] }) {
           {slide.steps?.length ? (
             <ol
               className={cn(
-                "mt-8 grid gap-3",
-                slide.steps.length > 4
+                "mt-6 grid gap-2.5 sm:mt-7",
+                slide.steps.length > 3
                   ? "sm:grid-cols-2 lg:grid-cols-3"
-                  : "sm:grid-cols-1 lg:grid-cols-3",
+                  : "lg:grid-cols-3",
               )}
             >
               {slide.steps.map((step, i) => (
                 <li
                   key={step.n + step.title}
                   className={cn(
-                    "pitch-stagger flex gap-3 rounded-xl border px-4 py-4",
+                    "pitch-stagger flex gap-3 rounded-xl border px-3.5 py-3 sm:px-4 sm:py-3.5",
                     slide.tone === "dark"
                       ? "border-white/10 bg-white/[0.04]"
                       : "border-ink-200/80 bg-white/70",
@@ -259,12 +259,12 @@ export function PitchDeck({ slides }: { slides: PitchSlide[] }) {
                     {step.n}
                   </span>
                   <div className="min-w-0">
-                    <h2 className="text-[14px] font-semibold tracking-tight">
+                    <h2 className="text-[13.5px] font-semibold tracking-tight sm:text-[14px]">
                       {step.title}
                     </h2>
                     <p
                       className={cn(
-                        "mt-1.5 text-[12.5px] leading-relaxed sm:text-[13px]",
+                        "mt-1 text-[12.5px] leading-relaxed sm:text-[13px]",
                         slide.tone === "dark" ? "text-white/60" : "text-ink-600",
                       )}
                     >
@@ -306,7 +306,12 @@ export function PitchDeck({ slides }: { slides: PitchSlide[] }) {
         </div>
       </main>
 
-      <footer className="relative z-10 border-t border-white/5 px-5 py-3 sm:px-8">
+      <footer
+        className={cn(
+          "relative z-10 shrink-0 border-t px-5 py-3 sm:px-8",
+          slide.tone === "dark" ? "border-white/5" : "border-ink-200/60 bg-white/40",
+        )}
+      >
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <button
             type="button"
