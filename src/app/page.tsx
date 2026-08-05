@@ -131,15 +131,24 @@ export default async function LoginPage() {
               ))}
             </div>
 
-            <Link
-              href="/proof"
-              className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-dashed border-white/15 px-4 py-3.5 text-[13px] text-white/60 transition hover:border-white/30 hover:text-white sm:px-5"
-            >
-              <span>
-                Skeptical? Start at the correctness proof instead.
-              </span>
-              <ArrowRight className="h-4 w-4 shrink-0" />
-            </Link>
+            <div className="mt-5 space-y-2.5">
+              <Link
+                href="/pitch"
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-[13px] text-white/70 transition hover:border-glass-400/40 hover:text-white sm:px-5"
+              >
+                <span>Pitch deck — problem, proof, wedge, and the ask.</span>
+                <ArrowRight className="h-4 w-4 shrink-0" />
+              </Link>
+              <Link
+                href="/proof"
+                className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-white/15 px-4 py-3.5 text-[13px] text-white/60 transition hover:border-white/30 hover:text-white sm:px-5"
+              >
+                <span>
+                  Skeptical? Start at the correctness proof instead.
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0" />
+              </Link>
+            </div>
           </div>
         </div>
 
