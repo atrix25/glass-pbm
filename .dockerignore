@@ -6,7 +6,13 @@ node_modules
 npm-debug.log*
 
 # 75 MB of NADAC source rows and the formulary PDF. These are inputs to the
-# ingest step, which has already run; its output is in prisma/dev.db.
+# ingest step, which has already run; its output lives on the Fly volume.
 data/raw
 
-# prisma/dev.db is deliberately NOT ignored — it is the seeded book.
+# The seeded book is ~1.3 GB. Baking it into every image made deploys take
+# hours. It lives on the glass_book volume at /data/dev.db instead; see
+# fly.toml and scripts/push-book.mjs.
+prisma/dev.db
+prisma/dev.db-*
+prisma/*.db.backup*
+prisma/*.db.bak*

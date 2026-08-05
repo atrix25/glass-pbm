@@ -20,7 +20,8 @@
     "setup": "npm run db:generate && npm run db:push && npm run packages && npm run seed && npm run enrich",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "flyctl deploy --remote-only && flyctl machine start $(flyctl machine list --json | node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].id))\") && node scripts/wait-for-health.mjs"
+    "deploy": "flyctl deploy --remote-only && flyctl machine start $(flyctl machine list --json | node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].id))\") && node scripts/wait-for-health.mjs",
+    "deploy:book": "node scripts/push-book.mjs && node scripts/wait-for-health.mjs"
   },
   "prisma": {
     "seed": "tsx scripts/seed/index.ts"

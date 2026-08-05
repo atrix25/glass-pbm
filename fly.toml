@@ -4,6 +4,12 @@ primary_region = "ord"
 [build]
   dockerfile = "Dockerfile"
 
+# The seeded book is too large to ship inside every image. It lives here, and
+# is updated with `node scripts/push-book.mjs` when the local book changes.
+[mounts]
+  source = "glass_book"
+  destination = "/data"
+
 [http_service]
   internal_port = 3000
   force_https = true
