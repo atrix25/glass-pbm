@@ -65,7 +65,7 @@ export function composeDataAnswer(
   if (runs.every((r) => r.error || !r.result)) {
     return {
       paragraphs: [
-        "I could not answer from the plan's data. Try asking about book totals, guarantees, rebates, trends, settlement, or a specific claim number.",
+        "I could not answer from the plan's data. Try asking about book totals, guarantees, rebates, trends, settlement, prior auth, MAC appeals, member NPS, integrity signals, formulary rules, or a specific claim number.",
       ],
       citations: [],
       links: [
@@ -307,6 +307,221 @@ export function composeDataAnswer(
       links.push({ label: "Guarantee reconciliation", href: "/reconciliation" });
       break;
     }
+    case "formulary-um": {
+      const um = dataOf(runs, "getHighCostDrugUm");
+      const drugs =
+        (um?.drugs as {
+          name: string;
+          billedCents: number;
+          level: string;
+          specialCode: string | null;
+          prioritizations: string[];
+          requiresStep: boolean;
+          requiresPA: boolean;
+        }[]) ?? [];
+      if (drugs.length === 0) {
+        paragraphs.push(
+          "No high-cost drugs with formulary data were found for the current book window.",
+        );
+      } else {
+        paragraphs.push(
+          `Among the top ${formatNumber(Number(um?.drugCount ?? drugs.length))} drugs by YTD spend through ${String(um?.asOf ?? "today")}: ${formatNumber(Number(um?.withStepTherapy ?? 0))} require step therapy, ${formatNumber(Number(um?.withPriorAuth ?? 0))} require prior authorization, ${formatNumber(Number(um?.withQuantityLimit ?? 0))} have quantity limits.`,
+        );
+        for (const d of drugs) {
+          const flags = d.prioritizations.join("; ");
+          const code = d.specialCode ? ` [${d.specialCode}]` : "";
+          paragraphs.push(
+            `${d.name}${code} — Level ${d.level}, ${formatCentsCompact(d.billedCents)} YTD: ${flags}.`,
+          );
+        }
+      }
+      const search = dataOf(runs, "searchFormularyUm");
+      const catalog =
+        (search?.drugs as { name: string; prioritizations: string[] }[]) ?? [];
+      if (catalog.length > 0) {
+        paragraphs.push(
+          `Formulary index: ${formatNumber(Number(search?.totalMatching ?? catalog.length))} product(s) match the requested UM flag; sample:`,
+        );
+        for (const d of catalog.slice(0, 8)) {
+          paragraphs.push(`${d.name}: ${d.prioritizations.join("; ")}.`);
+        }
+      }
+      links.push(
+        { label: "Prior authorization", href: "/pa" },
+        { label: "Change console", href: "/changes" },
+        { label: "Sponsor top drugs", href: "/sponsor" },
+      );
+      break;
+    }
+    case "formulary-search": {
+      const search = dataOf(runs, "searchFormularyUm");
+      const catalog =
+        (search?.drugs as {
+          name: string;
+          level: string;
+          specialCode: string | null;
+          prioritizations: string[];
+        }[]) ?? [];
+      if (catalog.length === 0) {
+        paragraphs.push("No formulary products matched that UM filter.");
+      } else {
+        paragraphs.push(
+          `${formatNumber(Number(search?.totalMatching ?? 0))} product(s) on the published formulary carry the requested rule; showing ${catalog.length}:`,
+        );
+        for (const d of catalog.slice(0, 12)) {
+          const code = d.specialCode ? ` [${d.specialCode}]` : "";
+          paragraphs.push(
+            `${d.name}${code} — Level ${d.level}: ${d.prioritizations.join("; ")}.`,
+          );
+        }
+      }
+      links.push(
+        { label: "Prior authorization", href: "/pa" },
+        { label: "Change console", href: "/changes" },
+      );
+      break;
+    }
+    case "prior-auth": {
+      const pa = dataOf(runs, "getPriorAuthOverview");
+      if (pa) {
+        paragraphs.push(
+          `Through ${String(pa.asOf ?? "today")}: ${formatNumber(Number(pa.total ?? 0))} prior authorization determinations — ${formatNumber(Number(pa.approved ?? 0))} approved, ${formatNumber(Number(pa.denied ?? 0))} denied, ${formatNumber(Number(pa.pending ?? 0))} still pending.`,
+        );
+        paragraphs.push(
+          `${formatNumber(Number(pa.byAi ?? 0))} decided by AI; ${formatNumber(Number(pa.byHuman ?? 0))} by pharmacists; ${formatNumber(Number(pa.expedited ?? 0))} expedited; ${formatNumber(Number(pa.cited ?? 0))} cite a published criteria step.`,
+        );
+      }
+      links.push({ label: "PA queue", href: "/pa" });
+      break;
+    }
+    case "mac": {
+      const mac = dataOf(runs, "getMacOverview");
+      const list = mac?.mac as
+        | {
+            liveVersion: number;
+            drugCount: number;
+            macClaims: number;
+            totalClaims: number;
+            networkMarginCents: number;
+          }
+        | undefined;
+      const appeals = mac?.appeals as
+        | {
+            total: number;
+            overturned: number;
+            withinStatute: number;
+            outsideStatute: number;
+            medianResolutionDays: number;
+            adjustmentCents: number;
+          }
+        | undefined;
+      if (list) {
+        paragraphs.push(
+          `Live MAC list v${list.liveVersion} covers ${formatNumber(list.drugCount)} products; ${formatNumber(list.macClaims)} of ${formatNumber(list.totalClaims)} paid claims priced on the ceiling; disclosed network margin ${formatCentsCompact(list.networkMarginCents)}.`,
+        );
+      }
+      if (appeals) {
+        paragraphs.push(
+          `${formatNumber(appeals.total)} appeals filed — ${formatNumber(appeals.overturned)} overturned; median resolution ${appeals.medianResolutionDays} days (${formatNumber(appeals.withinStatute)} within 21 days, ${formatNumber(appeals.outsideStatute)} outside); adjustments ${formatCentsCompact(appeals.adjustmentCents)}.`,
+        );
+      }
+      links.push({ label: "MAC and appeals", href: "/mac" });
+      break;
+    }
+    case "member-experience": {
+      const mx = dataOf(runs, "getMemberExperience");
+      if (mx) {
+        paragraphs.push(
+          `Census NPS ${Number(mx.censusNps ?? 0)} across ${formatNumber(Number(mx.censusScored ?? 0))} scored members (${formatNumber(Number(mx.promoters ?? 0))} promoters, ${formatNumber(Number(mx.passives ?? 0))} passives, ${formatNumber(Number(mx.detractors ?? 0))} detractors).`,
+        );
+        const drivers =
+          (mx.topDrivers as { id: string; membersAffected: number; totalPoints: number }[]) ??
+          [];
+        if (drivers[0]) {
+          paragraphs.push(
+            `Top rubric driver: ${drivers[0].id} (${formatNumber(drivers[0].membersAffected)} members, ${drivers[0].totalPoints} total points).`,
+          );
+        }
+      }
+      links.push({ label: "Member experience", href: "/nps" });
+      break;
+    }
+    case "integrity": {
+      const integrity = dataOf(runs, "getIntegrityOverview");
+      const sev = integrity?.bySeverity as
+        | { high: number; elevated: number; watch: number }
+        | undefined;
+      const signals =
+        (integrity?.topSignals as {
+          subjectLabel: string;
+          detector: string;
+          severity: string;
+          exposureCents: number;
+        }[]) ?? [];
+      if (sev) {
+        paragraphs.push(
+          `Program integrity: ${formatNumber(sev.high)} high, ${formatNumber(sev.elevated)} elevated, ${formatNumber(sev.watch)} watch signals; ${formatCentsCompact(Number(integrity?.totalExposureCents ?? 0))} exposure above watch.`,
+        );
+      }
+      for (const s of signals.slice(0, 5)) {
+        paragraphs.push(
+          `${s.subjectLabel} — ${s.detector} (${s.severity}, ${formatCentsCompact(s.exposureCents)} exposure).`,
+        );
+      }
+      links.push({ label: "Program integrity", href: "/integrity" });
+      break;
+    }
+    case "claim-rejects": {
+      const rejects = dataOf(runs, "getRejectOverview");
+      const codes =
+        (rejects?.codes as {
+          code: string;
+          message: string;
+          claims: number;
+          members: number;
+        }[]) ?? [];
+      paragraphs.push(
+        `${formatNumber(Number(rejects?.totalRejectedClaims ?? 0))} rejected claim(s) in the book window.`,
+      );
+      for (const r of codes.slice(0, 8)) {
+        paragraphs.push(
+          `${r.code}: ${formatNumber(r.claims)} claims, ${formatNumber(r.members)} members${r.message ? ` — ${r.message}` : ""}.`,
+        );
+      }
+      links.push({ label: "Claim ledger", href: "/claims" });
+      break;
+    }
+    case "clinical": {
+      const clinical = dataOf(runs, "getClinicalOverview");
+      if (clinical) {
+        paragraphs.push(
+          `${formatNumber(Number(clinical.totalAlerts ?? 0))} clinical alert(s) on ${formatNumber(Number(clinical.claimsScreened ?? 0))} paid claims; ${formatNumber(Number(clinical.membersAffected ?? 0))} members affected.`,
+        );
+        const dose = clinical.dose as
+          | { atCeiling: number; atReassess: number; members: number }
+          | undefined;
+        if (dose) {
+          paragraphs.push(
+            `Opioid MME: ${formatNumber(dose.atCeiling)} members at ceiling, ${formatNumber(dose.atReassess)} at reassess threshold.`,
+          );
+        }
+      }
+      links.push({ label: "Clinical screening", href: "/clinical" });
+      break;
+    }
+    case "eligibility": {
+      const feed = dataOf(runs, "getEligibilityOverview");
+      if (feed) {
+        paragraphs.push(
+          `${formatNumber(Number(feed.livesOnFile ?? 0))} lives on file; ${formatNumber(Number(feed.filesReceived ?? 0))} eligibility files received; ${formatNumber(Number(feed.transactionsApplied ?? 0))} transactions applied.`,
+        );
+        paragraphs.push(
+          `${formatNumber(Number(feed.rejected ?? 0))} transaction reject(s) — ${formatNumber(Number(feed.openRejects ?? 0))} open, ${formatNumber(Number(feed.resolvedRejects ?? 0))} resolved; median turnaround ${Number(feed.medianTurnaroundHours ?? 0)} hours.`,
+        );
+      }
+      links.push({ label: "Eligibility feed", href: "/eligibility" });
+      break;
+    }
     case "claim-detail": {
       const detail = dataOf(runs, "getClaimDetail");
       if (detail?.found) {
@@ -387,7 +602,7 @@ export function composeDataAnswer(
         );
       }
       paragraphs.push(
-        `Ask about guarantees, rebates, spread, trends, top drugs, settlement, the operational scorecard, or say “write the year-end report briefing.” (You asked: “${question.trim()}”.)`,
+        `Ask about book totals, guarantees, rebates, spread, trends, top drugs, settlement, the operational scorecard, prior auth, MAC appeals, member NPS, program integrity, claim reject codes, clinical alerts, eligibility feed rejects, formulary step therapy / PA rules, or say “write the year-end report briefing.” (You asked: “${question.trim()}”.)`,
       );
       links.push(
         { label: "Sponsor dashboard", href: "/sponsor" },

@@ -18,7 +18,7 @@ import {
 } from "@/lib/agent/data-tools";
 import type { ToolResult } from "@/lib/agent/tools";
 
-const MAX_CALLS = 8;
+const MAX_CALLS = 10;
 
 const NARRATIVE_SCHEMA = z.object({
   paragraphs: z.array(z.string()).min(1).max(12),
@@ -81,8 +81,9 @@ export async function answerDataQuestion(opts: {
 
   for (const call of plan.calls) {
     if (work.length >= MAX_CALLS) break;
-    if (called.has(call.tool)) continue;
-    called.add(call.tool);
+    const callKey = `${call.tool}:${JSON.stringify(call.args)}`;
+    if (called.has(callKey)) continue;
+    called.add(callKey);
 
     const def = DATA_TOOL_REGISTRY[call.tool as DataToolName];
     if (!def) {
