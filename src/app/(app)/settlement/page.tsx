@@ -16,7 +16,7 @@ import {
   getRebateLedger,
   getSettlementOverview,
 } from "@/lib/queries/settlement";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import {
   formatBpsAsPercent,
   formatCents,
@@ -28,11 +28,12 @@ import { formatDate, formatNumber } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function SettlementPage() {
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const sponsorId = book.sponsorId;
   const [settle, invoices, rebates] = await Promise.all([
-    getSettlementOverview(clock),
-    getInvoiceOverview(clock),
-    getRebateLedger(clock),
+    getSettlementOverview(clock, sponsorId),
+    getInvoiceOverview(clock, sponsorId),
+    getRebateLedger(clock, sponsorId),
   ]);
 
   const agingMax = Math.max(1, ...rebates.aging.map((a) => a.cents));

@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import { DEFAULT_BOOK } from "@/lib/book-context";
 
 export interface ClaimFilters {
   q?: string;
@@ -12,6 +13,7 @@ export interface ClaimFilters {
   member?: string;
   scenario?: string;
   basis?: string;
+  sponsorId?: string;
   page?: number;
   perPage?: number;
 }
@@ -67,6 +69,7 @@ function buildWhere(
 ): Prisma.ClaimWhereInput {
   // A claim dated after the simulation clock has not been submitted yet.
   const where: Prisma.ClaimWhereInput = {
+    sponsorId: f.sponsorId ?? DEFAULT_BOOK.sponsorId,
     dateOfService: { lte: clock.today },
   };
   const and: Prisma.ClaimWhereInput[] = [];
@@ -102,7 +105,8 @@ function buildWhere(
 export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
   const perPage = f.perPage ?? 40;
   const page = Math.max(1, f.page ?? 1);
-  const where = buildWhere(f, clock);
+  const sponsorId = f.sponsorId ?? DEFAULT_BOOK.sponsorId;
+  const where = buildWhere({ ...f, sponsorId }, clock);
 
   const rows = await prisma.claim.findMany({
     where,
@@ -120,7 +124,7 @@ export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
    * filter has already made small.
    */
   const totals = isUnfiltered(f)
-    ? await totalsFromRollup(clock)
+    ? await totalsFromRollup(clock, sponsorId)
     : await totalsFromClaims(where);
 
   return {
@@ -133,10 +137,13 @@ export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
   };
 }
 
-async function totalsFromRollup(clock: SimulationClock) {
+async function totalsFromRollup(clock: SimulationClock, sponsorId: string) {
   const [agg, nadac] = await Promise.all([
     prisma.bookDay.aggregate({
-      where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
+      where: {
+        sponsorId,
+        date: { gte: PLAN_YEAR_START, lte: clock.today },
+      },
       _sum: {
         claimsSubmitted: true,
         totalBilledCents: true,
@@ -147,6 +154,7 @@ async function totalsFromRollup(clock: SimulationClock) {
     }),
     prisma.bookDayDimension.aggregate({
       where: {
+        sponsorId,
         dimension: "channel",
         date: { gte: PLAN_YEAR_START, lte: clock.today },
       },

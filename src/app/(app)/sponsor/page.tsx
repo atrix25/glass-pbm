@@ -22,7 +22,7 @@ import {
   getRejectMix,
   getTopDrugs,
 } from "@/lib/queries/sponsor";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent, levelMeta } from "@/lib/utils";
 import { PRICING_ARM_LABEL } from "@/lib/engine/types";
@@ -39,16 +39,17 @@ const BASIS_TO_ARM: Record<string, keyof typeof PRICING_ARM_LABEL> = {
 };
 
 export default async function SponsorDashboard() {
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const sponsorId = book.sponsorId;
   const [totals, channels, levels, trend, rejects, topDrugs, basis] =
     await Promise.all([
-      getBookTotals(clock),
-      getChannelMix(clock),
-      getLevelMix(clock),
-      getMonthlyTrend(clock),
-      getRejectMix(clock),
-      getTopDrugs(clock, 10),
-      getBasisMix(clock),
+      getBookTotals(clock, sponsorId),
+      getChannelMix(clock, sponsorId),
+      getLevelMix(clock, sponsorId),
+      getMonthlyTrend(clock, sponsorId),
+      getRejectMix(clock, sponsorId),
+      getTopDrugs(clock, 10, sponsorId),
+      getBasisMix(clock, sponsorId),
     ]);
 
   const netPlanCostCents = totals.planPaidCents - totals.rebateCents;

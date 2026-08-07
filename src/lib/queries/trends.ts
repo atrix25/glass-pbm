@@ -22,6 +22,7 @@
 
 import { prisma } from "@/lib/db";
 import { DAY_MS, PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import { DEFAULT_BOOK } from "@/lib/book-context";
 
 /** Longest comparison window worth using, in days. */
 const MAX_WINDOW_DAYS = 90;
@@ -98,6 +99,7 @@ export interface TrendDriver {
 export interface TrendOverview {
   periods: TrendPeriods;
   members: number;
+  sponsorId: string;
   current: PeriodMetrics;
   prior: PeriodMetrics;
   drivers: TrendDriver[];
@@ -109,9 +111,13 @@ export interface TrendOverview {
 async function periodMetrics(
   window: TrendWindow,
   members: number,
+  sponsorId: string,
 ): Promise<PeriodMetrics> {
   const agg = await prisma.bookDay.aggregate({
-    where: { date: { gte: window.start, lte: window.end } },
+    where: {
+      sponsorId,
+      date: { gte: window.start, lte: window.end },
+    },
     _sum: {
       claimsPaid: true,
       totalBilledCents: true,
@@ -173,14 +179,15 @@ async function periodMetrics(
  */
 export async function getTrendOverview(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<TrendOverview | null> {
   const periods = trendPeriods(clock);
   if (!periods) return null;
 
-  const members = await prisma.member.count();
+  const members = await prisma.member.count({ where: { sponsorId } });
   const [current, prior] = await Promise.all([
-    periodMetrics(periods.current, members),
-    periodMetrics(periods.prior, members),
+    periodMetrics(periods.current, members, sponsorId),
+    periodMetrics(periods.prior, members, sponsorId),
   ]);
 
   const dU = current.utilization - prior.utilization;
@@ -224,6 +231,7 @@ export async function getTrendOverview(
   return {
     periods,
     members,
+    sponsorId,
     current,
     prior,
     drivers,
@@ -257,11 +265,16 @@ async function dimensionDrivers(
   dimension: string,
   periods: TrendPeriods,
   memberMonths: number,
+  sponsorId: string,
 ): Promise<DriverRow[]> {
   const cells = async (w: TrendWindow) =>
     prisma.bookDayDimension.groupBy({
       by: ["key"],
-      where: { dimension, date: { gte: w.start, lte: w.end } },
+      where: {
+        sponsorId,
+        dimension,
+        date: { gte: w.start, lte: w.end },
+      },
       _sum: { claims: true, planPaidCents: true, rebateCents: true, billedCents: true },
     });
 
@@ -314,6 +327,7 @@ export async function getClassDrivers(
     "class",
     overview.periods,
     overview.current.memberMonths,
+    overview.sponsorId,
   );
 }
 
@@ -325,6 +339,7 @@ export async function getDrugDrivers(
     "drug",
     overview.periods,
     overview.current.memberMonths,
+    overview.sponsorId,
   );
   const drugs = await prisma.drug.findMany({
     where: { id: { in: rows.slice(0, 40).map((r) => r.key) } },
@@ -379,6 +394,7 @@ export async function getRelationshipTrend(
   overview: TrendOverview,
 ): Promise<RelationshipTrend[]> {
   const { prior, current } = overview.periods;
+  const sponsorId = overview.sponsorId;
 
   const [rows, lives] = await Promise.all([
     prisma.$queryRaw<
@@ -391,12 +407,17 @@ export async function getRelationshipTrend(
       FROM Claim c
       JOIN Member m ON m.id = c.memberId
       WHERE c.responseStatus = 'P'
+        AND c.sponsorId = ${sponsorId}
         AND c.scenarioTag IS NULL
         AND c.dateOfService >= ${prior.start}
         AND c.dateOfService <= ${current.end}
       GROUP BY rel, period
     `,
-    prisma.member.groupBy({ by: ["relationshipCode"], _count: true }),
+    prisma.member.groupBy({
+      by: ["relationshipCode"],
+      where: { sponsorId },
+      _count: true,
+    }),
   ]);
 
   const livesBy = new Map(lives.map((l) => [l.relationshipCode, l._count]));
@@ -464,6 +485,7 @@ export async function getCostConcentration(
 ): Promise<ConcentrationBand[]> {
   const { prior, current } = overview.periods;
   const enrolled = overview.members;
+  const sponsorId = overview.sponsorId;
 
   const bucket = (w: TrendWindow) => prisma.$queryRaw<
     Array<{ floor: number; members: bigint; plan: bigint }>
@@ -472,6 +494,7 @@ export async function getCostConcentration(
       SELECT memberId, SUM(planPaidCents - estimatedRebateCents) AS spend
       FROM Claim
       WHERE responseStatus = 'P'
+        AND sponsorId = ${sponsorId}
         AND scenarioTag IS NULL
         AND dateOfService >= ${w.start} AND dateOfService <= ${w.end}
       GROUP BY memberId
@@ -551,9 +574,13 @@ export interface MonthPoint {
  */
 export async function getMonthlyTrendLine(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<MonthPoint[]> {
   const days = await prisma.bookDay.findMany({
-    where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
+    where: {
+      sponsorId,
+      date: { gte: PLAN_YEAR_START, lte: clock.today },
+    },
     orderBy: { date: "asc" },
     select: {
       date: true,
@@ -562,7 +589,7 @@ export async function getMonthlyTrendLine(
       estimatedRebateCents: true,
     },
   });
-  const members = await prisma.member.count();
+  const members = await prisma.member.count({ where: { sponsorId } });
 
   const byMonth = new Map<
     string,

@@ -19,7 +19,7 @@ import {
   getSpreadComparison,
 } from "@/lib/queries/reports";
 import { getBookTotals } from "@/lib/queries/sponsor";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
@@ -29,13 +29,14 @@ export const dynamic = "force-dynamic";
 const bps = (n: number) => `${(n / 100).toFixed(2)}%`;
 
 export default async function ReportsPage() {
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const sponsorId = book.sponsorId;
   const [guarantees, rebates, spread, awp, totals] = await Promise.all([
-    getGuaranteeReconciliation(clock),
-    getRebateWaterfall(clock),
-    getSpreadComparison(clock),
-    getAwpSensitivity(clock),
-    getBookTotals(clock),
+    getGuaranteeReconciliation(clock, sponsorId),
+    getRebateWaterfall(clock, sponsorId),
+    getSpreadComparison(clock, sponsorId),
+    getAwpSensitivity(clock, sponsorId),
+    getBookTotals(clock, sponsorId),
   ]);
 
   const missed = guarantees.filter((g) => g.met === false);

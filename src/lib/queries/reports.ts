@@ -8,11 +8,26 @@
  * clock also keeps the reconciliation honest, because reporting a full plan
  * year of guarantee performance in March would be reporting on claims that
  * have not been filled yet.
+ *
+ * Every aggregation is scoped by sponsorId. Wisconsin Exhibit C math stays on
+ * steel-potatoes; Michigan uses Schedule B rates and Michigan contract terms.
  */
 
 import { prisma } from "@/lib/db";
-import { EXHIBIT_C_RATES, WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
+import {
+  EXHIBIT_C_RATES,
+  WISCONSIN_CONTRACT,
+  type RateRow,
+} from "@/lib/contracts/wisconsin";
+import {
+  MICHIGAN_CLIENT_RATES,
+  MICHIGAN_CONTRACT,
+} from "@/lib/contracts/michigan";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import {
+  DEFAULT_BOOK,
+  MICHIGAN_DEMO_SPONSOR_ID,
+} from "@/lib/book-context";
 
 interface Row {
   channel: string;
@@ -29,11 +44,65 @@ function window(clock: SimulationClock) {
   return { gte: PLAN_YEAR_START, lte: clock.today };
 }
 
+function isMichigan(sponsorId: string): boolean {
+  return sponsorId === MICHIGAN_DEMO_SPONSOR_ID;
+}
+
+function commercialRatesFor(sponsorId: string): RateRow[] {
+  if (isMichigan(sponsorId)) {
+    return MICHIGAN_CLIENT_RATES.filter(
+      (r) => r.lineOfBusiness === "Commercial",
+    );
+  }
+  return EXHIBIT_C_RATES.filter((r) => r.lineOfBusiness === "Commercial");
+}
+
+/** minClaims / rebate-admin PMPM for the active sponsor's contract. */
+async function contractTerms(sponsorId: string): Promise<{
+  minClaimsPerCategory: number;
+  rebateAdminFeePmpmCents: number;
+}> {
+  const sponsor = await prisma.planSponsor.findUnique({
+    where: { id: sponsorId },
+    select: {
+      contract: {
+        select: {
+          minClaimsPerCategory: true,
+          rebateAdminFeePmpmCents: true,
+        },
+      },
+    },
+  });
+  if (sponsor?.contract) {
+    return {
+      minClaimsPerCategory: sponsor.contract.minClaimsPerCategory,
+      rebateAdminFeePmpmCents: sponsor.contract.rebateAdminFeePmpmCents,
+    };
+  }
+  if (isMichigan(sponsorId)) {
+    return {
+      minClaimsPerCategory: MICHIGAN_CONTRACT.minClaimsPerCategory,
+      rebateAdminFeePmpmCents: MICHIGAN_CONTRACT.rebateAdminFeePmpmCents,
+    };
+  }
+  return {
+    minClaimsPerCategory: WISCONSIN_CONTRACT.minClaimsPerCategory,
+    rebateAdminFeePmpmCents: WISCONSIN_CONTRACT.rebateAdminFeePmpmCents,
+  };
+}
+
 /** The stored guarantee cells, split back into channel and brand class. */
-async function guaranteeCells(clock: SimulationClock): Promise<Row[]> {
+async function guaranteeCells(
+  clock: SimulationClock,
+  sponsorId: string,
+): Promise<Row[]> {
   const cells = await prisma.bookDayDimension.groupBy({
     by: ["key"],
-    where: { dimension: "guarantee", date: window(clock) },
+    where: {
+      sponsorId,
+      dimension: "guarantee",
+      date: window(clock),
+    },
     _sum: {
       claims: true,
       ingredientCostCents: true,
@@ -60,7 +129,7 @@ async function guaranteeCells(clock: SimulationClock): Promise<Row[]> {
 }
 
 /**
- * Reconcile realised pricing against the Exhibit C guarantees.
+ * Reconcile realised pricing against the contract's guarantee schedule.
  *
  * A guarantee is an aggregate promise: across all of a channel's brand claims,
  * the effective discount off AWP must average at least the guaranteed rate.
@@ -68,12 +137,16 @@ async function guaranteeCells(clock: SimulationClock): Promise<Row[]> {
  * per-claim discounts, which would weight a $4 generic the same as a $9,000
  * specialty fill and produce a number that reconciles to nothing.
  */
-export async function getGuaranteeReconciliation(clock: SimulationClock) {
-  const rows = await guaranteeCells(clock);
+export async function getGuaranteeReconciliation(
+  clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
+) {
+  const [rows, terms] = await Promise.all([
+    guaranteeCells(clock, sponsorId),
+    contractTerms(sponsorId),
+  ]);
 
-  const commercial = EXHIBIT_C_RATES.filter(
-    (r) => r.lineOfBusiness === "Commercial",
-  );
+  const commercial = commercialRatesFor(sponsorId);
 
   /*
    * Reconcile against the scope the contract actually promises. Exhibit C's
@@ -89,7 +162,7 @@ export async function getGuaranteeReconciliation(clock: SimulationClock) {
     {
       channel: string;
       scope: string;
-      rate: (typeof commercial)[number] | null;
+      rate: RateRow | null;
       claims: number;
       billed: number;
       awp: number;
@@ -159,7 +232,7 @@ export async function getGuaranteeReconciliation(clock: SimulationClock) {
         dollarVarianceCents:
           valueAtGuaranteeCents == null ? null : valueAtGuaranteeCents - b.billed,
         // A guarantee only binds once the category has enough volume.
-        belowMinimumVolume: b.claims < WISCONSIN_CONTRACT.minClaimsPerCategory,
+        belowMinimumVolume: b.claims < terms.minClaimsPerCategory,
         met: discountVarianceBps == null ? null : discountVarianceBps >= 0,
       };
     })
@@ -169,13 +242,17 @@ export async function getGuaranteeReconciliation(clock: SimulationClock) {
     );
 }
 
-export async function getRebateWaterfall(clock: SimulationClock) {
-  const [agg, members] = await Promise.all([
+export async function getRebateWaterfall(
+  clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
+) {
+  const [agg, members, terms] = await Promise.all([
     prisma.bookDay.aggregate({
-      where: { date: window(clock) },
+      where: { sponsorId, date: window(clock) },
       _sum: { estimatedRebateCents: true, brandClaims: true },
     }),
-    prisma.member.count(),
+    prisma.member.count({ where: { sponsorId } }),
+    contractTerms(sponsorId),
   ]);
 
   const brandClaims = agg._sum.brandClaims ?? 0;
@@ -187,15 +264,15 @@ export async function getRebateWaterfall(clock: SimulationClock) {
    */
   const memberMonths = Math.round(members * 12 * clock.yearElapsed);
   const rebateAdminFeeCents =
-    memberMonths * WISCONSIN_CONTRACT.rebateAdminFeePmpmCents;
+    memberMonths * terms.rebateAdminFeePmpmCents;
   const netToPlanCents = grossRebateCents - rebateAdminFeeCents;
 
-  // Exhibit C guarantees a floor per brand claim, separately from whatever the
+  // Guarantees a floor per brand claim, separately from whatever the
   // manufacturer contracts actually yield. The plan gets the larger of the two.
+  const commercial = commercialRatesFor(sponsorId);
   const minPerBrandClaimCents =
-    EXHIBIT_C_RATES.find(
+    commercial.find(
       (r) =>
-        r.lineOfBusiness === "Commercial" &&
         r.channel === "Retail" &&
         r.drugClass === "Brand",
     )?.minRebatePerBrandClaimCents ?? 0;
@@ -221,15 +298,21 @@ export async function getRebateWaterfall(clock: SimulationClock) {
  * The comparison is not a guess about a competitor. It applies a published
  * schedule from another state's PBM contract to this plan's own utilisation,
  * so the difference is a difference in contract terms and nothing else.
+ *
+ * When the active book is already Michigan Traditional, the "spread" arm is
+ * that book's own client rates — the counterfactual is then the same schedule.
  */
-export async function getSpreadComparison(clock: SimulationClock) {
+export async function getSpreadComparison(
+  clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
+) {
   // The guarantee cells already carry ingredient cost and AWP; collapsing the
   // channel out of them is the same book cut one level coarser.
   const byBrandGeneric = new Map<
     string,
     { claims: number; billed: number; awp: number }
   >();
-  for (const cell of await guaranteeCells(clock)) {
+  for (const cell of await guaranteeCells(clock, sponsorId)) {
     const cur = byBrandGeneric.get(cell.brandGeneric) ?? {
       claims: 0,
       billed: 0,
@@ -242,7 +325,23 @@ export async function getSpreadComparison(clock: SimulationClock) {
   }
 
   // Michigan's OptumRx Schedule B, the closest published spread schedule.
+  // Used as the Traditional counterfactual for Steel Potatoes; for the
+  // Michigan book itself these are the book's own client rates.
   const SPREAD_BPS: Record<string, number> = { Brand: 1650, Generic: 7700 };
+  if (isMichigan(sponsorId)) {
+    const retailBrand = MICHIGAN_CLIENT_RATES.find(
+      (r) => r.channel === "Retail" && r.drugClass === "Brand",
+    );
+    const retailGeneric = MICHIGAN_CLIENT_RATES.find(
+      (r) => r.channel === "Retail" && r.drugClass === "Generic",
+    );
+    if (retailBrand?.awpDiscountBps != null) {
+      SPREAD_BPS.Brand = retailBrand.awpDiscountBps;
+    }
+    if (retailGeneric?.awpDiscountBps != null) {
+      SPREAD_BPS.Generic = retailGeneric.awpDiscountBps;
+    }
+  }
 
   let passThroughCents = 0;
   let spreadCents = 0;
@@ -278,10 +377,17 @@ export async function getSpreadComparison(clock: SimulationClock) {
  * whoever sets it, so the honest thing to report is not a savings figure but
  * the size of the exposure and how it moves.
  */
-export async function getAwpSensitivity(clock: SimulationClock) {
+export async function getAwpSensitivity(
+  clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
+) {
   const rows = await prisma.bookDayDimension.groupBy({
     by: ["key"],
-    where: { dimension: "basis", date: window(clock) },
+    where: {
+      sponsorId,
+      dimension: "basis",
+      date: window(clock),
+    },
     _sum: { billedCents: true },
   });
 
@@ -299,7 +405,7 @@ export async function getAwpSensitivity(clock: SimulationClock) {
    * actual argument for pass-through, and it survives being wrong about where
    * AWP sits today.
    */
-  const spread = await getSpreadComparison(clock);
+  const spread = await getSpreadComparison(clock, sponsorId);
 
   const shifts = [-10, -5, 0, 5, 10, 15].map((pct) => ({
     shiftPercent: pct,
