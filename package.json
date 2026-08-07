@@ -21,12 +21,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "flyctl deploy --remote-only && flyctl machine start $(flyctl machine list --json | node -e \"let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s)[0].id))\") && node scripts/wait-for-health.mjs",
-    "deploy:book": "node scripts/push-book.mjs && node scripts/wait-for-health.mjs"
+    "deploy:book": "node scripts/push-book.mjs && node scripts/wait-for-health.mjs",
+    "upload:book": "node scripts/push-book.mjs --upload-only",
+    "download:book": "node scripts/download-book.mjs"
   },
   "prisma": {
     "seed": "tsx scripts/seed/index.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.876.0",
+    "@aws-sdk/lib-storage": "^3.876.0",
     "@ai-sdk/anthropic": "^2.0.55",
     "@ai-sdk/openai": "^2.0.71",
     "@prisma/client": "^6.19.0",

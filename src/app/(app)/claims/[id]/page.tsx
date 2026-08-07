@@ -444,9 +444,13 @@ function MoneyPanel({
         />
         <Footnote
           label="Member share of the fill"
-          value={formatPercent(
-            claim.patientPayCents / Math.max(1, claim.totalBilledCents),
-          )}
+          value={
+            claim.totalBilledCents !== 0
+              ? formatPercent(
+                  claim.patientPayCents / claim.totalBilledCents,
+                )
+              : "—"
+          }
           note={
             claim.rebateEligible
               ? "Below the 50% threshold, so the claim keeps its rebate"
