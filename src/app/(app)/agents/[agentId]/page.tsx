@@ -86,6 +86,31 @@ export default async function AgentDetailPage({
 
       <SectionTitle description={def.purpose}>{def.name}</SectionTitle>
 
+      {agentId === "data-agent" ? (
+        <p className="text-[13px] text-ink-600">
+          Live chat surface:{" "}
+          <Link
+            href="/data-agent"
+            className="font-medium text-glass-700 hover:text-glass-900"
+          >
+            Open the data agent
+          </Link>
+          .
+        </p>
+      ) : null}
+      {agentId === "member-service" ? (
+        <p className="text-[13px] text-ink-600">
+          Live chat surface:{" "}
+          <Link
+            href="/assistant"
+            className="font-medium text-glass-700 hover:text-glass-900"
+          >
+            Open AI member service
+          </Link>
+          .
+        </p>
+      ) : null}
+
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">
           <Stat

@@ -127,6 +127,31 @@ const TIMELINE: PolicyStep[] = [
     setBy: "Member services supervisor",
     from: d(5, 1),
   },
+
+  {
+    agentId: "data-agent",
+    autonomy: "Propose",
+    rationale:
+      "Briefings drafted for benefits and finance to review while the tool layer was checked against the sponsor and reports pages.",
+    setBy: "Benefits director",
+    from: GO_LIVE,
+  },
+  {
+    agentId: "data-agent",
+    autonomy: "ActWithReview",
+    rationale:
+      "Answers now go to the sponsor portal directly and are sampled at 20% by account management.",
+    setBy: "Benefits director",
+    from: d(2, 15),
+  },
+  {
+    agentId: "data-agent",
+    autonomy: "Act",
+    rationale:
+      "Read-only reporting: every figure is returned by a query over the claim ledger or contract reports. No consequential actions. Sampling found no invented totals.",
+    setBy: "Benefits director",
+    from: d(4, 15),
+  },
 ];
 
 export async function seedPolicies(prisma: PrismaClient) {

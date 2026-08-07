@@ -199,6 +199,39 @@ export const AGENTS: AgentDef[] = [
       target: "80%",
     },
   },
+  {
+    id: "data-agent",
+    name: "Data agent",
+    purpose:
+      "Answers plan-sponsor data questions and composes report briefings from the claim ledger and contract reports.",
+    owner: "Benefits / finance",
+    surface: "AI data agent",
+    autonomy: "Act",
+    tools: [
+      "getBookSnapshot",
+      "getContractReports",
+      "getTrendDrivers",
+      "getTopSpend",
+      "getSettlementSnapshot",
+      "getGuaranteeScorecard",
+      "lookupClaims",
+      "getClaimDetail",
+      "composeReportBriefing",
+    ],
+    mayNot: [
+      "Compute a dollar figure. Every number it states came back from a tool that reads the claim ledger.",
+      "Change benefits or run a whole-book replay. That is the plan-design agent.",
+      "Dump claim-level PHI or export outside an in-chat briefing with deep links.",
+      "Invent a report total that is not recomputable from the tools it called.",
+    ],
+    consequential: [],
+    incumbent:
+      "Ad-hoc analyst time for sponsor reporting packs, typically hours per question when the PBM workbook and the claim file disagree",
+    measure: {
+      name: "Figures in the reply backed by a tool result",
+      target: "100%",
+    },
+  },
 ];
 
 export function agent(id: string): AgentDef {

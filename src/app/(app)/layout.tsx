@@ -58,6 +58,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: "/agents", label: "Agent operations", icon: "agents" },
       { href: "/assistant", label: "AI member service", icon: "assistant" },
+      { href: "/data-agent", label: "Data agent", icon: "dataAgent" },
     ],
   },
   {
