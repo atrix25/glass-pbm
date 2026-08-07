@@ -1420,6 +1420,24 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     if (d) d.amountMicros = patientPayMicros;
   }
 
+  /*
+   * The same ceiling applies to the out-of-pocket credits. They are pushed
+   * before the total-allowed clamp, and a DAW brand penalty can make the
+   * pre-clamp patient pay larger than the fill itself. Leaving those deltas
+   * alone would credit the member's Rx or federal accumulator for money they
+   * never owed — so the next fill would hit the out-of-pocket cap early and
+   * under-charge them.
+   */
+  for (const d of deltas) {
+    if (
+      (d.accumulatorType === "RxOopIndividual" ||
+        d.accumulatorType === "FederalOopIndividual") &&
+      d.amountMicros > patientPayMicros
+    ) {
+      d.amountMicros = patientPayMicros;
+    }
+  }
+
   return {
     patientPayMicros,
     appliedToDeductibleMicros,
