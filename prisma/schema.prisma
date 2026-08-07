@@ -104,11 +104,15 @@ model PlanSponsor {
   /// "Pass-through" | "Traditional"
   pricingModel  String
   contractId    String
+  contract      Contract @relation(fields: [contractId], references: [id])
   contractName  String
 
-  benefitPlans BenefitPlan[]
-  members      Member[]
-  claims       Claim[]
+  benefitPlans    BenefitPlan[]
+  members         Member[]
+  claims          Claim[]
+  sponsorInvoices SponsorInvoice[]
+  remittanceRuns  RemittanceRun[]
+  rebateInvoices  RebateInvoice[]
 }
 
 model BenefitPlan {
@@ -550,6 +554,11 @@ model ContractRate {
   /// Minimum rebate guarantee per qualifying brand claim, in cents.
   minRebatePerBrandClaimCents Int?
 
+  /// True when this rate row is modeled rather than transcribed from a
+  /// published schedule. Traditional pharmacy-side rates are usually modeled
+  /// because network contracts are not public; client Schedule B rows are not.
+  isSimulated Boolean @default(false)
+
   effectiveDate   DateTime
   terminationDate DateTime?
 
@@ -576,6 +585,11 @@ model Contract {
   rebateAdminFeePmpmCents     Int @default(0)
   rebatePassThroughBps        Int @default(10000)
 
+  /// Client MAC list as a multiple of the pharmacy MAC, in basis points.
+  /// 10000 = 1.0 (pass-through). Traditional spread often sits above 10000
+  /// because the plan is billed on a higher MAC list than the pharmacy is paid.
+  clientMacMultiplierBps Int @default(10000)
+
   /// Retail is 1-83 days supply; Retail90 is 84 or more. Exhibit C footnote.
   retailMaxDaysSupply           Int    @default(83)
   /// Guarantees only apply to a category with at least this many claims.
@@ -592,6 +606,7 @@ model Contract {
   rates       ContractRate[]
   claims      Claim[]
   rebateTerms RebateTerm[]
+  sponsors    PlanSponsor[]
 }
 
 // ---------------------------------------------------------------------------
@@ -745,7 +760,7 @@ model BookDay {
   id        String   @id
   sponsorId String
   /// Midnight UTC on the day being summarised.
-  date      DateTime @unique
+  date      DateTime
 
   claimsSubmitted Int @default(0)
   claimsPaid      Int @default(0)
@@ -778,7 +793,9 @@ model BookDay {
   reversalPatientPayCents Int @default(0)
   reversalRebateCents     Int @default(0)
 
+  @@unique([sponsorId, date])
   @@index([date])
+  @@index([sponsorId, date])
 }
 
 /// The same day, cut by one dimension: channel, benefit level, pricing basis,
@@ -792,6 +809,7 @@ model BookDay {
 /// and nothing else, and the invariant suite checks them against the claims.
 model BookDayDimension {
   id        String   @id
+  sponsorId String
   date      DateTime
   /// One of: channel, level, basis, drug, class, reject.
   dimension String
@@ -812,8 +830,10 @@ model BookDayDimension {
   ingredientCostCents Int @default(0)
   awpCents            Int @default(0)
 
+  @@unique([sponsorId, date, dimension, key])
   @@index([dimension, date])
   @@index([date])
+  @@index([sponsorId, date])
 }
 
 // ---------------------------------------------------------------------------
@@ -1375,6 +1395,9 @@ model DurAlert {
 /// a receivable. The gap is the float.
 model RebateInvoice {
   id           String   @id
+  sponsorId    String
+  sponsor      PlanSponsor @relation(fields: [sponsorId], references: [id])
+  contractId   String
   manufacturer String
   /// "2026Q1"
   quarter      String
@@ -1397,6 +1420,7 @@ model RebateInvoice {
   @@index([quarter])
   @@index([submittedAt])
   @@index([collectedAt])
+  @@index([sponsorId])
 }
 
 // ---------------------------------------------------------------------------
@@ -1410,6 +1434,9 @@ model RebateInvoice {
 /// two sides are equal by construction, and the invariant suite checks it.
 model RemittanceRun {
   id         String   @id
+  sponsorId  String
+  sponsor    PlanSponsor @relation(fields: [sponsorId], references: [id])
+  contractId String
   cycleStart DateTime
   cycleEnd   DateTime
   /// Contractual payment date for the cycle. Whether it has been paid is
@@ -1427,6 +1454,7 @@ model RemittanceRun {
   lines RemittanceLine[]
 
   @@index([paidAt])
+  @@index([sponsorId, paidAt])
 }
 
 model RemittanceLine {
@@ -1453,8 +1481,10 @@ model RemittanceLine {
 /// less rebates actually collected in the period. Every line traces to a
 /// contract citation.
 model SponsorInvoice {
-  id          String   @id
+  id          String      @id
   sponsorId   String
+  sponsor     PlanSponsor @relation(fields: [sponsorId], references: [id])
+  contractId  String
   periodStart DateTime
   periodEnd   DateTime
   issuedAt    DateTime
@@ -1475,6 +1505,7 @@ model SponsorInvoice {
   paidAt        DateTime
 
   @@index([periodStart])
+  @@index([sponsorId, periodStart])
 }
 
 // ---------------------------------------------------------------------------

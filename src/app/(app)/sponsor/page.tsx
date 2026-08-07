@@ -22,11 +22,13 @@ import {
   getRejectMix,
   getTopDrugs,
 } from "@/lib/queries/sponsor";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent, levelMeta } from "@/lib/utils";
 import { PRICING_ARM_LABEL } from "@/lib/engine/types";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
+import { MICHIGAN_CONTRACT } from "@/lib/contracts/michigan";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -39,16 +41,18 @@ const BASIS_TO_ARM: Record<string, keyof typeof PRICING_ARM_LABEL> = {
 };
 
 export default async function SponsorDashboard() {
-  const clock = await getClock();
-  const [totals, channels, levels, trend, rejects, topDrugs, basis] =
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const sponsorId = book.sponsorId;
+  const [totals, channels, levels, trend, rejects, topDrugs, basis, contract] =
     await Promise.all([
-      getBookTotals(clock),
-      getChannelMix(clock),
-      getLevelMix(clock),
-      getMonthlyTrend(clock),
-      getRejectMix(clock),
-      getTopDrugs(clock, 10),
-      getBasisMix(clock),
+      getBookTotals(clock, sponsorId),
+      getChannelMix(clock, sponsorId),
+      getLevelMix(clock, sponsorId),
+      getMonthlyTrend(clock, sponsorId),
+      getRejectMix(clock, sponsorId),
+      getTopDrugs(clock, 10, sponsorId),
+      getBasisMix(clock, sponsorId),
+      prisma.contract.findUnique({ where: { id: book.contractId } }),
     ]);
 
   const netPlanCostCents = totals.planPaidCents - totals.rebateCents;
@@ -66,13 +70,21 @@ export default async function SponsorDashboard() {
     totals.specialtyBilledCents / Math.max(1, totals.totalBilledCents);
   const marginOverAcquisition =
     totals.totalBilledCents - totals.nadacTotalCents - totals.dispensingFeeCents;
-  const adminFeeCents =
-    totals.members * 12 * WISCONSIN_CONTRACT.adminFeePmpmCommercialCents;
+  const adminFeePmpm =
+    contract?.adminFeePmpmCommercialCents ??
+    (book.model === "Traditional"
+      ? MICHIGAN_CONTRACT.adminFeePmpmCommercialCents
+      : WISCONSIN_CONTRACT.adminFeePmpmCommercialCents);
+  const adminFeeCents = totals.members * 12 * adminFeePmpm;
+  const isPassThrough = book.model === "PassThrough";
+  const description = isPassThrough
+    ? `${book.sponsorName}, self-insured commercial line of business, plan year 2026, priced on the published Navitus ETG0013 rate card. Every figure on this page is a sum over individual adjudicated claims, and any claim will show the derivation that produced it.`
+    : `${book.sponsorName}, self-insured commercial line of business, plan year 2026, priced on Michigan OptumRx Contract 220000001116 Schedule B (Traditional). Client rates are published; pharmacy rates are modeled. Spread is billed minus allowed.`;
 
   return (
     <div className="space-y-6">
       <SectionTitle
-        description="Steel Potatoes LLC, self-insured commercial line of business, plan year 2026, priced on the published Navitus ETG0013 rate card. Every figure on this page is a sum over individual adjudicated claims, and any claim will show the derivation that produced it."
+        description={description}
         action={
           <Link
             href="/claims"
@@ -113,28 +125,66 @@ export default async function SponsorDashboard() {
         </div>
       </Card>
 
-      {/* The pass-through claim, stated as a checkable identity */}
-      <Card className="border-emerald-600/25 bg-emerald-50/40">
+      {/* Pricing model claim, stated as a checkable identity */}
+      <Card
+        className={
+          isPassThrough
+            ? "border-emerald-600/25 bg-emerald-50/40"
+            : "border-amber-600/25 bg-amber-50/40"
+        }
+      >
         <div className="flex items-start gap-3.5 px-5 py-4">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <ShieldCheck
+            className={
+              isPassThrough
+                ? "mt-0.5 h-5 w-5 shrink-0 text-emerald-700"
+                : "mt-0.5 h-5 w-5 shrink-0 text-amber-700"
+            }
+          />
           <div className="min-w-0">
-            <h2 className="text-[13.5px] font-semibold text-emerald-900">
-              Pass-through holds on all {formatNumber(totals.claimsPaid)} paid claims
+            <h2
+              className={
+                isPassThrough
+                  ? "text-[13.5px] font-semibold text-emerald-900"
+                  : "text-[13.5px] font-semibold text-amber-900"
+              }
+            >
+              {isPassThrough
+                ? `Pass-through holds on all ${formatNumber(totals.claimsPaid)} paid claims`
+                : `Traditional spread of ${formatCents(totals.spreadCents)} across ${formatNumber(totals.claimsPaid)} paid claims`}
             </h2>
-            <p className="mt-1 text-[13px] leading-relaxed text-emerald-900/75">
-              The amount billed to the plan equals the amount remitted to the
-              pharmacy on every single claim, so the sum of the differences is
-              exactly {formatCents(totals.spreadCents)}. This is not a
-              reconciliation performed after the fact. The engine reads one rate
-              row for both sides, which makes spread structurally impossible
-              rather than contractually discouraged.{" "}
-              <Link
-                href="/proof#invariants"
-                className="font-medium underline decoration-emerald-600/40 underline-offset-2 hover:decoration-emerald-700"
-              >
-                See the invariant test
-              </Link>
-              .
+            <p
+              className={
+                isPassThrough
+                  ? "mt-1 text-[13px] leading-relaxed text-emerald-900/75"
+                  : "mt-1 text-[13px] leading-relaxed text-amber-900/75"
+              }
+            >
+              {isPassThrough ? (
+                <>
+                  The amount billed to the plan equals the amount remitted to the
+                  pharmacy on every single claim, so the sum of the differences is
+                  exactly {formatCents(totals.spreadCents)}. This is not a
+                  reconciliation performed after the fact. The engine reads one rate
+                  row for both sides, which makes spread structurally impossible
+                  rather than contractually discouraged.{" "}
+                  <Link
+                    href="/proof#invariants"
+                    className="font-medium underline decoration-emerald-600/40 underline-offset-2 hover:decoration-emerald-700"
+                  >
+                    See the invariant test
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  Under Schedule B the plan is billed on the client rate table and
+                  the pharmacy is paid on a separate, modeled network table. The
+                  difference is spread. Pharmacy rates and the client MAC
+                  multiplier are disclosed as modeled assumptions, not published
+                  facts.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -199,7 +249,7 @@ export default async function SponsorDashboard() {
                 swatch="bg-ink-900"
                 label="PBM administrative fee"
                 value={formatCents(adminFeeCents)}
-                note={`${formatCents(WISCONSIN_CONTRACT.adminFeePmpmCommercialCents)} per member per month, invoiced separately from claims`}
+                note={`${formatCents(adminFeePmpm)} per member per month, invoiced separately from claims`}
               />
             </dl>
             <p className="text-[12px] leading-relaxed text-ink-500">
@@ -421,23 +471,39 @@ export default async function SponsorDashboard() {
       <Card>
         <CardHeader
           title="Contract at a glance"
-          description="The terms this plan is priced on: contract ETG0013 between Wisconsin ETF and Navitus Health Solutions, as published. Steel Potatoes is an invented employer; these rates are not."
+          description={
+            isPassThrough
+              ? "The terms this plan is priced on: contract ETG0013 between Wisconsin ETF and Navitus Health Solutions, as published. Steel Potatoes is an invented employer; these rates are not."
+              : "The terms this plan is priced on: Michigan OptumRx Contract 220000001116 Schedule B, as published. Lakeside Fabricators is an invented employer; the client Schedule B rates are not. Pharmacy rates are modeled."
+          }
         />
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-4">
           <Fact
             label="Pricing model"
-            value="Pass-through"
-            note="Client and pharmacy rate tables are the same row"
+            value={isPassThrough ? "Pass-through" : "Traditional"}
+            note={
+              isPassThrough
+                ? "Client and pharmacy rate tables are the same row"
+                : "Client Schedule B published; pharmacy rates modeled"
+            }
           />
           <Fact
             label="Administrative fee"
-            value="$1.95 PMPM"
-            note="Commercial line of business"
+            value={formatCents(adminFeePmpm)}
+            note="Commercial line of business, per member per month"
           />
           <Fact
             label="Rebate pass-through"
-            value="100%"
-            note="Less a $0.40 PMPM rebate administration fee, Amendment 5"
+            value={
+              isPassThrough
+                ? "100%"
+                : formatPercent((contract?.rebatePassThroughBps ?? 0) / 10_000)
+            }
+            note={
+              isPassThrough
+                ? "Less a $0.40 PMPM rebate administration fee, Amendment 5"
+                : "Narrow rebate definition; amounts above the per-brand guarantee are retained"
+            }
           />
           <Fact
             label="Generic dispensing rate"

@@ -43,22 +43,45 @@ import { RUBRIC_BY_ID, scoreMember } from "@/lib/nps/rubric";
 async function counterexamples(
   columns: Prisma.Sql,
   predicate: Prisma.Sql,
+  scope: Prisma.Sql = Prisma.sql``,
 ): Promise<Array<Record<string, unknown>>> {
   return prisma.$queryRaw<Array<Record<string, unknown>>>`
     SELECT claimNumber, ${columns}
     FROM Claim
-    WHERE responseStatus = 'P' AND (${predicate})
+    WHERE responseStatus = 'P' ${scope} AND (${predicate})
     LIMIT 5
   `;
 }
 
 const NONE: Array<Record<string, unknown>> = [];
 
+/** Pass-through invariants apply only to the Steel Potatoes / ETG0013 book. */
+const STEEL_POTATOES_SCOPE = Prisma.sql`AND sponsorId = 'steel-potatoes' AND contractId = 'etg0013'`;
+
+/** Traditional spread invariants apply only to the Michigan demo book. */
+const MICHIGAN_SCOPE = Prisma.sql`AND sponsorId = 'michigan-demo' AND contractId = 'mi-220000001116'`;
+
 let paidCount = 0;
+let steelPaidCount = 0;
+let michiganPaidCount = 0;
 
 beforeAll(async () => {
   paidCount = await prisma.claim.count({ where: { responseStatus: "P" } });
-  expect(paidCount).toBeGreaterThan(1000);
+  steelPaidCount = await prisma.claim.count({
+    where: {
+      responseStatus: "P",
+      sponsorId: "steel-potatoes",
+      contractId: "etg0013",
+    },
+  });
+  michiganPaidCount = await prisma.claim.count({
+    where: {
+      responseStatus: "P",
+      sponsorId: "michigan-demo",
+      contractId: "mi-220000001116",
+    },
+  });
+  expect(steelPaidCount).toBeGreaterThan(1000);
 });
 
 describe("pass-through", () => {
@@ -67,12 +90,16 @@ describe("pass-through", () => {
    * hands over at the counter, so the pass-through property is not
    * "remittance equals billed". It is that the plan is billed exactly what the
    * pharmacy is entitled to: one rate row prices both sides.
+   *
+   * Scoped to Steel Potatoes so a Traditional Michigan book cannot fail these
+   * assertions by construction.
    */
   it("bills the plan exactly what the pharmacy is owed, on every claim", async () => {
     expect(
       await counterexamples(
         Prisma.sql`totalBilledCents AS billedToPlan, totalAllowedCents AS allowedToPharmacy`,
         Prisma.sql`totalBilledCents <> totalAllowedCents`,
+        STEEL_POTATOES_SCOPE,
       ),
     ).toEqual(NONE);
   });
@@ -80,7 +107,10 @@ describe("pass-through", () => {
   it("retains zero spread in aggregate", async () => {
     const [row] = await prisma.$queryRaw<Array<{ spread: number | bigint }>>`
       SELECT COALESCE(SUM(totalBilledCents - totalAllowedCents), 0) AS spread
-      FROM Claim WHERE responseStatus = 'P'
+      FROM Claim
+      WHERE responseStatus = 'P'
+        AND sponsorId = 'steel-potatoes'
+        AND contractId = 'etg0013'
     `;
     expect(Number(row.spread)).toBe(0);
   });
@@ -90,6 +120,7 @@ describe("pass-through", () => {
       await counterexamples(
         Prisma.sql`pharmacyPaidCents, patientPayCents, totalAllowedCents`,
         Prisma.sql`pharmacyPaidCents + patientPayCents <> totalAllowedCents`,
+        STEEL_POTATOES_SCOPE,
       ),
     ).toEqual(NONE);
   });
@@ -580,15 +611,18 @@ describe("every reversal exactly undoes the fill it reverses", () => {
 /*
  * Settlement is the whole pass-through argument stated in money rather than in
  * pricing rules: whatever the network is paid across a cycle is what the plan
- * is billed for the same claims, to the cent.
+ * is billed for the same claims, to the cent. Scoped to Steel Potatoes so a
+ * Traditional Michigan book — where spread is intentional — cannot break it.
  */
 describe("settlement ties out", () => {
   it("pays the network exactly what it billed the sponsor for drug cost", async () => {
     const [network] = await prisma.$queryRaw<Array<{ net: number }>>`
       SELECT COALESCE(SUM(netCents), 0) AS net FROM RemittanceRun
+      WHERE sponsorId = 'steel-potatoes'
     `;
     const [sponsor] = await prisma.$queryRaw<Array<{ drug: number }>>`
       SELECT COALESCE(SUM(drugCostCents), 0) AS drug FROM SponsorInvoice
+      WHERE sponsorId = 'steel-potatoes'
     `;
     /*
      * The two differ by exactly what members handed over at the counter, which
@@ -597,6 +631,7 @@ describe("settlement ties out", () => {
     const [counter] = await prisma.$queryRaw<Array<{ member: number }>>`
       SELECT COALESCE(SUM(patientPayCents), 0) AS member FROM Claim
       WHERE responseStatus IN ('P', 'A')
+        AND sponsorId = 'steel-potatoes'
     `;
     expect(Number(network.net) + Number(counter.member)).toBe(
       Number(sponsor.drug) + Number(counter.member),
@@ -616,6 +651,7 @@ describe("settlement ties out", () => {
 
   it("charges the administrative fee at the contracted rate on covered lives", async () => {
     const rows = await prisma.sponsorInvoice.findMany({
+      where: { sponsorId: "steel-potatoes" },
       select: { id: true, memberMonths: true, adminFeeCents: true },
     });
     expect(rows.length).toBeGreaterThan(0);
@@ -627,7 +663,9 @@ describe("settlement ties out", () => {
   });
 
   it("bills drug cost plus the fee, less rebates collected", async () => {
-    const rows = await prisma.sponsorInvoice.findMany();
+    const rows = await prisma.sponsorInvoice.findMany({
+      where: { sponsorId: "steel-potatoes" },
+    });
     for (const r of rows) {
       expect(r.totalDueCents, `${r.id} does not foot`).toBe(
         r.drugCostCents + r.adminFeeCents - r.rebateCreditCents,
@@ -1867,5 +1905,45 @@ describe("member experience", () => {
       if (cap < 0) expect(term.points).toBeGreaterThanOrEqual(cap);
       else expect(term.points).toBeLessThanOrEqual(cap);
     }
+  });
+});
+
+/*
+ * Traditional spread invariants. Only meaningful once the Michigan demo book
+ * is seeded; skipped when that book is absent so Steel Potatoes CI stays green.
+ */
+describe("traditional spread", () => {
+  it("bills the plan at least what the pharmacy is owed on every paid claim", async () => {
+    if (michiganPaidCount === 0) return;
+    expect(
+      await counterexamples(
+        Prisma.sql`totalBilledCents AS billedToPlan, totalAllowedCents AS allowedToPharmacy`,
+        Prisma.sql`totalBilledCents < totalAllowedCents`,
+        MICHIGAN_SCOPE,
+      ),
+    ).toEqual(NONE);
+  });
+
+  it("retains positive spread in aggregate", async () => {
+    if (michiganPaidCount === 0) return;
+    const [row] = await prisma.$queryRaw<Array<{ spread: number | bigint }>>`
+      SELECT COALESCE(SUM(totalBilledCents - totalAllowedCents), 0) AS spread
+      FROM Claim
+      WHERE responseStatus = 'P'
+        AND sponsorId = 'michigan-demo'
+        AND contractId = 'mi-220000001116'
+    `;
+    expect(Number(row.spread)).toBeGreaterThan(0);
+  });
+
+  it("still conserves money between plan and member on the billed side", async () => {
+    if (michiganPaidCount === 0) return;
+    expect(
+      await counterexamples(
+        Prisma.sql`planPaidCents AS plan, patientPayCents AS member, totalBilledCents AS total`,
+        Prisma.sql`planPaidCents + patientPayCents <> totalBilledCents`,
+        MICHIGAN_SCOPE,
+      ),
+    ).toEqual(NONE);
   });
 });

@@ -20,9 +20,14 @@ import {
 } from "../../src/lib/contracts/michigan.js";
 
 export const SPONSOR_ID = "steel-potatoes";
+export const MICHIGAN_SPONSOR_ID = "michigan-demo";
 export const NETWORK_LIMITED = "navicare-limited";
 export const NETWORK_SPECIALTY = "navicare-specialty";
 export const FORMULARY_ID = "navitus-etf-2026";
+
+/** Michigan demo plans reuse the Wisconsin benefit shape; the rate card differs. */
+export const MICHIGAN_IYC_PLAN_ID = "mi-iyc-2026";
+export const MICHIGAN_HDHP_PLAN_ID = "mi-hdhp-2026";
 
 /**
  * Exhibit C prices off AWP with a MAC ceiling, capped by the pharmacy's cash
@@ -67,6 +72,7 @@ export async function seedContracts(prisma: PrismaClient) {
       adminFeePmpmEgwpCents: WISCONSIN_CONTRACT.adminFeePmpmEgwpCents,
       rebateAdminFeePmpmCents: WISCONSIN_CONTRACT.rebateAdminFeePmpmCents,
       rebatePassThroughBps: WISCONSIN_CONTRACT.rebatePassThroughBps,
+      clientMacMultiplierBps: 10_000,
       retailMaxDaysSupply: WISCONSIN_CONTRACT.retailMaxDaysSupply,
       minClaimsPerCategory: WISCONSIN_CONTRACT.minClaimsPerCategory,
       discountExclusions: JSON.stringify(WISCONSIN_CONTRACT.discountExclusions),
@@ -75,7 +81,9 @@ export async function seedContracts(prisma: PrismaClient) {
         WISCONSIN_CONTRACT.rebateMemberShareThresholdBps,
       notes: WISCONSIN_CONTRACT.notes,
     },
-    update: {},
+    update: {
+      clientMacMultiplierBps: 10_000,
+    },
   });
 
   await prisma.contractRate.deleteMany({ where: { contractId: WISCONSIN_CONTRACT.id } });
@@ -95,6 +103,7 @@ export async function seedContracts(prisma: PrismaClient) {
           lesserOfArms: PASS_THROUGH_ARMS,
           includeUandC: true,
           minRebatePerBrandClaimCents: r.minRebatePerBrandClaimCents ?? null,
+          isSimulated: false,
           effectiveDate: new Date("2019-01-01T00:00:00Z"),
           sourceDocumentId: "etg0013-amd1-exhibit-c",
           citation: `Exhibit C, Guaranteed Pricing Terms, ${r.lineOfBusiness} ${r.channel} ${r.drugClass}: AWP less ${(r.awpDiscountBps / 100).toFixed(2)}%, dispensing fee $${(r.dispensingFeeCents / 100).toFixed(2)}${r.minRebatePerBrandClaimCents ? `, minimum rebate $${(r.minRebatePerBrandClaimCents / 100).toFixed(0)} per brand claim` : ""}.`,
@@ -104,6 +113,7 @@ export async function seedContracts(prisma: PrismaClient) {
   }
 
   // --- Michigan / OptumRx, traditional comparator ----------------------
+  const michiganMacBps = Math.round(MODELED_CLIENT_MAC_MULTIPLIER * 10_000);
   await prisma.contract.upsert({
     where: { id: MICHIGAN_CONTRACT.id },
     create: {
@@ -117,6 +127,7 @@ export async function seedContracts(prisma: PrismaClient) {
       adminFeePmpmEgwpCents: MICHIGAN_CONTRACT.adminFeePmpmEgwpCents,
       rebateAdminFeePmpmCents: 0,
       rebatePassThroughBps: MICHIGAN_CONTRACT.rebatePassThroughBps,
+      clientMacMultiplierBps: michiganMacBps,
       retailMaxDaysSupply: MICHIGAN_CONTRACT.retailMaxDaysSupply,
       minClaimsPerCategory: MICHIGAN_CONTRACT.minClaimsPerCategory,
       discountExclusions: "[]",
@@ -124,7 +135,9 @@ export async function seedContracts(prisma: PrismaClient) {
       rebateMemberShareThresholdBps: 10000,
       notes: MICHIGAN_CONTRACT.notes,
     },
-    update: {},
+    update: {
+      clientMacMultiplierBps: michiganMacBps,
+    },
   });
 
   await prisma.contractRate.deleteMany({ where: { contractId: MICHIGAN_CONTRACT.id } });
@@ -141,6 +154,7 @@ export async function seedContracts(prisma: PrismaClient) {
         lesserOfArms: TRADITIONAL_CLIENT_ARMS,
         includeUandC: false,
         minRebatePerBrandClaimCents: r.minRebatePerBrandClaimCents ?? null,
+        isSimulated: false,
         effectiveDate: MICHIGAN_CONTRACT.effectiveDate,
         sourceDocumentId: "michigan-optumrx-scheduleb",
         citation: `Schedule B, contract year 1, ${r.channel} ${r.drugClass}: AWP less ${(r.awpDiscountBps / 100).toFixed(2)}%.`,
@@ -159,6 +173,7 @@ export async function seedContracts(prisma: PrismaClient) {
         dispensingFeeCents: r.dispensingFeeCents,
         lesserOfArms: TRADITIONAL_PHARMACY_ARMS,
         includeUandC: true,
+        isSimulated: true,
         effectiveDate: MICHIGAN_CONTRACT.effectiveDate,
         sourceDocumentId: "michigan-optumrx-scheduleb",
         citation:
@@ -361,6 +376,106 @@ export async function seedSponsorAndPlans(prisma: PrismaClient) {
           appliesToDeductible: plan.deductibleIndividual > 0,
           sourceDocumentId: "etf-uniform-pharmacy-coc-2026",
           citation: rule.citation,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * Lakeside Fabricators — invented Michigan employer priced on the published
+ * OptumRx Schedule B traditional rate card. Benefit design is borrowed from
+ * the Wisconsin certificate (the Michigan PDF is a rate schedule, not a full
+ * commercial certificate); that assumption is documented on the contract notes
+ * and in the UI when this book is selected.
+ */
+export async function seedMichiganSponsorAndPlans(prisma: PrismaClient) {
+  await prisma.planSponsor.upsert({
+    where: { id: MICHIGAN_SPONSOR_ID },
+    create: {
+      id: MICHIGAN_SPONSOR_ID,
+      name: "Lakeside Fabricators LLC",
+      shortName: "Lakeside",
+      fundingType: "Self-insured",
+      situsState: "MI",
+      planYearStart: "01-01",
+      pricingModel: "Traditional",
+      contractId: MICHIGAN_CONTRACT.id,
+      contractName: "220000001116",
+    },
+    update: {
+      name: "Lakeside Fabricators LLC",
+      shortName: "Lakeside",
+      contractId: MICHIGAN_CONTRACT.id,
+      contractName: "220000001116",
+      pricingModel: "Traditional",
+    },
+  });
+
+  const plans = [
+    {
+      ...WISCONSIN_BENEFIT_2026.iyc,
+      id: MICHIGAN_IYC_PLAN_ID,
+      name: "Lakeside Preferred Pharmacy",
+      formularyId: FORMULARY_ID,
+      networkId: NETWORK_LIMITED,
+    },
+    {
+      ...WISCONSIN_BENEFIT_2026.hdhp,
+      id: MICHIGAN_HDHP_PLAN_ID,
+      name: "Lakeside High Deductible",
+      formularyId: FORMULARY_ID,
+      networkId: NETWORK_LIMITED,
+    },
+  ];
+
+  for (const plan of plans) {
+    await prisma.benefitPlan.upsert({
+      where: { id: plan.id },
+      create: {
+        id: plan.id,
+        sponsorId: MICHIGAN_SPONSOR_ID,
+        name: plan.name,
+        lineOfBusiness: plan.lineOfBusiness,
+        planYear: plan.planYear,
+        effectiveDate: new Date("2026-01-01T00:00:00Z"),
+        formularyId: plan.formularyId,
+        networkId: plan.networkId,
+        deductibleIndividual: plan.deductibleIndividual,
+        deductibleFamily: plan.deductibleFamily,
+        deductibleIntegratedWithMedical: plan.deductibleIntegratedWithMedical,
+        rxOopLimitIndividual: plan.rxOopLimitIndividual,
+        rxOopLimitFamily: plan.rxOopLimitFamily,
+        federalOopLimitIndividual: plan.federalOopLimitIndividual,
+        federalOopLimitFamily: plan.federalOopLimitFamily,
+        rxOopEligibleLevels: JSON.stringify(plan.rxOopEligibleLevels),
+        dawPenaltyEnabled: true,
+        specialtyChannelRestricted: true,
+        specialtyPharmacyIds: JSON.stringify(["ph-lumicera", "ph-uwhealth-sp"]),
+      },
+      update: {
+        name: plan.name,
+        sponsorId: MICHIGAN_SPONSOR_ID,
+      },
+    });
+
+    await prisma.costShareRule.deleteMany({ where: { benefitPlanId: plan.id } });
+    for (const rule of iycCostShareRules()) {
+      await prisma.costShareRule.create({
+        data: {
+          benefitPlanId: plan.id,
+          level: rule.level,
+          channel: rule.channel,
+          costShareType: rule.costShareType,
+          copayCents: rule.copayCents ?? null,
+          coinsuranceRateBps: rule.coinsuranceRateBps ?? null,
+          coinsuranceMaxCents: rule.coinsuranceMaxCents ?? null,
+          accumulatesToRxOop:
+            plan.id === MICHIGAN_HDHP_PLAN_ID ? true : rule.accumulatesToRxOop,
+          accumulatesToFederalOop: rule.accumulatesToFederalOop,
+          appliesToDeductible: plan.deductibleIndividual > 0,
+          sourceDocumentId: "etf-uniform-pharmacy-coc-2026",
+          citation: `${rule.citation} (borrowed benefit design for Michigan Traditional demo; rate card is Michigan Schedule B).`,
         },
       });
     }

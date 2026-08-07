@@ -16,6 +16,7 @@ import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
 import { PLAN_YEAR_START } from "@/lib/clock";
 import { IN_FLIGHT_STATUSES, paLiveState, type PaLiveStatus } from "@/lib/pa/status";
+import { DEFAULT_BOOK } from "@/lib/book-context";
 
 export interface DayActivity {
   date: Date;
@@ -76,6 +77,7 @@ function toActivity(r: {
 
 export async function getOperationsSnapshot(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<OperationsSnapshot> {
   const RECENT_DAYS = 30;
   const recentFrom = new Date(
@@ -84,11 +86,17 @@ export async function getOperationsSnapshot(
 
   const [days, ytd, lives, contracts] = await Promise.all([
     prisma.bookDay.findMany({
-      where: { date: { gte: recentFrom, lte: clock.today } },
+      where: {
+        sponsorId,
+        date: { gte: recentFrom, lte: clock.today },
+      },
       orderBy: { date: "asc" },
     }),
     prisma.bookDay.aggregate({
-      where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
+      where: {
+        sponsorId,
+        date: { gte: PLAN_YEAR_START, lte: clock.today },
+      },
       _sum: {
         claimsSubmitted: true,
         claimsPaid: true,
@@ -104,8 +112,8 @@ export async function getOperationsSnapshot(
       },
       _count: true,
     }),
-    prisma.member.count(),
-    prisma.member.count({ where: { personCode: "01" } }),
+    prisma.member.count({ where: { sponsorId } }),
+    prisma.member.count({ where: { sponsorId, personCode: "01" } }),
   ]);
 
   const recent = days.map(toActivity);
@@ -374,9 +382,16 @@ export async function getPaQueueStats(
  * This is the closest thing the application has to a tape: the last few
  * hundred fills that actually adjudicated, in the order they arrived.
  */
-export async function getRecentClaims(clock: SimulationClock, limit = 40) {
+export async function getRecentClaims(
+  clock: SimulationClock,
+  limit = 40,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
+) {
   return prisma.claim.findMany({
-    where: { dateOfService: { lte: clock.today } },
+    where: {
+      sponsorId,
+      dateOfService: { lte: clock.today },
+    },
     select: {
       id: true,
       claimNumber: true,

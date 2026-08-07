@@ -208,7 +208,21 @@ export interface PopulationOptions {
   seed: number;
   /** Share of contracts enrolled in the HDHP rather than the IYC plan. */
   hdhpShare: number;
+  /** Cardholder id prefix so two sponsors never collide. */
+  cardholderPrefix?: string;
+  /** IYC benefit plan id. */
+  iycPlanId?: string;
+  /** HDHP benefit plan id. */
+  hdhpPlanId?: string;
+  /** Member home state for addresses. */
+  state?: string;
+  /** City/zip pairs for the situs state. */
+  cities?: Array<[string, string]>;
+  /** Prefix inserted into member ids so Michigan members do not collide with Steel Potatoes. */
+  memberIdPrefix?: string;
 }
+
+const DEFAULT_CITIES: Array<[string, string]> = WI_CITIES;
 
 export function generatePopulation(
   opts: PopulationOptions,
@@ -216,13 +230,19 @@ export function generatePopulation(
   const rng = new Rng(opts.seed);
   const members: GeneratedMember[] = [];
   const yearStart = new Date(Date.UTC(opts.planYear, 0, 1));
+  const prefix = opts.cardholderPrefix ?? "W";
+  const iycPlanId = opts.iycPlanId ?? "wi-iyc-2026";
+  const hdhpPlanId = opts.hdhpPlanId ?? "wi-hdhp-2026";
+  const state = opts.state ?? "WI";
+  const cities = opts.cities ?? DEFAULT_CITIES;
+  const memberIdPrefix = opts.memberIdPrefix ?? "";
 
   for (let c = 0; c < opts.contractCount; c++) {
-    const cardholderId = `W${String(100_000_000 + c * 7).padStart(9, "0")}`;
+    const cardholderId = `${prefix}${String(100_000_000 + c * 7).padStart(9, "0")}`;
     const lastName = rng.pick(LAST_NAMES);
-    const [city, zip] = rng.pick(WI_CITIES);
+    const [city, zip] = rng.pick(cities);
     const street = `${rng.int(100, 9999)} ${rng.pick(["Oak", "Maple", "Washington", "Jefferson", "Lake", "University", "Main", "Park", "Monroe", "Johnson"])} ${rng.pick(["St", "Ave", "Rd", "Blvd", "Dr", "Ln"])}`;
-    const plan = rng.bool(opts.hdhpShare) ? "wi-hdhp-2026" : "wi-iyc-2026";
+    const plan = rng.bool(opts.hdhpShare) ? hdhpPlanId : iycPlanId;
 
     // Family composition, roughly matching a public-employee population.
     const roll = rng.next();
@@ -272,7 +292,7 @@ export function generatePopulation(
         gender === "F" ? rng.pick(FIRST_NAMES_F) : rng.pick(FIRST_NAMES_M);
 
       members.push({
-        id: `mbr-${cardholderId}-${personCode}`,
+        id: `mbr-${memberIdPrefix}${cardholderId}-${personCode}`,
         cardholderId,
         personCode,
         relationshipCode,
@@ -283,10 +303,10 @@ export function generatePopulation(
         gender,
         addressLine1: street,
         city,
-        state: "WI",
+        state,
         zip,
-        phone: `608${rng.int(2000000, 9999999)}`,
-        email: `${first.toLowerCase()}.${lastName.toLowerCase().replace(/'/g, "")}@steelpotatoes.example`,
+        phone: `${state === "MI" ? "313" : "608"}${rng.int(2000000, 9999999)}`,
+        email: `${first.toLowerCase()}.${lastName.toLowerCase().replace(/'/g, "")}@${state === "MI" ? "lakesidefabricators" : "steelpotatoes"}.example`,
         diagnosisCodes,
         weightKg: Math.round((gender === "F" ? 68 : 84) + rng.next() * 34 - 12),
         profileId: profile.id,

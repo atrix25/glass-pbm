@@ -16,9 +16,48 @@
 
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
+import { DEFAULT_BOOK, MICHIGAN_DEMO_SPONSOR_ID } from "@/lib/book-context";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
+import { MICHIGAN_CONTRACT } from "@/lib/contracts/michigan";
 
 const DAY_MS = 86_400_000;
+
+/** Admin / rebate-admin PMPM for a sponsor, preferring the Contract row. */
+async function adminFeesForSponsor(sponsorId: string): Promise<{
+  adminFeePmpmCommercialCents: number;
+  rebateAdminFeePmpmCents: number;
+}> {
+  const sponsor = await prisma.planSponsor.findUnique({
+    where: { id: sponsorId },
+    select: {
+      contract: {
+        select: {
+          adminFeePmpmCommercialCents: true,
+          rebateAdminFeePmpmCents: true,
+        },
+      },
+    },
+  });
+  if (sponsor?.contract) {
+    return {
+      adminFeePmpmCommercialCents:
+        sponsor.contract.adminFeePmpmCommercialCents,
+      rebateAdminFeePmpmCents: sponsor.contract.rebateAdminFeePmpmCents,
+    };
+  }
+  if (sponsorId === MICHIGAN_DEMO_SPONSOR_ID) {
+    return {
+      adminFeePmpmCommercialCents:
+        MICHIGAN_CONTRACT.adminFeePmpmCommercialCents,
+      rebateAdminFeePmpmCents: MICHIGAN_CONTRACT.rebateAdminFeePmpmCents,
+    };
+  }
+  return {
+    adminFeePmpmCommercialCents:
+      WISCONSIN_CONTRACT.adminFeePmpmCommercialCents,
+    rebateAdminFeePmpmCents: WISCONSIN_CONTRACT.rebateAdminFeePmpmCents,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Pharmacy remittance
@@ -64,9 +103,10 @@ export interface SettlementOverview {
 
 export async function getSettlementOverview(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<SettlementOverview> {
   const runs = await prisma.remittanceRun.findMany({
-    where: { cycleStart: { lte: clock.now } },
+    where: { sponsorId, cycleStart: { lte: clock.now } },
     orderBy: { cycleStart: "desc" },
   });
 
@@ -75,7 +115,11 @@ export async function getSettlementOverview(
 
   for (const r of runs) {
     if (r.cycleEnd >= clock.now) {
-      inFlight = { ...r, status: "In flight", ...(await cycleToDate(r.id, r.cycleStart, clock.now)) };
+      inFlight = {
+        ...r,
+        status: "In flight",
+        ...(await cycleToDate(r.id, r.cycleStart, clock.now, sponsorId)),
+      };
       continue;
     }
     cycles.push({
@@ -115,6 +159,7 @@ async function cycleToDate(
   runId: string,
   start: Date,
   now: Date,
+  sponsorId: string,
 ): Promise<
   Pick<
     RemittanceCycle,
@@ -143,6 +188,7 @@ async function cycleToDate(
            SUM(CASE WHEN transactionCode = 'B2' THEN pharmacyPaidCents ELSE 0 END) AS reversed
     FROM Claim
     WHERE (responseStatus = 'P' OR responseStatus = 'A')
+      AND sponsorId = ${sponsorId}
       AND dateOfService >= ${start} AND dateOfService <= ${now}
   `;
   const gross = Number(row?.gross ?? 0);
@@ -211,11 +257,15 @@ export interface InvoiceOverview {
 
 export async function getInvoiceOverview(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<InvoiceOverview> {
-  const rows = await prisma.sponsorInvoice.findMany({
-    where: { periodStart: { lte: clock.now } },
-    orderBy: { periodStart: "desc" },
-  });
+  const [rows, fees] = await Promise.all([
+    prisma.sponsorInvoice.findMany({
+      where: { sponsorId, periodStart: { lte: clock.now } },
+      orderBy: { periodStart: "desc" },
+    }),
+    adminFeesForSponsor(sponsorId),
+  ]);
 
   const bills: SponsorBill[] = [];
   for (const r of rows) {
@@ -231,13 +281,14 @@ export async function getInvoiceOverview(
        * clock, or a half-finished month shows a full month of rebate against
        * half a month of spend and comes out looking like a refund.
        */
-      const live = await monthToDate(r.periodStart, clock.now);
+      const live = await monthToDate(r.periodStart, clock.now, sponsorId);
       bill.claimCount = live.claims;
       bill.reversalCount = live.reversals;
       bill.drugCostCents = live.drugCost;
       bill.rebateCreditCents = await rebatesCollectedBetween(
         r.periodStart,
         clock.now,
+        sponsorId,
       );
       bill.totalDueCents =
         live.drugCost + r.adminFeeCents - bill.rebateCreditCents;
@@ -261,20 +312,25 @@ export async function getInvoiceOverview(
         ? Math.round((adminFeeToDateCents / billedToDateCents) * 10_000)
         : 0,
     adminFeePmpmCents:
-      WISCONSIN_CONTRACT.adminFeePmpmCommercialCents +
-      WISCONSIN_CONTRACT.rebateAdminFeePmpmCents,
+      fees.adminFeePmpmCommercialCents + fees.rebateAdminFeePmpmCents,
   };
 }
 
-async function rebatesCollectedBetween(start: Date, end: Date): Promise<number> {
+async function rebatesCollectedBetween(
+  start: Date,
+  end: Date,
+  sponsorId: string,
+): Promise<number> {
   const [row] = await prisma.$queryRaw<Array<{ credited: number | null }>>`
     SELECT SUM(collectedCents) AS credited FROM RebateInvoice
-    WHERE collectedAt IS NOT NULL AND collectedAt >= ${start} AND collectedAt <= ${end}
+    WHERE sponsorId = ${sponsorId}
+      AND collectedAt IS NOT NULL
+      AND collectedAt >= ${start} AND collectedAt <= ${end}
   `;
   return Number(row?.credited ?? 0);
 }
 
-async function monthToDate(start: Date, now: Date) {
+async function monthToDate(start: Date, now: Date, sponsorId: string) {
   const [row] = await prisma.$queryRaw<
     Array<{ claims: number; reversals: number; drugCost: number | null }>
   >`
@@ -283,6 +339,7 @@ async function monthToDate(start: Date, now: Date) {
            SUM(planPaidCents) AS drugCost
     FROM Claim
     WHERE (responseStatus = 'P' OR responseStatus = 'A')
+      AND sponsorId = ${sponsorId}
       AND dateOfService >= ${start} AND dateOfService <= ${now}
   `;
   return {
@@ -348,8 +405,10 @@ const FLOAT_RATE_BPS = 450;
 
 export async function getRebateLedger(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<RebateLedger> {
   const invoices = await prisma.rebateInvoice.findMany({
+    where: { sponsorId },
     orderBy: [{ periodEnd: "asc" }, { invoicedCents: "desc" }],
   });
 

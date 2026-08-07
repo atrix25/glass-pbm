@@ -23,7 +23,7 @@ import {
   type DriverRow,
   type TrendWindow,
 } from "@/lib/queries/trends";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatDate, formatNumber, formatPercent } from "@/lib/utils";
 
@@ -33,8 +33,8 @@ export const dynamic = "force-dynamic";
 const TOP_N = 8;
 
 export default async function TrendsPage() {
-  const clock = await getClock();
-  const overview = await getTrendOverview(clock);
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const overview = await getTrendOverview(clock, book.sponsorId);
 
   if (!overview) {
     return (
@@ -58,7 +58,7 @@ export default async function TrendsPage() {
       getDrugDrivers(overview),
       getRelationshipTrend(overview),
       getCostConcentration(overview),
-      getMonthlyTrendLine(clock),
+      getMonthlyTrendLine(clock, book.sponsorId),
     ]);
 
   const { current, prior, periods, drivers, netChangeCents, netChangePct } =
