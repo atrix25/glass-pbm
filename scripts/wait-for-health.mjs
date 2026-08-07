@@ -9,7 +9,8 @@
  */
 
 const URL = process.env.HEALTH_URL ?? "https://glass-pbm-demo.fly.dev/api/health";
-const DEADLINE_MS = 5 * 60 * 1000;
+// First boot may download and gunzip ~325 MB from object storage.
+const DEADLINE_MS = 10 * 60 * 1000;
 
 const started = Date.now();
 let attempt = 0;
@@ -18,7 +19,9 @@ while (Date.now() - started < DEADLINE_MS) {
   attempt++;
   const elapsed = ((Date.now() - started) / 1000).toFixed(0);
   try {
-    const res = await fetch(URL, { signal: AbortSignal.timeout(60_000) });
+    // The first query against a cold ~1.3 GB SQLite book can take 20–30s even
+    // after Next.js is listening; a shorter timeout makes deploy look hung.
+    const res = await fetch(URL, { signal: AbortSignal.timeout(120_000) });
     const body = await res.json();
     if (res.ok && body.ok) {
       console.log(`healthy after ${elapsed}s: ${body.bookDays} days in the book`);
