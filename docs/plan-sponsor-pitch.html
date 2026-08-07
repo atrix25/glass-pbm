@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glass — Plan sponsor pitch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink-950: #12161f;
+      --ink-900: #1d2432;
+      --ink-700: #404b60;
+      --ink-600: #4e5d76;
+      --ink-500: #647590;
+      --ink-300: #b0b9c9;
+      --ink-200: #d5dae3;
+      --ink-100: #eceef2;
+      --ink-50: #f6f7f9;
+      --glass-600: #148187;
+      --glass-500: #1ca2a7;
+      --glass-300: #74d8d8;
+      --glass-100: #d3f5f3;
+      --glass-50: #eefbfa;
+      --amber: #b45309;
+      --paper: #f4f6f8;
+      --white: #ffffff;
+      --display: "Instrument Serif", Georgia, serif;
+      --sans: "DM Sans", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--ink-950);
+      color: var(--ink-900);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chrome {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 18px;
+      background: var(--ink-950);
+      color: rgba(255,255,255,0.72);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      z-index: 10;
+    }
+
+    .chrome .brand {
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .chrome .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--glass-500);
+    }
+
+    .chrome .spacer { flex: 1; }
+
+    .chrome button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: transparent;
+      color: #fff;
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .chrome button:hover:not(:disabled) {
+      border-color: var(--glass-400, #38bec1);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .chrome button:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .chrome .progress {
+      font-variant-numeric: tabular-nums;
+      color: rgba(255,255,255,0.45);
+      min-width: 3.5rem;
+      text-align: right;
+    }
+
+    .stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: clamp(28px, 5vw, 64px) clamp(28px, 6vw, 80px);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity 280ms ease, transform 280ms ease, visibility 280ms;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .slide.dark {
+      background: var(--ink-950);
+      color: #fff;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--glass-600);
+      margin-bottom: 14px;
+    }
+
+    .slide.dark .eyebrow { color: var(--glass-300); }
+
+    h1 {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: clamp(36px, 5.2vw, 58px);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      max-width: 16ch;
+      margin-bottom: 16px;
+    }
+
+    .slide.dark h1 { color: #fff; }
+
+    .lede {
+      font-size: clamp(15px, 1.5vw, 18px);
+      line-height: 1.55;
+      color: var(--ink-600);
+      max-width: 52ch;
+      margin-bottom: 28px;
+    }
+
+    .slide.dark .lede { color: rgba(255,255,255,0.65); }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stack { display: flex; flex-direction: column; gap: 12px; }
+
+    .stat {
+      border: 1px solid var(--ink-200);
+      background: var(--white);
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+    }
+
+    .slide.dark .stat {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .stat strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--ink-950);
+      margin-bottom: 6px;
+    }
+
+    .slide.dark .stat strong { color: #fff; }
+
+    .stat span {
+      display: block;
+      font-size: 13.5px;
+      line-height: 1.4;
+      color: var(--ink-600);
+    }
+
+    .slide.dark .stat span { color: rgba(255,255,255,0.55); }
+
+    .card {
+      border: 1px solid var(--ink-200);
+      background: var(--white);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--ink-950);
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .card li {
+      font-size: 13.5px;
+      line-height: 1.4;
+      color: var(--ink-700);
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .card li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.55em;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--glass-500);
+    }
+
+    .card p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink-700);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--glass-50);
+      color: var(--glass-800, #155259);
+      border: 1px solid var(--glass-200, #ace9e8);
+    }
+
+    .callout {
+      margin-top: auto;
+      padding-top: 22px;
+    }
+
+    .callout > div {
+      border-left: 3px solid var(--glass-500);
+      padding: 12px 16px;
+      background: var(--glass-50);
+      border-radius: 0 10px 10px 0;
+    }
+
+    .callout.warn > div {
+      border-left-color: var(--amber);
+      background: #fff7ed;
+    }
+
+    .callout h4 {
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink-700);
+      margin-bottom: 4px;
+    }
+
+    .callout p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink-700);
+      max-width: 70ch;
+    }
+
+    .slide.dark .callout > div {
+      background: rgba(28, 162, 167, 0.12);
+      border-left-color: var(--glass-300);
+    }
+
+    .slide.dark .callout h4,
+    .slide.dark .callout p { color: rgba(255,255,255,0.8); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: var(--white);
+      border: 1px solid var(--ink-200);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--ink-100);
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-500);
+      background: var(--ink-50);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    td:first-child { font-weight: 600; color: var(--ink-900); width: 22%; }
+    td { color: var(--ink-700); line-height: 1.4; }
+
+    .pillar {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 14px;
+      align-items: start;
+      border: 1px solid var(--ink-200);
+      background: var(--white);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    .pillar .n {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--ink-950);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--display);
+      font-size: 20px;
+    }
+
+    .pillar h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .pillar p {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--ink-600);
+      max-width: 62ch;
+    }
+
+    .title-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .title-mark .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--glass-500);
+    }
+
+    .title-mark .name {
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    .close-line {
+      font-family: var(--display);
+      font-size: clamp(26px, 3.4vw, 38px);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      max-width: 22ch;
+      margin: 8px 0 20px;
+    }
+
+    .hint {
+      position: fixed;
+      bottom: 14px;
+      right: 18px;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.35);
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .dots button {
+      width: 7px;
+      height: 7px;
+      padding: 0;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(255,255,255,0.22);
+      cursor: pointer;
+    }
+
+    .dots button[aria-current="true"] {
+      background: var(--glass-400, #38bec1);
+      transform: scale(1.15);
+    }
+
+    @media (max-width: 860px) {
+      .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      h1 { max-width: none; }
+      table { font-size: 12px; }
+      .chrome .hide-sm { display: none; }
+    }
+
+    @media print {
+      .chrome, .hint { display: none !important; }
+      .stage { overflow: visible; background: #fff; }
+      .slide {
+        position: relative;
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: none !important;
+        page-break-after: always;
+        min-height: 100vh;
+        overflow: visible;
+      }
+      .slide.dark {
+        background: #fff !important;
+        color: var(--ink-900) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .slide.dark .lede,
+      .slide.dark .stat span,
+      .slide.dark .callout p,
+      .slide.dark .callout h4 { color: var(--ink-600) !important; }
+      .slide.dark .stat {
+        background: var(--ink-50);
+        border-color: var(--ink-200);
+      }
+      .slide.dark .stat strong,
+      .slide.dark h1 { color: var(--ink-950) !important; }
+      .slide.dark .eyebrow { color: var(--glass-600) !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+    <header class="chrome">
+      <span class="brand">Glass</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span class="hide-sm">Plan sponsor pitch</span>
+      <span class="spacer"></span>
+      <div class="dots" id="dots" aria-label="Slides"></div>
+      <span class="progress" id="progress">1 / 9</span>
+      <button type="button" id="prev" aria-label="Previous slide">Prev</button>
+      <button type="button" id="next" aria-label="Next slide">Next</button>
+    </header>
+
+    <main class="stage" id="stage">
+      <!-- 1 -->
+      <section class="slide dark active" data-title="Open">
+        <div class="title-mark">
+          <div class="mark" aria-hidden="true"></div>
+          <div class="name">Glass</div>
+        </div>
+        <p class="eyebrow">Transparent pharmacy benefit management</p>
+        <h1>Glass for plan sponsors</h1>
+        <p class="lede">
+          Best-in-class reporting, radical transparency without locking you into
+          one fee model, and member service that answers in chat and text — from
+          the same rules that adjudicate the claim.
+        </p>
+        <div class="grid-3">
+          <div class="stat">
+            <strong>Reporting</strong>
+            <span>Contract questions answered from the claim ledger</span>
+          </div>
+          <div class="stat">
+            <strong>Transparency</strong>
+            <span>Every dollar named — any commercial model</span>
+          </div>
+          <div class="stat">
+            <strong>Service</strong>
+            <span>Chat and text, grounded in live plan data</span>
+          </div>
+        </div>
+        <div class="callout">
+          <div>
+            <h4>How we lead</h4>
+            <p>
+              Reports finance trusts, economics you can audit, and service that
+              does not make people wait on hold. Flexible pricing is available —
+              opacity is not.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section class="slide" data-title="Problem">
+        <p class="eyebrow">The status quo</p>
+        <h1>What sponsors are tired of</h1>
+        <p class="lede">
+          The pharmacy benefit often fails in three places that matter more than
+          the brochure discount: reports that cannot be checked, fees that hide
+          inside drug cost, and member service that cannot explain a reject.
+        </p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>Reporting today</h3>
+            <ul>
+              <li>Quarterly PDFs with stored totals</li>
+              <li>Guarantee credits that never quite appear</li>
+              <li>Trend stories without claim-level proof</li>
+              <li>Finance and benefits see different numbers</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Transparency today</h3>
+            <ul>
+              <li>“Transparency” as a slide, not a ledger</li>
+              <li>Pass-through sold, then exceptions</li>
+              <li>Or spread accepted because RFPs demand PEPM</li>
+              <li>No way to name every dollar either way</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Service today</h3>
+            <ul>
+              <li>Phone trees and callback queues</li>
+              <li>Chatbots that cannot read the claim</li>
+              <li>Members escalate what should be one text</li>
+              <li>HR becomes the unofficial help desk</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn">
+          <div>
+            <h4>What Glass fixes</h4>
+            <p>
+              Recomputable reports, disclosed economics under any fee model, and
+              service channels that answer from the same book as adjudication.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="slide" data-title="Three pillars">
+        <p class="eyebrow">The offer</p>
+        <h1>Three pillars</h1>
+        <p class="lede">
+          Everything else — pass-through vs PEPM, shared savings, clinical
+          modules — sits under these three. If a feature does not make reporting
+          clearer, economics more honest, or service faster, it is secondary.
+        </p>
+        <div class="stack">
+          <div class="pillar">
+            <div class="n">1</div>
+            <div>
+              <h3>Best-in-class reporting</h3>
+              <p>
+                Sponsor dashboards, guarantee reconciliation, rebate waterfalls,
+                trend drivers, design scenarios, and a data agent for ad-hoc
+                questions — all computed from claims, not carried forward from a
+                PBM workbook. Finance can drill to the dollar.
+              </p>
+            </div>
+          </div>
+          <div class="pillar">
+            <div class="n">2</div>
+            <div>
+              <h3>Transparency with flexible pricing</h3>
+              <p>
+                Claim-level derivation and source citations stay mandatory. How
+                Glass gets paid is a menu: pass-through, PEPM, shared savings,
+                outcomes at risk, or disclosed margin — always as named lines,
+                never as an unexplained plan-vs-pharmacy gap.
+              </p>
+            </div>
+          </div>
+          <div class="pillar">
+            <div class="n">3</div>
+            <div>
+              <h3>Excellent service by chat and text</h3>
+              <p>
+                Members get answers where they already are — chat and SMS —
+                from an agent grounded in live eligibility, formulary, PA status,
+                and claim history. Every figure comes from the book.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section class="slide" data-title="Reporting">
+        <p class="eyebrow">Pillar one</p>
+        <h1>Best-in-class reporting</h1>
+        <p class="lede">
+          The questions a plan sponsor should answer at year-end — computed from
+          the claim ledger, not supplied by the PBM as a finished answer.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Report</th>
+              <th>What it answers</th>
+              <th>Why it is best-in-class</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Guarantee reconciliation</td>
+              <td>Did pricing and ops promises pay?</td>
+              <td>Each measure settles alone — no cross-category netting</td>
+            </tr>
+            <tr>
+              <td>Rebate waterfall</td>
+              <td>What was earned vs retained vs passed?</td>
+              <td>Floors, admin, and surplus as separate lines</td>
+            </tr>
+            <tr>
+              <td>Spread / fee comparison</td>
+              <td>What would the same claims cost elsewhere?</td>
+              <td>Identical book, alternate economics — a calculation</td>
+            </tr>
+            <tr>
+              <td>Trend drivers</td>
+              <td>Why did PMPM move?</td>
+              <td>Price, util, mix, starts, leavers that sum to the whole</td>
+            </tr>
+            <tr>
+              <td>Change scenarios</td>
+              <td>What if we change the design?</td>
+              <td>Whole-book re-adjudication + named member disruption</td>
+            </tr>
+            <tr>
+              <td>Data agent</td>
+              <td>Ad-hoc questions and report briefings</td>
+              <td>Ask in plain language; every figure is tool-backed</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <div>
+            <h4>Reporting promise</h4>
+            <p>
+              No figure is a stored answer. If we cannot recompute it from claims
+              and contract rules, it does not belong in a Glass report.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section class="slide" data-title="Transparency">
+        <p class="eyebrow">Pillar two</p>
+        <h1>Transparency — without a single fee model</h1>
+        <p class="lede">
+          Transparency is the product layer. Pricing is packaging. Sponsors who
+          need PEPM or shared savings still get claim-level derivation; they
+          just see Glass revenue as an explicit line.
+        </p>
+        <div class="grid-3">
+          <div class="card">
+            <div class="pill-row"><span class="pill">Always on</span></div>
+            <h3>Transparency layer</h3>
+            <ul>
+              <li>Lesser-of arms on every claim</li>
+              <li>Source documents with citations</li>
+              <li>Settlement: invoice vs remit vs rebates</li>
+              <li>Guarantees from sponsor-visible records</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="pill-row"><span class="pill">Your choice</span></div>
+            <h3>Commercial shell</h3>
+            <ul>
+              <li>Full pass-through</li>
+              <li>Transparent PEPM</li>
+              <li>Shared savings on verified interventions</li>
+              <li>Outcomes / SLA dollars at risk</li>
+              <li>Disclosed hybrid margin if required</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="pill-row"><span class="pill">Rule</span></div>
+            <h3>Disclosure rule</h3>
+            <p>
+              If Glass earns money, it appears as a named fee, share, credit,
+              or disclosed margin — never as an unexplained gap between what
+              the plan pays and what the pharmacy receives.
+            </p>
+          </div>
+        </div>
+        <div class="callout">
+          <div>
+            <h4>Line for the room</h4>
+            <p>
+              “Buy the fee model that fits your RFP. You still get the ledger.
+              You just cannot buy opacity.”
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section class="slide" data-title="Service">
+        <p class="eyebrow">Pillar three</p>
+        <h1>Excellent service through chat and text</h1>
+        <p class="lede">
+          Members should not need HR or a 45-minute hold to learn why a claim
+          rejected or whether a PA is approved. Glass answers in chat and SMS
+          from the same rules engine that priced the claim.
+        </p>
+        <div class="grid-2" style="margin-bottom: 16px;">
+          <div class="stat">
+            <strong>Chat</strong>
+            <span>In-app / web member service agent</span>
+          </div>
+          <div class="stat">
+            <strong>Text</strong>
+            <span>SMS for status, rejects, and next steps</span>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>Example</th>
+              <th>Why it works</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Chat</td>
+              <td>“Is Ozempic covered for me?”</td>
+              <td>Reads formulary + member eligibility live</td>
+            </tr>
+            <tr>
+              <td>Chat</td>
+              <td>“What’s the status of my prior auth?”</td>
+              <td>Follows into the PA record without a second ask</td>
+            </tr>
+            <tr>
+              <td>Text</td>
+              <td>Reject at the pharmacy → why + what to do</td>
+              <td>Pushes the answer when friction happens</td>
+            </tr>
+            <tr>
+              <td>Text</td>
+              <td>PA approved / more info needed / expiring</td>
+              <td>Keeps the member out of the call center</td>
+            </tr>
+            <tr>
+              <td>Either</td>
+              <td>Cost share, accumulators, alternatives</td>
+              <td>Every number comes from a tool on the book</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <div>
+            <h4>Service promise</h4>
+            <p>
+              Same answer in chat, text, or a human handoff — because all three
+              read the same adjudication book. No script that disagrees with the claim.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7 -->
+      <section class="slide" data-title="Pricing">
+        <p class="eyebrow">Commercial menu</p>
+        <h1>Flexible pricing under the same glass</h1>
+        <p class="lede">
+          Reporting and service do not change with the fee model. Only how Glass
+          appears on the invoice changes — always disclosed.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>How Glass is paid</th>
+              <th>Reporting &amp; service</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Full pass-through</td>
+              <td>Low admin PEPM/PMPM only</td>
+              <td>Full ledger + chat/text included</td>
+            </tr>
+            <tr>
+              <td>Transparent PEPM</td>
+              <td>Higher PEPM for ops + service modules</td>
+              <td>Same reports; service SLAs explicit</td>
+            </tr>
+            <tr>
+              <td>Shared savings</td>
+              <td>% of verified, reproducible savings</td>
+              <td>Savings measured in the same reporting layer</td>
+            </tr>
+            <tr>
+              <td>Outcomes / SLA at risk</td>
+              <td>Base fee + credits if targets miss</td>
+              <td>Service and PA turnaround on the scorecard</td>
+            </tr>
+            <tr>
+              <td>Disclosed hybrid margin</td>
+              <td>Named, capped margin on claims</td>
+              <td>Margin line visible on claims and invoices</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <div>
+            <h4>Non-negotiable</h4>
+            <p>
+              No unexplained plan-vs-pharmacy gap. Chat and text answers stay
+              grounded in the book under every commercial model.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 -->
+      <section class="slide" data-title="Proof">
+        <p class="eyebrow">Demo path</p>
+        <h1>Proof points to run live</h1>
+        <p class="lede">
+          Six stops. End on the channel this sponsor’s members will actually use.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Stop</th>
+              <th>Show</th>
+              <th>Pillar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Sponsor dashboard → totals match the claim ledger</td>
+              <td>Reporting</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Contract reports + data agent briefing</td>
+              <td>Reporting</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>Open a claim: lesser-of arms + source citation</td>
+              <td>Transparency</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Name the fee model they buy — every dollar still labeled</td>
+              <td>Transparency</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Member chat: coverage / PA status with live tools</td>
+              <td>Service</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td>Text moment: reject or PA update as plain-language SMS</td>
+              <td>Service</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card">
+            <h3>For finance / benefits</h3>
+            <p>
+              Stay on reports and transparency until they trust the numbers.
+              Only then show service — or they will think chat is a veneer.
+            </p>
+          </div>
+          <div class="card">
+            <h3>For HR / experience owners</h3>
+            <p>
+              Lead with chat and text: “Ask it what members ask HR today.”
+              Then show that the answer matches the claim they can open.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9 -->
+      <section class="slide dark" data-title="Ask">
+        <p class="eyebrow">Next step</p>
+        <h1>The ask</h1>
+        <div class="grid-2" style="margin: 8px 0 28px;">
+          <div class="card" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12);">
+            <h3 style="color:#fff;">Near-term engagement</h3>
+            <ul>
+              <li style="color:rgba(255,255,255,0.72);">Walk finance through recomputable contract reports</li>
+              <li style="color:rgba(255,255,255,0.72);">Pick a fee model from the menu — keep full transparency</li>
+              <li style="color:rgba(255,255,255,0.72);">Run live chat on 5 real member questions from last month</li>
+              <li style="color:rgba(255,255,255,0.72);">Prototype SMS for rejects + PA status on a pilot population</li>
+            </ul>
+          </div>
+          <div class="card" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12);">
+            <h3 style="color:#fff;">What we need from you</h3>
+            <ul>
+              <li style="color:rgba(255,255,255,0.72);">Current reporting gaps finance cannot close</li>
+              <li style="color:rgba(255,255,255,0.72);">Preferred fee construct for the next RFP</li>
+              <li style="color:rgba(255,255,255,0.72);">Top member call / HR ticket reasons</li>
+              <li style="color:rgba(255,255,255,0.72);">Whether SMS is allowed for benefit communications</li>
+            </ul>
+          </div>
+        </div>
+        <p class="close-line">
+          Reports you can trust. Transparency that survives any fee model.
+          Answers by chat and text.
+        </p>
+        <div class="pill-row">
+          <span class="pill">Reporting</span>
+          <span class="pill">Transparency</span>
+          <span class="pill">Chat &amp; text</span>
+          <span class="pill">Flexible fees</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <p class="hint">Arrow keys · Space · click dots</p>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const progress = document.getElementById("progress");
+      const prevBtn = document.getElementById("prev");
+      const nextBtn = document.getElementById("next");
+      const dots = document.getElementById("dots");
+      let i = 0;
+
+      slides.forEach((slide, idx) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.title = slide.dataset.title || `Slide ${idx + 1}`;
+        b.setAttribute("aria-label", b.title);
+        b.addEventListener("click", () => go(idx));
+        dots.appendChild(b);
+      });
+
+      function go(n) {
+        i = Math.max(0, Math.min(slides.length - 1, n));
+        slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+        Array.from(dots.children).forEach((d, idx) => {
+          d.setAttribute("aria-current", idx === i ? "true" : "false");
+        });
+        progress.textContent = `${i + 1} / ${slides.length}`;
+        prevBtn.disabled = i === 0;
+        nextBtn.disabled = i === slides.length - 1;
+        history.replaceState(null, "", `#${i + 1}`);
+      }
+
+      prevBtn.addEventListener("click", () => go(i - 1));
+      nextBtn.addEventListener("click", () => go(i + 1));
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
+          e.preventDefault();
+          go(i + 1);
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
+          go(i - 1);
+        } else if (e.key === "Home") {
+          go(0);
+        } else if (e.key === "End") {
+          go(slides.length - 1);
+        }
+      });
+
+      const hash = parseInt(location.hash.replace("#", ""), 10);
+      go(Number.isFinite(hash) && hash >= 1 ? hash - 1 : 0);
+    })();
+  </script>
+</body>
+</html>
