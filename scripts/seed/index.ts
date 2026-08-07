@@ -18,12 +18,17 @@ import type {
 import type { Channel, PricingArm } from "../../src/lib/engine/types.js";
 import { CRITERIA_TREES } from "../../src/lib/pa/criteria.js";
 import { WISCONSIN_CONTRACT_ID } from "../../src/lib/contracts/wisconsin.js";
+import { MICHIGAN_CONTRACT_ID } from "../../src/lib/contracts/michigan.js";
 import {
   FORMULARY_ID,
   SPONSOR_ID,
+  MICHIGAN_SPONSOR_ID,
+  MICHIGAN_IYC_PLAN_ID,
+  MICHIGAN_HDHP_PLAN_ID,
   seedContracts,
   seedPharmacies,
   seedSponsorAndPlans,
+  seedMichiganSponsorAndPlans,
 } from "./world.js";
 import { Rng, generatePopulation } from "./population.js";
 import {
@@ -48,6 +53,14 @@ const PLAN_YEAR = 2026;
  * this is the number that produces roughly a hundred thousand members.
  */
 const CONTRACT_COUNT = Number(process.env.SEED_CONTRACTS ?? 48_250);
+/**
+ * Smaller Traditional book for Lakeside / Michigan. Enough claims to show
+ * spread without doubling seed time. Override with SEED_MICHIGAN_CONTRACTS=0
+ * to skip.
+ */
+const MICHIGAN_CONTRACT_COUNT = Number(
+  process.env.SEED_MICHIGAN_CONTRACTS ?? 2_500,
+);
 const SEED = 20260101;
 /**
  * Members per generation batch.
@@ -124,7 +137,7 @@ export async function loadEngineContract(
     rebateMemberShareThresholdBps: contract.rebateMemberShareThresholdBps,
     rates: commercial.filter((r) => r.rateSide === "Pharmacy").map(toRate),
     clientRates: commercial.filter((r) => r.rateSide === "Client").map(toRate),
-    clientMacMultiplier: contract.model === "Traditional" ? 1.75 : 1,
+    clientMacMultiplier: (contract.clientMacMultiplierBps ?? 10_000) / 10_000,
     rebatePassThroughBps: contract.rebatePassThroughBps,
   };
 }
@@ -351,6 +364,8 @@ function buildClaimRows(
   days: Map<number, DayTotals>,
   dims: Map<DimKey, DimTotals>,
   classOf: Map<string, string>,
+  sponsorId: string = SPONSOR_ID,
+  contractId: string = WISCONSIN_CONTRACT_ID,
 ): Prisma.ClaimCreateManyInput[] {
   const rows: Prisma.ClaimCreateManyInput[] = [];
 
@@ -359,13 +374,13 @@ function buildClaimRows(
     rows.push({
       claimNumber: g.claimNumber,
       transactionCode: "B1",
-      sponsorId: SPONSOR_ID,
+      sponsorId,
       memberId: g.member.id,
       eligibilitySpanId: `elig-${g.member.id}`,
       benefitPlanId: g.member.benefitPlanId,
       pharmacyId: g.pharmacyId,
       drugId: g.drug.id,
-      contractId: WISCONSIN_CONTRACT_ID,
+      contractId,
       dateOfService: g.dateOfService,
       rxNumber: g.rxNumber,
       fillNumber: g.fillNumber,
@@ -542,6 +557,7 @@ async function main() {
 
   console.log("Seeding sponsor and benefit plans...");
   await seedSponsorAndPlans(prisma);
+  await seedMichiganSponsorAndPlans(prisma);
 
   console.log("Seeding published PA criteria trees...");
   await seedCriteriaTrees();
@@ -691,7 +707,7 @@ async function main() {
   const dayRows: Prisma.BookDayCreateManyInput[] = [...days.entries()]
     .sort(([a], [b]) => a - b)
     .map(([ms, d]) => ({
-      id: `day-${new Date(ms).toISOString().slice(0, 10)}`,
+      id: `day-${SPONSOR_ID}-${new Date(ms).toISOString().slice(0, 10)}`,
       sponsorId: SPONSOR_ID,
       date: new Date(ms),
       claimsSubmitted: d.claimsSubmitted,
@@ -717,7 +733,8 @@ async function main() {
   for (const [k, v] of dims) {
     const [ms, dimension, key] = k.split("|");
     dimRows.push({
-      id: k,
+      id: `${SPONSOR_ID}|${k}`,
+      sponsorId: SPONSOR_ID,
       date: new Date(Number(ms)),
       dimension,
       key,
@@ -839,6 +856,17 @@ async function main() {
   await seedExceptions(prisma, { planYear: PLAN_YEAR });
 
   // -----------------------------------------------------------------------
+  if (MICHIGAN_CONTRACT_COUNT > 0) {
+    await seedMichiganUtilisation({
+      drugs,
+      drugsByClass,
+      specialtyDrugs,
+      plans,
+      classOf,
+    });
+  }
+
+  // -----------------------------------------------------------------------
   const stats = await prisma.claim.aggregate({
     _sum: {
       totalBilledCents: true,
@@ -847,10 +875,21 @@ async function main() {
       estimatedRebateCents: true,
     },
     _count: true,
-    where: { responseStatus: "P" },
+    where: { responseStatus: "P", sponsorId: SPONSOR_ID },
   });
-  const rejected = await prisma.claim.count({ where: { responseStatus: "R" } });
-  const memberCount = await prisma.member.count();
+  const rejected = await prisma.claim.count({
+    where: { responseStatus: "R", sponsorId: SPONSOR_ID },
+  });
+  const memberCount = await prisma.member.count({
+    where: { sponsorId: SPONSOR_ID },
+  });
+  const miPaid = await prisma.claim.count({
+    where: { responseStatus: "P", sponsorId: MICHIGAN_SPONSOR_ID },
+  });
+  const miSpread = await prisma.claim.aggregate({
+    where: { responseStatus: "P", sponsorId: MICHIGAN_SPONSOR_ID },
+    _sum: { totalBilledCents: true, totalAllowedCents: true },
+  });
 
   console.log("\n" + "=".repeat(58));
   console.log("Plan summary");
@@ -871,7 +910,238 @@ async function main() {
   console.log(
     `  Member share of spend   ${(((stats._sum.patientPayCents ?? 0) / (stats._sum.totalBilledCents ?? 1)) * 100).toFixed(1)}%  (ET-8933 reports 10.6%)`,
   );
+  if (MICHIGAN_CONTRACT_COUNT > 0) {
+    const spreadCents =
+      (miSpread._sum.totalBilledCents ?? 0) - (miSpread._sum.totalAllowedCents ?? 0);
+    console.log(
+      `  Michigan paid claims    ${miPaid.toLocaleString()}  (spread ${formatCents(spreadCents)})`,
+    );
+  }
   console.log(`\nDone in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+}
+
+/**
+ * Isolated Traditional utilisation book for Lakeside Fabricators / Michigan.
+ * Does not touch Steel Potatoes members, claims, or rollups.
+ */
+async function seedMichiganUtilisation(args: {
+  drugs: DrugCandidate[];
+  drugsByClass: Map<string, DrugCandidate[]>;
+  specialtyDrugs: DrugCandidate[];
+  plans: Map<string, EngineBenefitPlan>;
+  classOf: Map<string, string>;
+}) {
+  console.log("\nGenerating Michigan Traditional book (Lakeside Fabricators)...");
+  const miMembers = generatePopulation({
+    contractCount: MICHIGAN_CONTRACT_COUNT,
+    planYear: PLAN_YEAR,
+    seed: SEED + 77,
+    hdhpShare: 0.18,
+    cardholderPrefix: "M",
+    iycPlanId: MICHIGAN_IYC_PLAN_ID,
+    hdhpPlanId: MICHIGAN_HDHP_PLAN_ID,
+    state: "MI",
+    cities: [
+      ["Detroit", "48201"],
+      ["Grand Rapids", "49503"],
+      ["Ann Arbor", "48104"],
+      ["Lansing", "48933"],
+      ["Kalamazoo", "49007"],
+      ["Flint", "48502"],
+      ["Traverse City", "49684"],
+      ["Marquette", "49855"],
+    ],
+    memberIdPrefix: "mi-",
+  });
+  console.log(
+    `  ${miMembers.length.toLocaleString()} Michigan members across ${MICHIGAN_CONTRACT_COUNT.toLocaleString()} contracts`,
+  );
+
+  const MEMBER_CHUNK = 2_000;
+  for (let i = 0; i < miMembers.length; i += MEMBER_CHUNK) {
+    const slice = miMembers.slice(i, i + MEMBER_CHUNK);
+    await prisma.member.createMany({
+      data: slice.map((m) => ({
+        id: m.id,
+        sponsorId: MICHIGAN_SPONSOR_ID,
+        cardholderId: m.cardholderId,
+        personCode: m.personCode,
+        relationshipCode: m.relationshipCode,
+        subscriberId: m.subscriberId,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        dateOfBirth: m.dateOfBirth,
+        gender: m.gender,
+        addressLine1: m.addressLine1,
+        city: m.city,
+        state: m.state,
+        zip: m.zip,
+        phone: m.phone,
+        email: m.email,
+        diagnosisCodes: JSON.stringify(m.diagnosisCodes),
+        weightKg: m.weightKg,
+      })),
+    });
+    await prisma.eligibilitySpan.createMany({
+      data: slice.map((m) => ({
+        id: `elig-${m.id}`,
+        memberId: m.id,
+        benefitPlanId: m.benefitPlanId,
+        effectiveDate: m.effectiveDate,
+        terminationDate: m.terminationDate,
+        coverageTier: m.coverageTier,
+        memberType: "Active",
+      })),
+    });
+  }
+
+  const miContract = await loadEngineContract(MICHIGAN_CONTRACT_ID);
+  const miDays = new Map<number, DayTotals>();
+  const miDims = new Map<DimKey, DimTotals>();
+  const miAccumulators = new Map<
+    string,
+    { rxOop: number; fedOop: number; deductible: number; planId: string }
+  >();
+  const miRng = new Rng(SEED + 99);
+  const miPools = buildDrugPools(args.drugsByClass, args.drugs);
+  let miClaimSeq = 80_000_000;
+  let miClaimsWritten = 0;
+
+  for (let start = 0; start < miMembers.length; start += MEMBER_BATCH) {
+    const slice = miMembers.slice(start, start + MEMBER_BATCH);
+    const batch = generateClaims({
+      members: slice,
+      drugsByClass: args.drugsByClass,
+      allDrugs: args.drugs,
+      specialtyDrugs: args.specialtyDrugs,
+      plans: args.plans,
+      contract: miContract,
+      planYear: PLAN_YEAR,
+      seed: SEED + 99,
+      rng: miRng,
+      pools: miPools,
+      claimSeqStart: miClaimSeq,
+    });
+    miClaimSeq = batch.nextClaimSeq;
+    const claimRows = buildClaimRows(
+      batch.claims,
+      miAccumulators,
+      miDays,
+      miDims,
+      args.classOf,
+      MICHIGAN_SPONSOR_ID,
+      MICHIGAN_CONTRACT_ID,
+    );
+    const CHUNK = 500;
+    for (let i = 0; i < claimRows.length; i += CHUNK) {
+      await prisma.claim.createMany({ data: claimRows.slice(i, i + CHUNK) });
+    }
+    miClaimsWritten += claimRows.length;
+    process.stdout.write(
+      `  ${miClaimsWritten.toLocaleString()} Michigan claims written` +
+        ` (${Math.min(start + MEMBER_BATCH, miMembers.length).toLocaleString()} / ${miMembers.length.toLocaleString()} members)\r`,
+    );
+  }
+  console.log(
+    `  ${miClaimsWritten.toLocaleString()} Michigan claims written                    `,
+  );
+
+  const miDayRows: Prisma.BookDayCreateManyInput[] = [...miDays.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([ms, d]) => ({
+      id: `day-${MICHIGAN_SPONSOR_ID}-${new Date(ms).toISOString().slice(0, 10)}`,
+      sponsorId: MICHIGAN_SPONSOR_ID,
+      date: new Date(ms),
+      claimsSubmitted: d.claimsSubmitted,
+      claimsPaid: d.claimsPaid,
+      claimsRejected: d.claimsRejected,
+      totalBilledCents: d.totalBilledCents,
+      planPaidCents: d.planPaidCents,
+      patientPayCents: d.patientPayCents,
+      pharmacyPaidCents: d.pharmacyPaidCents,
+      estimatedRebateCents: d.estimatedRebateCents,
+      genericClaims: d.genericClaims,
+      brandClaims: d.brandClaims,
+      specialtyClaims: d.specialtyClaims,
+      specialtyBilledCents: d.specialtyBilledCents,
+      mailClaims: d.mailClaims,
+      retailClaims: d.retailClaims,
+      retail90Claims: d.retail90Claims,
+      membersFilling: d.members.size,
+    }));
+  await prisma.bookDay.createMany({ data: miDayRows });
+
+  const miDimRows: Prisma.BookDayDimensionCreateManyInput[] = [];
+  for (const [k, v] of miDims) {
+    const [ms, dimension, key] = k.split("|");
+    miDimRows.push({
+      id: `${MICHIGAN_SPONSOR_ID}|${k}`,
+      sponsorId: MICHIGAN_SPONSOR_ID,
+      date: new Date(Number(ms)),
+      dimension,
+      key,
+      claims: v.claims,
+      billedCents: v.billedCents,
+      planPaidCents: v.planPaidCents,
+      memberPaidCents: v.memberPaidCents,
+      rebateCents: v.rebateCents,
+      nadacCents: v.nadacCents,
+      dispensingFeeCents: v.dispensingFeeCents,
+      allowedCents: v.allowedCents,
+      ingredientCostCents: v.ingredientCostCents,
+      awpCents: v.awpCents,
+    });
+  }
+  for (let i = 0; i < miDimRows.length; i += 1000) {
+    await prisma.bookDayDimension.createMany({
+      data: miDimRows.slice(i, i + 1000),
+    });
+  }
+  console.log(
+    `  ${miDayRows.length} Michigan days, ${miDimRows.length.toLocaleString()} dimensional cells`,
+  );
+
+  const planLimits = new Map(
+    (await prisma.benefitPlan.findMany({
+      where: { sponsorId: MICHIGAN_SPONSOR_ID },
+    })).map((p) => [p.id, p]),
+  );
+  const accumulatorRows: Prisma.AccumulatorCreateManyInput[] = [];
+  for (const [memberId, acc] of miAccumulators) {
+    const plan = planLimits.get(acc.planId);
+    if (!plan) continue;
+    accumulatorRows.push({
+      memberId,
+      benefitPlanId: acc.planId,
+      accumulatorType: "RxOopIndividual",
+      planYear: PLAN_YEAR,
+      limitCents: plan.rxOopLimitIndividual,
+      accumulatedCents: acc.rxOop,
+    });
+    accumulatorRows.push({
+      memberId,
+      benefitPlanId: acc.planId,
+      accumulatorType: "FederalOopIndividual",
+      planYear: PLAN_YEAR,
+      limitCents: plan.federalOopLimitIndividual,
+      accumulatedCents: acc.fedOop,
+    });
+    if (plan.deductibleIndividual > 0) {
+      accumulatorRows.push({
+        memberId,
+        benefitPlanId: acc.planId,
+        accumulatorType: "DeductibleIndividual",
+        planYear: PLAN_YEAR,
+        limitCents: plan.deductibleIndividual,
+        accumulatedCents: acc.deductible,
+      });
+    }
+  }
+  for (let i = 0; i < accumulatorRows.length; i += 500) {
+    await prisma.accumulator.createMany({
+      data: accumulatorRows.slice(i, i + 500),
+    });
+  }
 }
 
 /**

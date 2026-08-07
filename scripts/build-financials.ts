@@ -23,7 +23,6 @@
 
 import { prisma } from "../src/lib/db.js";
 import { Rng } from "./seed/population.js";
-import { WISCONSIN_CONTRACT } from "../src/lib/contracts/wisconsin.js";
 
 const PLAN_YEAR = 2026;
 const DAY_MS = 86_400_000;
@@ -190,18 +189,23 @@ async function buildReversals() {
     UPDATE BookDay SET
       reversalsProcessed = COALESCE((SELECT COUNT(*) FROM Claim c
         WHERE c.transactionCode = 'B2' AND c.scenarioTag IS NULL
+          AND c.sponsorId = BookDay.sponsorId
           AND c.dateOfService = BookDay.date), 0),
       reversalBilledCents = COALESCE((SELECT SUM(c.totalBilledCents) FROM Claim c
         WHERE c.transactionCode = 'B2' AND c.scenarioTag IS NULL
+          AND c.sponsorId = BookDay.sponsorId
           AND c.dateOfService = BookDay.date), 0),
       reversalPlanPaidCents = COALESCE((SELECT SUM(c.planPaidCents) FROM Claim c
         WHERE c.transactionCode = 'B2' AND c.scenarioTag IS NULL
+          AND c.sponsorId = BookDay.sponsorId
           AND c.dateOfService = BookDay.date), 0),
       reversalPatientPayCents = COALESCE((SELECT SUM(c.patientPayCents) FROM Claim c
         WHERE c.transactionCode = 'B2' AND c.scenarioTag IS NULL
+          AND c.sponsorId = BookDay.sponsorId
           AND c.dateOfService = BookDay.date), 0),
       reversalRebateCents = COALESCE((SELECT SUM(c.estimatedRebateCents) FROM Claim c
         WHERE c.transactionCode = 'B2' AND c.scenarioTag IS NULL
+          AND c.sponsorId = BookDay.sponsorId
           AND c.dateOfService = BookDay.date), 0)
   `);
 
@@ -321,66 +325,74 @@ async function buildRebateInvoices() {
   console.log("Rebate invoicing...");
   await prisma.rebateInvoice.deleteMany({});
 
-  const rows = await prisma.$queryRawUnsafe<
-    Array<{
-      quarter: number;
-      manufacturer: string;
-      claims: number;
-      amount: number;
-    }>
-  >(`
-    SELECT
-      (CAST(STRFTIME('%m', c.dateOfService / 1000, 'unixepoch') AS INTEGER) - 1) / 3 AS quarter,
-      COALESCE(d.labeler, 'Unattributed labeler') AS manufacturer,
-      COUNT(*) AS claims,
-      SUM(c.estimatedRebateCents) AS amount
-    FROM Claim c JOIN Drug d ON d.id = c.drugId
-    WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
-      AND c.estimatedRebateCents > 0 AND c.scenarioTag IS NULL
-    GROUP BY quarter, manufacturer
-    HAVING amount > 0
-  `);
-
-  const rng = new Rng(2929);
-  const invoices = rows.map((r, i) => {
-    const q = Math.min(3, Number(r.quarter));
-    const periodStart = new Date(Date.UTC(PLAN_YEAR, q * 3, 1));
-    const periodEnd = new Date(Date.UTC(PLAN_YEAR, q * 3 + 3, 0));
-    const submittedAt = new Date(
-      periodEnd.getTime() + INVOICE_LAG_DAYS * DAY_MS,
-    );
-    const dueAt = new Date(submittedAt.getTime() + PAYMENT_TERMS_DAYS * DAY_MS);
-
-    // Manufacturers dispute a slice of roughly a third of invoices, usually
-    // over whether particular claims qualified, and the disputed part sits
-    // unpaid while it is worked.
-    const invoiced = Number(r.amount);
-    const disputedCents =
-      rng.next() < 0.35 ? Math.round(invoiced * (rng.int(2, 9) / 100)) : 0;
-
-    return {
-      id: `reb-${String(i + 1).padStart(5, "0")}`,
-      manufacturer: r.manufacturer,
-      quarter: `${PLAN_YEAR}Q${q + 1}`,
-      periodStart,
-      periodEnd,
-      submittedAt,
-      dueAt,
-      // Payers are late as often as not; a fifth of the schedule slips past
-      // terms and is what the aging buckets are there to catch.
-      collectedAt: new Date(dueAt.getTime() + rng.int(0, 40) * DAY_MS),
-      claimCount: Number(r.claims),
-      invoicedCents: invoiced,
-      collectedCents: invoiced - disputedCents,
-      disputedCents,
-    };
+  const sponsors = await prisma.planSponsor.findMany({
+    select: { id: true, contractId: true },
   });
 
-  for (let i = 0; i < invoices.length; i += 1000) {
-    await prisma.rebateInvoice.createMany({ data: invoices.slice(i, i + 1000) });
+  const rng = new Rng(2929);
+  const invoices: Array<Record<string, unknown>> = [];
+  let invoiceSeq = 0;
+
+  for (const sponsor of sponsors) {
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{
+        quarter: number;
+        manufacturer: string;
+        claims: number;
+        amount: number;
+      }>
+    >(`
+      SELECT
+        (CAST(STRFTIME('%m', c.dateOfService / 1000, 'unixepoch') AS INTEGER) - 1) / 3 AS quarter,
+        COALESCE(d.labeler, 'Unattributed labeler') AS manufacturer,
+        COUNT(*) AS claims,
+        SUM(c.estimatedRebateCents) AS amount
+      FROM Claim c JOIN Drug d ON d.id = c.drugId
+      WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+        AND c.estimatedRebateCents > 0 AND c.scenarioTag IS NULL
+        AND c.sponsorId = '${sponsor.id}'
+      GROUP BY quarter, manufacturer
+      HAVING amount > 0
+    `);
+
+    for (const r of rows) {
+      invoiceSeq += 1;
+      const q = Math.min(3, Number(r.quarter));
+      const periodStart = new Date(Date.UTC(PLAN_YEAR, q * 3, 1));
+      const periodEnd = new Date(Date.UTC(PLAN_YEAR, q * 3 + 3, 0));
+      const submittedAt = new Date(
+        periodEnd.getTime() + INVOICE_LAG_DAYS * DAY_MS,
+      );
+      const dueAt = new Date(submittedAt.getTime() + PAYMENT_TERMS_DAYS * DAY_MS);
+      const invoiced = Number(r.amount);
+      const disputedCents =
+        rng.next() < 0.35 ? Math.round(invoiced * (rng.int(2, 9) / 100)) : 0;
+
+      invoices.push({
+        id: `reb-${sponsor.id}-${String(invoiceSeq).padStart(5, "0")}`,
+        sponsorId: sponsor.id,
+        contractId: sponsor.contractId,
+        manufacturer: r.manufacturer,
+        quarter: `${PLAN_YEAR}Q${q + 1}`,
+        periodStart,
+        periodEnd,
+        submittedAt,
+        dueAt,
+        collectedAt: new Date(dueAt.getTime() + rng.int(0, 40) * DAY_MS),
+        claimCount: Number(r.claims),
+        invoicedCents: invoiced,
+        collectedCents: invoiced - disputedCents,
+        disputedCents,
+      });
+    }
   }
 
-  const accrued = invoices.reduce((s, i) => s + i.invoicedCents, 0);
+  for (let i = 0; i < invoices.length; i += 1000) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.rebateInvoice.createMany({ data: invoices.slice(i, i + 1000) as any });
+  }
+
+  const accrued = invoices.reduce((s, i) => s + (i.invoicedCents as number), 0);
   console.log(
     `  ${invoices.length} invoices across ${new Set(invoices.map((i) => i.manufacturer)).size} manufacturers; ` +
       `$${(accrued / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} scheduled across the year`,
@@ -402,6 +414,9 @@ async function buildRebateInvoices() {
  * The whole year's schedule is laid down here. Which cycles have run is a
  * question the simulation clock answers at read time, the same way it answers
  * it for claims, so the payment calendar advances by itself.
+ *
+ * Runs and invoices are scoped per sponsor so Steel Potatoes and Michigan
+ * never share a remittance cycle or invoice.
  */
 async function buildSettlement() {
   console.log("Settlement...");
@@ -409,7 +424,10 @@ async function buildSettlement() {
   await prisma.remittanceRun.deleteMany({});
   await prisma.sponsorInvoice.deleteMany({});
 
-  // --- Pharmacy remittance, twice a month ---------------------------------
+  const sponsors = await prisma.planSponsor.findMany({
+    include: { contract: true },
+  });
+
   const cycles: Array<{ start: Date; end: Date; paid: Date }> = [];
   for (let m = 0; m < 12; m++) {
     const firstHalfStart = new Date(Date.UTC(PLAN_YEAR, m, 1));
@@ -430,68 +448,142 @@ async function buildSettlement() {
 
   const runs: Array<Record<string, unknown>> = [];
   const lines: Array<Record<string, unknown>> = [];
+  const invoices: Array<Record<string, unknown>> = [];
 
-  for (let i = 0; i < cycles.length; i++) {
-    const c = cycles[i];
+  for (const sponsor of sponsors) {
+    for (let i = 0; i < cycles.length; i++) {
+      const c = cycles[i];
 
-    const perPharmacy = await prisma.$queryRawUnsafe<
-      Array<{
-        pharmacyId: string;
-        claims: number;
-        reversals: number;
-        gross: number;
-        reversed: number;
-      }>
-    >(`
-      SELECT pharmacyId,
-             SUM(CASE WHEN transactionCode = 'B1' THEN 1 ELSE 0 END) AS claims,
-             SUM(CASE WHEN transactionCode = 'B2' THEN 1 ELSE 0 END) AS reversals,
-             SUM(CASE WHEN transactionCode = 'B1' THEN pharmacyPaidCents ELSE 0 END) AS gross,
-             SUM(CASE WHEN transactionCode = 'B2' THEN pharmacyPaidCents ELSE 0 END) AS reversed
-      FROM Claim
-      WHERE (responseStatus = 'P' OR responseStatus = 'A')
-        AND dateOfService >= ${c.start.getTime()} AND dateOfService <= ${c.end.getTime()}
-      GROUP BY pharmacyId
-    `);
-    if (perPharmacy.length === 0) continue;
+      const perPharmacy = await prisma.$queryRawUnsafe<
+        Array<{
+          pharmacyId: string;
+          claims: number;
+          reversals: number;
+          gross: number;
+          reversed: number;
+        }>
+      >(`
+        SELECT pharmacyId,
+               SUM(CASE WHEN transactionCode = 'B1' THEN 1 ELSE 0 END) AS claims,
+               SUM(CASE WHEN transactionCode = 'B2' THEN 1 ELSE 0 END) AS reversals,
+               SUM(CASE WHEN transactionCode = 'B1' THEN pharmacyPaidCents ELSE 0 END) AS gross,
+               SUM(CASE WHEN transactionCode = 'B2' THEN pharmacyPaidCents ELSE 0 END) AS reversed
+        FROM Claim
+        WHERE (responseStatus = 'P' OR responseStatus = 'A')
+          AND sponsorId = '${sponsor.id}'
+          AND dateOfService >= ${c.start.getTime()} AND dateOfService <= ${c.end.getTime()}
+        GROUP BY pharmacyId
+      `);
+      if (perPharmacy.length === 0) continue;
 
-    const runId = `rem-${String(i + 1).padStart(3, "0")}`;
-    let claimCount = 0;
-    let reversalCount = 0;
-    let gross = 0;
-    let reversed = 0;
+      const runId = `rem-${sponsor.id}-${String(i + 1).padStart(3, "0")}`;
+      let claimCount = 0;
+      let reversalCount = 0;
+      let gross = 0;
+      let reversed = 0;
 
-    for (const p of perPharmacy) {
-      const g = Number(p.gross);
-      const r = Number(p.reversed);
-      claimCount += Number(p.claims);
-      reversalCount += Number(p.reversals);
-      gross += g;
-      reversed += r;
-      lines.push({
-        id: `${runId}-${p.pharmacyId}`,
-        runId,
-        pharmacyId: p.pharmacyId,
-        claimCount: Number(p.claims),
-        reversalCount: Number(p.reversals),
-        grossCents: g,
-        reversalCents: r,
-        netCents: g + r,
+      for (const p of perPharmacy) {
+        const g = Number(p.gross);
+        const r = Number(p.reversed);
+        claimCount += Number(p.claims);
+        reversalCount += Number(p.reversals);
+        gross += g;
+        reversed += r;
+        lines.push({
+          id: `${runId}-${p.pharmacyId}`,
+          runId,
+          pharmacyId: p.pharmacyId,
+          claimCount: Number(p.claims),
+          reversalCount: Number(p.reversals),
+          grossCents: g,
+          reversalCents: r,
+          netCents: g + r,
+        });
+      }
+
+      runs.push({
+        id: runId,
+        sponsorId: sponsor.id,
+        contractId: sponsor.contractId,
+        cycleStart: c.start,
+        cycleEnd: c.end,
+        paidAt: c.paid,
+        pharmacyCount: perPharmacy.length,
+        claimCount,
+        reversalCount,
+        grossCents: gross,
+        reversalCents: reversed,
+        netCents: gross + reversed,
       });
     }
 
-    runs.push({
-      id: runId,
-      cycleStart: c.start,
-      cycleEnd: c.end,
-      paidAt: c.paid,
-      pharmacyCount: perPharmacy.length,
-      claimCount,
-      reversalCount,
-      grossCents: gross,
-      reversalCents: reversed,
-      netCents: gross + reversed,
-    });
+    for (let m = 0; m < 12; m++) {
+      const start = new Date(Date.UTC(PLAN_YEAR, m, 1));
+      const end = new Date(Date.UTC(PLAN_YEAR, m + 1, 0));
+
+      const [claims] = await prisma.$queryRawUnsafe<
+        Array<{
+          claims: number;
+          reversals: number;
+          drugCost: number;
+        }>
+      >(`
+        SELECT SUM(CASE WHEN transactionCode = 'B1' THEN 1 ELSE 0 END) AS claims,
+               SUM(CASE WHEN transactionCode = 'B2' THEN 1 ELSE 0 END) AS reversals,
+               SUM(planPaidCents) AS drugCost
+        FROM Claim
+        WHERE (responseStatus = 'P' OR responseStatus = 'A')
+          AND sponsorId = '${sponsor.id}'
+          AND dateOfService >= ${start.getTime()} AND dateOfService <= ${end.getTime()}
+      `);
+
+      const [{ lives }] = await prisma.$queryRawUnsafe<Array<{ lives: number }>>(`
+        SELECT COUNT(*) AS lives FROM EligibilitySpan e
+        JOIN Member m ON m.id = e.memberId
+        WHERE m.sponsorId = '${sponsor.id}'
+          AND e.effectiveDate <= ${end.getTime()}
+          AND (e.terminationDate IS NULL OR e.terminationDate >= ${start.getTime()})
+      `);
+
+      const memberMonths = Number(lives);
+      const adminFeeCents =
+        memberMonths * sponsor.contract.adminFeePmpmCommercialCents;
+      const rebateAdminFeeCents =
+        memberMonths * sponsor.contract.rebateAdminFeePmpmCents;
+
+      const [{ credited }] = await prisma.$queryRawUnsafe<
+        Array<{ credited: number }>
+      >(`
+        SELECT COALESCE(SUM(collectedCents), 0) AS credited FROM RebateInvoice
+        WHERE collectedAt IS NOT NULL
+          AND sponsorId = '${sponsor.id}'
+          AND collectedAt >= ${start.getTime()} AND collectedAt <= ${end.getTime()}
+      `);
+
+      const drugCost = Number(claims?.drugCost ?? 0);
+      const rebateCredit = Number(credited);
+      const issuedAt = new Date(end.getTime() + 5 * DAY_MS);
+      const dueAt = new Date(issuedAt.getTime() + 30 * DAY_MS);
+
+      invoices.push({
+        id: `inv-${sponsor.id}-${PLAN_YEAR}-${String(m + 1).padStart(2, "0")}`,
+        sponsorId: sponsor.id,
+        contractId: sponsor.contractId,
+        periodStart: start,
+        periodEnd: end,
+        issuedAt,
+        dueAt,
+        paidAt: dueAt,
+        claimCount: Number(claims?.claims ?? 0),
+        reversalCount: Number(claims?.reversals ?? 0),
+        drugCostCents: drugCost,
+        memberMonths,
+        adminFeeCents,
+        rebateCreditCents: rebateCredit,
+        rebateAdminFeeCents,
+        totalDueCents: drugCost + adminFeeCents - rebateCredit,
+      });
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -500,84 +592,12 @@ async function buildSettlement() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await prisma.remittanceLine.createMany({ data: lines.slice(i, i + 1000) as any });
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await prisma.sponsorInvoice.createMany({ data: invoices as any });
   console.log(
     `  ${runs.length} remittance cycles, ${lines.length} pharmacy lines, ` +
       `$${(runs.reduce((s, r) => s + (r.netCents as number), 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} net to the network`,
   );
-
-  // --- Sponsor invoicing, monthly -----------------------------------------
-  const sponsor = await prisma.planSponsor.findFirstOrThrow();
-  const invoices: Array<Record<string, unknown>> = [];
-
-  for (let m = 0; m < 12; m++) {
-    const start = new Date(Date.UTC(PLAN_YEAR, m, 1));
-    const end = new Date(Date.UTC(PLAN_YEAR, m + 1, 0, 23, 59, 59));
-
-    const [claims] = await prisma.$queryRawUnsafe<
-      Array<{
-        claims: number;
-        reversals: number;
-        drugCost: number;
-      }>
-    >(`
-      SELECT SUM(CASE WHEN transactionCode = 'B1' THEN 1 ELSE 0 END) AS claims,
-             SUM(CASE WHEN transactionCode = 'B2' THEN 1 ELSE 0 END) AS reversals,
-             SUM(planPaidCents) AS drugCost
-      FROM Claim
-      WHERE (responseStatus = 'P' OR responseStatus = 'A')
-        AND dateOfService >= ${start.getTime()} AND dateOfService <= ${end.getTime()}
-    `);
-
-    // Member months are the lives actually covered during the month, which is
-    // what the administrative fee is charged on.
-    const [{ lives }] = await prisma.$queryRawUnsafe<Array<{ lives: number }>>(`
-      SELECT COUNT(*) AS lives FROM EligibilitySpan
-      WHERE effectiveDate <= ${end.getTime()}
-        AND (terminationDate IS NULL OR terminationDate >= ${start.getTime()})
-    `);
-
-    const memberMonths = Number(lives);
-    const adminFeeCents =
-      memberMonths * WISCONSIN_CONTRACT.adminFeePmpmCommercialCents;
-    const rebateAdminFeeCents =
-      memberMonths * WISCONSIN_CONTRACT.rebateAdminFeePmpmCents;
-
-    // Only rebates actually collected in the month credit the invoice, which
-    // is why the credit lags the spend by two quarters.
-    const [{ credited }] = await prisma.$queryRawUnsafe<
-      Array<{ credited: number }>
-    >(`
-      SELECT COALESCE(SUM(collectedCents), 0) AS credited FROM RebateInvoice
-      WHERE collectedAt IS NOT NULL
-        AND collectedAt >= ${start.getTime()} AND collectedAt <= ${end.getTime()}
-    `);
-
-    const drugCost = Number(claims?.drugCost ?? 0);
-    const rebateCredit = Number(credited);
-    const issuedAt = new Date(end.getTime() + 5 * DAY_MS);
-    const dueAt = new Date(issuedAt.getTime() + 30 * DAY_MS);
-
-    invoices.push({
-      id: `inv-${PLAN_YEAR}-${String(m + 1).padStart(2, "0")}`,
-      sponsorId: sponsor.id,
-      periodStart: start,
-      periodEnd: end,
-      issuedAt,
-      dueAt,
-      paidAt: dueAt,
-      claimCount: Number(claims?.claims ?? 0),
-      reversalCount: Number(claims?.reversals ?? 0),
-      drugCostCents: drugCost,
-      memberMonths,
-      adminFeeCents,
-      rebateCreditCents: rebateCredit,
-      rebateAdminFeeCents,
-      totalDueCents: drugCost + adminFeeCents - rebateCredit,
-    });
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await prisma.sponsorInvoice.createMany({ data: invoices as any });
   console.log(
     `  ${invoices.length} sponsor invoices, ` +
       `$${(invoices.reduce((s, i) => s + (i.totalDueCents as number), 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} billed`,

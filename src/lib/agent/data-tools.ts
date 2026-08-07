@@ -53,6 +53,11 @@ import { getIntegrityOverview } from "@/lib/queries/integrity";
 import { getClinicalOverview } from "@/lib/queries/clinical";
 import { getFeedOverview } from "@/lib/queries/eligibility";
 import type { Citation, ToolResult } from "./tools";
+import {
+  DEFAULT_BOOK,
+  STEEL_POTATOES_SPONSOR_ID,
+  MICHIGAN_DEMO_SPONSOR_ID,
+} from "@/lib/book-context";
 
 function cite(sourceId: string, locator?: string): Citation {
   const s = getSource(sourceId);
@@ -65,10 +70,19 @@ function cite(sourceId: string, locator?: string): Citation {
   };
 }
 
-const CONTRACT_CITES = [
-  cite("etg0013-amd1-exhibit-c", "Exhibit C guaranteed pricing terms"),
-  cite("etg0013-amd5-gpo", "Rebate administration"),
-];
+function contractCites(sponsorId: string): Citation[] {
+  if (sponsorId === MICHIGAN_DEMO_SPONSOR_ID) {
+    return [
+      cite("michigan-optumrx-scheduleb", "Schedule B client pricing terms"),
+    ];
+  }
+  return [
+    cite("etg0013-amd1-exhibit-c", "Exhibit C guaranteed pricing terms"),
+    cite("etg0013-amd5-gpo", "Rebate administration"),
+  ];
+}
+
+const CONTRACT_CITES = contractCites(STEEL_POTATOES_SPONSOR_ID);
 
 function bpsLabel(bps: number | null | undefined): string {
   if (bps == null) return "—";
@@ -83,11 +97,12 @@ export const getBookSnapshotSchema = z.object({});
 
 async function getBookSnapshot(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const [totals, channel, basis] = await Promise.all([
-    getBookTotals(clock),
-    getChannelMix(clock),
-    getBasisMix(clock),
+    getBookTotals(clock, sponsorId),
+    getChannelMix(clock, sponsorId),
+    getBasisMix(clock, sponsorId),
   ]);
   const netPlan =
     totals.planPaidCents - totals.rebateCents;
@@ -109,7 +124,7 @@ async function getBookSnapshot(
         billedCents: b.billedCents,
       })),
     },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: `Book through ${clock.today.toISOString().slice(0, 10)}: ${formatNumber(totals.claimsPaid)} paid claims, plan billed ${formatCentsCompact(totals.totalBilledCents)}, estimated rebates ${formatCentsCompact(totals.rebateCents)}, spread ${formatCents(totals.spreadCents)}.`,
   };
 }
@@ -124,6 +139,7 @@ export const getContractReportsSchema = z.object({
 async function getContractReports(
   clock: SimulationClock,
   args: z.infer<typeof getContractReportsSchema>,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const want = new Set(
     args.sections ?? ["guarantees", "rebates", "spread", "awp"],
@@ -134,7 +150,7 @@ async function getContractReports(
   const parts: string[] = [];
 
   if (want.has("guarantees")) {
-    const guarantees = await getGuaranteeReconciliation(clock);
+    const guarantees = await getGuaranteeReconciliation(clock, sponsorId);
     data.guarantees = guarantees;
     const missed = guarantees.filter((g) => g.met === false);
     parts.push(
@@ -144,21 +160,21 @@ async function getContractReports(
     );
   }
   if (want.has("rebates")) {
-    const rebates = await getRebateWaterfall(clock);
+    const rebates = await getRebateWaterfall(clock, sponsorId);
     data.rebates = rebates;
     parts.push(
       `Rebates ${rebates.guaranteeMet ? "at or above" : "below"} the brand floor (${formatCentsCompact(rebates.grossRebateCents)} gross)`,
     );
   }
   if (want.has("spread")) {
-    const spread = await getSpreadComparison(clock);
+    const spread = await getSpreadComparison(clock, sponsorId);
     data.spread = spread;
     parts.push(
       `Same utilisation under a published spread schedule would cost ${formatCentsCompact(spread.deltaCents)} more`,
     );
   }
   if (want.has("awp")) {
-    const awp = await getAwpSensitivity(clock);
+    const awp = await getAwpSensitivity(clock, sponsorId);
     data.awp = awp;
     parts.push(
       `${((awp.awpShare ?? 0) * 100).toFixed(1)}% of billed cost priced on AWP`,
@@ -167,7 +183,7 @@ async function getContractReports(
 
   return {
     data,
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: parts.join("; ") + ".",
   };
 }
@@ -176,8 +192,9 @@ export const getTrendDriversSchema = z.object({});
 
 async function getTrendDriversTool(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
-  const overview = await getTrendOverview(clock);
+  const overview = await getTrendOverview(clock, sponsorId);
   if (!overview) {
     return {
       data: { available: false },
@@ -200,7 +217,7 @@ async function getTrendDriversTool(
       topClasses: classes.slice(0, 8),
       topDrugs: drugs.slice(0, 10),
     },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: `Net PMPM moved ${formatCents(overview.netChangeCents)} between the prior and current windows.`,
   };
 }
@@ -213,22 +230,23 @@ export const getTopSpendSchema = z.object({
 async function getTopSpend(
   clock: SimulationClock,
   args: z.infer<typeof getTopSpendSchema>,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const limit = args.limit ?? 10;
   const by = args.by ?? "both";
   const data: Record<string, unknown> = { asOf: clock.today.toISOString().slice(0, 10) };
   if (by === "drug" || by === "both") {
-    data.drugs = await getTopDrugs(clock, limit);
+    data.drugs = await getTopDrugs(clock, limit, sponsorId);
   }
   if (by === "class" || by === "both") {
-    data.classes = await getTopClasses(clock, limit);
+    data.classes = await getTopClasses(clock, limit, sponsorId);
   }
   const topDrug = (
     data.drugs as { name?: string; billedCents?: number }[] | undefined
   )?.[0];
   return {
     data,
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: topDrug
       ? `Top drug by billed: ${topDrug.name} at ${formatCentsCompact(topDrug.billedCents ?? 0)}.`
       : "No paid claims in the window yet.",
@@ -239,11 +257,12 @@ export const getSettlementSnapshotSchema = z.object({});
 
 async function getSettlementSnapshot(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const [settlement, invoices, rebates] = await Promise.all([
-    getSettlementOverview(clock),
-    getInvoiceOverview(clock),
-    getRebateLedger(clock),
+    getSettlementOverview(clock, sponsorId),
+    getInvoiceOverview(clock, sponsorId),
+    getRebateLedger(clock, sponsorId),
   ]);
   return {
     data: {
@@ -271,7 +290,7 @@ async function getSettlementSnapshot(
         disputedCents: rebates.disputedCents,
       },
     },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: `Settlement: pharmacy paid ${formatCentsCompact(settlement.paidToDateCents)}, sponsor billed ${formatCentsCompact(invoices.billedToDateCents)}, rebate outstanding ${formatCentsCompact(rebates.outstandingCents)}.`,
   };
 }
@@ -280,6 +299,7 @@ export const getGuaranteeScorecardSchema = z.object({});
 
 async function getGuaranteeScorecard(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const [scorecard, incidents, rebateFloor] = await Promise.all([
     getScorecard(clock),
@@ -313,7 +333,7 @@ async function getGuaranteeScorecard(
       })),
       rebateFloor,
     },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary:
       missed.length === 0
         ? `Operational scorecard: all measures met year-to-date; ${formatCentsCompact(scorecard.totalCreditCents)} in credits posted.`
@@ -334,6 +354,7 @@ export const lookupClaimsSchema = z.object({
 async function lookupClaims(
   clock: SimulationClock,
   args: z.infer<typeof lookupClaimsSchema>,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const result = await listClaims(
     {
@@ -345,6 +366,7 @@ async function lookupClaims(
       reject: args.reject,
       page: args.page ?? 1,
       perPage: 15,
+      sponsorId,
     },
     clock,
   );
@@ -367,7 +389,7 @@ async function lookupClaims(
       page: result.page,
       rows,
     },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: `Found ${formatNumber(result.total)} claim(s); showing ${rows.length} on this page.`,
   };
 }
@@ -429,6 +451,7 @@ export const composeReportBriefingSchema = z.object({
 async function composeReportBriefing(
   clock: SimulationClock,
   args: z.infer<typeof composeReportBriefingSchema>,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ToolResult> {
   const asOf = clock.today.toISOString().slice(0, 10);
   const lines: string[] = [];
@@ -437,7 +460,7 @@ async function composeReportBriefing(
   lines.push("");
 
   if (args.kind === "guarantees" || args.kind === "full-year") {
-    const guarantees = await getGuaranteeReconciliation(clock);
+    const guarantees = await getGuaranteeReconciliation(clock, sponsorId);
     lines.push("## Pricing guarantee reconciliation");
     lines.push(
       "Exhibit C promises an aggregate discount off AWP by channel and drug class. Each row settles alone.",
@@ -459,7 +482,7 @@ async function composeReportBriefing(
   }
 
   if (args.kind === "rebates" || args.kind === "full-year") {
-    const rebates = await getRebateWaterfall(clock);
+    const rebates = await getRebateWaterfall(clock, sponsorId);
     lines.push("## Rebate waterfall");
     lines.push(
       `- Gross rebates: ${formatCents(rebates.grossRebateCents)}`,
@@ -475,10 +498,10 @@ async function composeReportBriefing(
   }
 
   if (args.kind === "spread" || args.kind === "full-year") {
-    const spread = await getSpreadComparison(clock);
+    const spread = await getSpreadComparison(clock, sponsorId);
     lines.push("## Spread counterfactual");
     lines.push(
-      `Same utilisation under a published traditional schedule would cost ${formatCents(spread.deltaCents)} more than pass-through (${formatCents(spread.passThroughCents)} vs ${formatCents(spread.spreadCents)}).`,
+      `Same utilisation under a published traditional schedule would cost ${formatCents(spread.deltaCents)} more than this book's billed total (${formatCents(spread.passThroughCents)} vs ${formatCents(spread.spreadCents)}).`,
     );
     for (const row of spread.byClass) {
       lines.push(
@@ -489,7 +512,7 @@ async function composeReportBriefing(
   }
 
   if (args.kind === "awp" || args.kind === "full-year") {
-    const awp = await getAwpSensitivity(clock);
+    const awp = await getAwpSensitivity(clock, sponsorId);
     lines.push("## AWP sensitivity");
     const verifiableShare =
       awp.totalCents > 0 ? awp.verifiableCents / awp.totalCents : 0;
@@ -500,7 +523,7 @@ async function composeReportBriefing(
   }
 
   if (args.kind === "trends" || args.kind === "full-year") {
-    const overview = await getTrendOverview(clock);
+    const overview = await getTrendOverview(clock, sponsorId);
     lines.push("## Trend drivers");
     if (!overview) {
       lines.push("Not enough history for a two-period bridge yet.");
@@ -526,9 +549,9 @@ async function composeReportBriefing(
 
   if (args.kind === "settlement" || args.kind === "full-year") {
     const [settlement, invoices, rebates] = await Promise.all([
-      getSettlementOverview(clock),
-      getInvoiceOverview(clock),
-      getRebateLedger(clock),
+      getSettlementOverview(clock, sponsorId),
+      getInvoiceOverview(clock, sponsorId),
+      getRebateLedger(clock, sponsorId),
     ]);
     lines.push("## Settlement");
     lines.push(
@@ -550,7 +573,7 @@ async function composeReportBriefing(
   }
 
   if (args.kind === "full-year") {
-    const totals = await getBookTotals(clock);
+    const totals = await getBookTotals(clock, sponsorId);
     lines.push("## Book totals");
     lines.push(
       `${formatNumber(totals.members)} members; ${formatNumber(totals.claimsPaid)} paid claims; plan billed ${formatCents(totals.totalBilledCents)}; member OOP ${formatCents(totals.memberPaidCents)}; estimated rebates ${formatCents(totals.rebateCents)}; spread ${formatCents(totals.spreadCents)}.`,
@@ -566,7 +589,7 @@ async function composeReportBriefing(
   const markdown = lines.join("\n");
   return {
     data: { kind: args.kind, asOf, markdown },
-    citations: CONTRACT_CITES,
+    citations: contractCites(sponsorId),
     summary: `Composed a ${args.kind} briefing (${markdown.split("\n").length} lines) from the claim ledger.`,
   };
 }
@@ -873,35 +896,39 @@ type AnySchema = z.ZodType<unknown>;
 
 interface DataToolDef {
   schema: AnySchema;
-  execute: (args: unknown, clock: SimulationClock) => Promise<ToolResult>;
+  execute: (
+    args: unknown,
+    clock: SimulationClock,
+    sponsorId?: string,
+  ) => Promise<ToolResult>;
 }
 
 export const DATA_TOOL_REGISTRY: Record<DataToolName, DataToolDef> = {
   getBookSnapshot: {
     schema: getBookSnapshotSchema,
-    execute: (_a, clock) => getBookSnapshot(clock),
+    execute: (_a, clock, sponsorId) => getBookSnapshot(clock, sponsorId),
   },
   getContractReports: {
     schema: getContractReportsSchema,
-    execute: (a, clock) =>
-      getContractReports(clock, a as z.infer<typeof getContractReportsSchema>),
+    execute: (a, clock, sponsorId) =>
+      getContractReports(clock, a as z.infer<typeof getContractReportsSchema>, sponsorId),
   },
   getTrendDrivers: {
     schema: getTrendDriversSchema,
-    execute: (_a, clock) => getTrendDriversTool(clock),
+    execute: (_a, clock, sponsorId) => getTrendDriversTool(clock, sponsorId),
   },
   getTopSpend: {
     schema: getTopSpendSchema,
-    execute: (a, clock) =>
-      getTopSpend(clock, a as z.infer<typeof getTopSpendSchema>),
+    execute: (a, clock, sponsorId) =>
+      getTopSpend(clock, a as z.infer<typeof getTopSpendSchema>, sponsorId),
   },
   getSettlementSnapshot: {
     schema: getSettlementSnapshotSchema,
-    execute: (_a, clock) => getSettlementSnapshot(clock),
+    execute: (_a, clock, sponsorId) => getSettlementSnapshot(clock, sponsorId),
   },
   getGuaranteeScorecard: {
     schema: getGuaranteeScorecardSchema,
-    execute: (_a, clock) => getGuaranteeScorecard(clock),
+    execute: (_a, clock, sponsorId) => getGuaranteeScorecard(clock, sponsorId),
   },
   getHighCostDrugUm: {
     schema: getHighCostDrugUmSchema,
@@ -943,8 +970,8 @@ export const DATA_TOOL_REGISTRY: Record<DataToolName, DataToolDef> = {
   },
   lookupClaims: {
     schema: lookupClaimsSchema,
-    execute: (a, clock) =>
-      lookupClaims(clock, a as z.infer<typeof lookupClaimsSchema>),
+    execute: (a, clock, sponsorId) =>
+      lookupClaims(clock, a as z.infer<typeof lookupClaimsSchema>, sponsorId),
   },
   getClaimDetail: {
     schema: getClaimDetailSchema,
@@ -953,10 +980,11 @@ export const DATA_TOOL_REGISTRY: Record<DataToolName, DataToolDef> = {
   },
   composeReportBriefing: {
     schema: composeReportBriefingSchema,
-    execute: (a, clock) =>
+    execute: (a, clock, sponsorId) =>
       composeReportBriefing(
         clock,
         a as z.infer<typeof composeReportBriefingSchema>,
+        sponsorId,
       ),
   },
 };

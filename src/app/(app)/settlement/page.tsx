@@ -40,22 +40,41 @@ export default async function SettlementPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="A PBM is a payments company wearing a clinical hat. It collects from the plan monthly, pays the network twice a month, and chases manufacturers for money it booked two quarters ago. Under pass-through the first two are equal by construction. The third is where the industry makes its money.">
+      <SectionTitle
+        description={
+          book.model === "PassThrough"
+            ? "A PBM is a payments company wearing a clinical hat. It collects from the plan monthly, pays the network twice a month, and chases manufacturers for money it booked two quarters ago. Under pass-through the first two are equal by construction. The third is where the industry makes its money."
+            : "A PBM is a payments company wearing a clinical hat. Under a Traditional schedule the plan is billed on client rates and the network is paid on pharmacy rates; the gap is spread. Rebates follow the narrow Schedule B definition."
+        }
+      >
         Settlement
       </SectionTitle>
 
       <IncumbentNote>
-        The administrative fee in Contract ETG0013 is $2.10 per member per
-        month, plus $0.40 taken out of rebates. Across{" "}
-        {formatCentsCompact(invoices.billedToDateCents)} billed to the sponsor
-        so far this year, that fee is{" "}
-        {formatCentsCompact(invoices.adminFeeToDateCents)}, or{" "}
-        {formatBpsAsPercent(invoices.adminFeeShareBps, 2)} of the invoice. A
-        traditional contract does not charge more; it charges the same and keeps
-        the difference between what the plan is billed and what the pharmacy is
-        paid, plus the {formatCentsCompact(rebates.outstandingCents)} of rebate
-        money sitting in its account right now. That is the entire argument, and
-        it is visible on this page rather than asserted.
+        {book.model === "PassThrough" ? (
+          <>
+            The administrative fee in Contract ETG0013 is $2.10 per member per
+            month, plus $0.40 taken out of rebates. Across{" "}
+            {formatCentsCompact(invoices.billedToDateCents)} billed to the sponsor
+            so far this year, that fee is{" "}
+            {formatCentsCompact(invoices.adminFeeToDateCents)}, or{" "}
+            {formatBpsAsPercent(invoices.adminFeeShareBps, 2)} of the invoice. A
+            traditional contract does not charge more; it charges the same and keeps
+            the difference between what the plan is billed and what the pharmacy is
+            paid, plus the {formatCentsCompact(rebates.outstandingCents)} of rebate
+            money sitting in its account right now. That is the entire argument, and
+            it is visible on this page rather than asserted.
+          </>
+        ) : (
+          <>
+            Lakeside Fabricators is priced on Michigan OptumRx Schedule B. Client
+            rates are published; pharmacy rates are modeled. Across{" "}
+            {formatCentsCompact(invoices.billedToDateCents)} billed so far, admin
+            fees are {formatCentsCompact(invoices.adminFeeToDateCents)}. Remittances
+            pay the pharmacy table; invoices bill the client table — the gap is
+            spread.
+          </>
+        )}
       </IncumbentNote>
 
       {/* ------------------------------------------------------------------ */}

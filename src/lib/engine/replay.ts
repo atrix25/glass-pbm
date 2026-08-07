@@ -106,11 +106,23 @@ interface ReplayWorld {
   >;
 }
 
-let worldCache: { world: ReplayWorld; loadedAt: number } | null = null;
+let worldCache: {
+  world: ReplayWorld;
+  contractId: string;
+  loadedAt: number;
+} | null = null;
 const WORLD_TTL_MS = 60_000;
 
-export async function loadWorld(force = false): Promise<ReplayWorld> {
-  if (!force && worldCache && Date.now() - worldCache.loadedAt < WORLD_TTL_MS) {
+export async function loadWorld(
+  force = false,
+  contractId = "etg0013",
+): Promise<ReplayWorld> {
+  if (
+    !force &&
+    worldCache &&
+    worldCache.contractId === contractId &&
+    Date.now() - worldCache.loadedAt < WORLD_TTL_MS
+  ) {
     return worldCache.world;
   }
 
@@ -118,7 +130,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
     await Promise.all([
       prisma.benefitPlan.findMany({ include: { costShareRules: true } }),
       prisma.contract.findUnique({
-        where: { id: "etg0013" },
+        where: { id: contractId },
         include: { rates: true },
       }),
       prisma.drug.findMany({
@@ -157,7 +169,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
       prisma.networkPharmacy.findMany({ where: { networkId: "navicare-limited" } }),
     ]);
 
-  if (!contractRow) throw new Error("Contract etg0013 not found");
+  if (!contractRow) throw new Error(`Contract ${contractId} not found`);
 
   const inNetwork = new Set(networkLinks.map((n) => n.pharmacyId));
 
@@ -187,17 +199,23 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
     });
   }
 
-  const rates: EngineRate[] = contractRow.rates
-    .filter((r) => r.rateSide === "Pharmacy" && r.lineOfBusiness === "Commercial")
-    .map((r) => ({
-      channel: r.channel as Channel,
-      drugClass: r.drugClass as "Brand" | "Generic" | "All",
-      awpDiscountBps: r.awpDiscountBps,
-      dispensingFeeCents: r.dispensingFeeCents,
-      lesserOfArms: JSON.parse(r.lesserOfArms) as PricingArm[],
-      includeUandC: r.includeUandC,
-      minRebatePerBrandClaimCents: r.minRebatePerBrandClaimCents,
-    }));
+  const toRate = (r: (typeof contractRow.rates)[number]): EngineRate => ({
+    channel: r.channel as Channel,
+    drugClass: r.drugClass as "Brand" | "Generic" | "All",
+    awpDiscountBps: r.awpDiscountBps,
+    dispensingFeeCents: r.dispensingFeeCents,
+    lesserOfArms: JSON.parse(r.lesserOfArms) as PricingArm[],
+    includeUandC: r.includeUandC,
+    minRebatePerBrandClaimCents: r.minRebatePerBrandClaimCents,
+  });
+
+  const commercial = contractRow.rates.filter(
+    (r) => r.lineOfBusiness === "Commercial",
+  );
+  const rates = commercial.filter((r) => r.rateSide === "Pharmacy").map(toRate);
+  const clientRates = commercial
+    .filter((r) => r.rateSide === "Client")
+    .map(toRate);
 
   const contract: EngineContract = {
     id: contractRow.id,
@@ -207,6 +225,8 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
     rebateExclusions: JSON.parse(contractRow.rebateExclusions),
     rebateMemberShareThresholdBps: contractRow.rebateMemberShareThresholdBps,
     rates,
+    clientRates,
+    clientMacMultiplier: (contractRow.clientMacMultiplierBps ?? 10_000) / 10_000,
     rebatePassThroughBps: contractRow.rebatePassThroughBps,
   };
 
@@ -315,7 +335,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
     eligibility,
     approvedPAs,
   };
-  worldCache = { world, loadedAt: Date.now() };
+  worldCache = { world, contractId, loadedAt: Date.now() };
   return world;
 }
 
