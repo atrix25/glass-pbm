@@ -126,6 +126,52 @@ describe("a plan with no deductible", () => {
   });
 });
 
+describe("out-of-pocket credits after the total-allowed clamp", () => {
+  it("never credits more toward Rx or federal OOP than the member paid", () => {
+    /*
+     * DAW 1 on a brand under an unmet deductible builds patient pay as
+     * deductible + brand penalty, which exceeds the fill. The member's cheque
+     * is then clamped to the allowed amount. The Rx and federal deltas used to
+     * keep the pre-clamp figure, so a replay of the next fill saw an inflated
+     * accumulator and under-charged the member once they neared the limit.
+     */
+    const result = adjudicate(
+      makeContext({
+        drug: drug({
+          name: "brand statin tab",
+          nadacPerUnit: 8,
+          isBrandLabel: true,
+          monyCode: "M",
+        }),
+        formularyEntry: entry({ level: "2" }),
+        plan: HDHP_PLAN,
+        quantityDispensed: 30,
+        daysSupply: 30,
+        dawCode: "1",
+      }),
+    );
+
+    expect(result.responseStatus).toBe("P");
+    expect(result.costShare?.cappedBy).toBe("total-allowed");
+    expect(result.patientPayCents).toBe(result.totalAllowedCents);
+    expect(result.brandSelectionPenaltyCents).toBeGreaterThan(0);
+
+    const rx = result.costShare?.accumulatorDeltas.find(
+      (d) => d.accumulatorType === "RxOopIndividual",
+    );
+    const federal = result.costShare?.accumulatorDeltas.find(
+      (d) => d.accumulatorType === "FederalOopIndividual",
+    );
+    // Deltas are micros; replay turns them into cents the same way.
+    expect(Math.round((rx?.amountMicros ?? 0) / 10_000)).toBe(
+      result.patientPayCents,
+    );
+    expect(Math.round((federal?.amountMicros ?? 0) / 10_000)).toBe(
+      result.patientPayCents,
+    );
+  });
+});
+
 describe("the deductible and the out-of-pocket limit together", () => {
   it("never charges the member past the out-of-pocket limit", () => {
     const nearLimit = HDHP_PLAN.rxOopLimitIndividual - 500;
