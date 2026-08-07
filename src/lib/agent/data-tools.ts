@@ -17,6 +17,7 @@ import {
   getBasisMix,
   getTopDrugs,
   getTopClasses,
+  getRejectMix,
 } from "@/lib/queries/sponsor";
 import {
   getGuaranteeReconciliation,
@@ -40,6 +41,17 @@ import {
   getRebateFloor,
 } from "@/lib/queries/reconciliation";
 import { listClaims, getClaimDetail } from "@/lib/queries/claims";
+import {
+  getHighCostDrugUtilizationManagement,
+  searchFormularyUtilizationManagement,
+  type UmSearchFlag,
+} from "@/lib/queries/formulary-um";
+import { getPriorAuthQueueStats } from "@/lib/queries/pa";
+import { getMacOverview, getAppealOverview } from "@/lib/queries/mac";
+import { getCurrentReading } from "@/lib/queries/nps";
+import { getIntegrityOverview } from "@/lib/queries/integrity";
+import { getClinicalOverview } from "@/lib/queries/clinical";
+import { getFeedOverview } from "@/lib/queries/eligibility";
 import type { Citation, ToolResult } from "./tools";
 
 function cite(sourceId: string, locator?: string): Citation {
@@ -559,6 +571,280 @@ async function composeReportBriefing(
   };
 }
 
+export const getHighCostDrugUmSchema = z.object({
+  limit: z
+    .number()
+    .int()
+    .min(5)
+    .max(25)
+    .optional()
+    .describe("How many top drugs by YTD spend to include; default 15"),
+});
+
+async function getHighCostDrugUm(
+  clock: SimulationClock,
+  args: z.infer<typeof getHighCostDrugUmSchema>,
+): Promise<ToolResult> {
+  const limit = args.limit ?? 15;
+  const um = await getHighCostDrugUtilizationManagement(clock, limit);
+  const formularyCite = cite(
+    "navitus-etf-formulary-2026",
+    "Alphabetical index — special code legend (PA, ST, QL, MSP, etc.)",
+  );
+  const withUm = um.drugs.filter(
+    (d) => d.requiresStep || d.requiresPA || d.hasQuantityLimit,
+  );
+  return {
+    data: um,
+    citations: [formularyCite],
+    summary: `Top ${um.drugCount} drugs by YTD spend through ${um.asOf}: ${um.withStepTherapy} with step therapy, ${um.withPriorAuth} with PA, ${um.withQuantityLimit} with quantity limits (${withUm.length} with any UM rule).`,
+  };
+}
+
+export const searchFormularyUmSchema = z.object({
+  flag: z
+    .enum(["step", "pa", "ql", "specialty", "any"])
+    .optional()
+    .describe("Which UM flag to search; default any active rule"),
+  query: z
+    .string()
+    .optional()
+    .describe("Optional drug name substring filter"),
+  limit: z.number().int().min(5).max(50).optional(),
+});
+
+async function searchFormularyUm(
+  clock: SimulationClock,
+  args: z.infer<typeof searchFormularyUmSchema>,
+): Promise<ToolResult> {
+  const result = await searchFormularyUtilizationManagement(clock, {
+    flag: (args.flag ?? "any") as UmSearchFlag,
+    query: args.query,
+    limit: args.limit ?? 25,
+  });
+  const formularyCite = cite(
+    "navitus-etf-formulary-2026",
+    "Alphabetical index — special code legend (PA, ST, QL, MSP, etc.)",
+  );
+  const label =
+    result.flag === "any"
+      ? "any UM rule"
+      : result.flag === "step"
+        ? "step therapy"
+        : result.flag === "pa"
+          ? "prior authorization"
+          : result.flag === "ql"
+            ? "quantity limit"
+            : "mandatory specialty";
+  return {
+    data: result,
+    citations: [formularyCite],
+    summary: `${formatNumber(result.totalMatching)} formulary product(s) with ${label}; showing ${result.returned}.`,
+  };
+}
+
+export const getPriorAuthOverviewSchema = z.object({});
+
+async function getPriorAuthOverview(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const stats = await getPriorAuthQueueStats(clock);
+  const paCite = cite("navitus-pa-process", "Prior authorization turnaround");
+  const approvalRate =
+    stats.total > 0 ? Math.round((stats.approved / stats.total) * 1000) / 10 : 0;
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      ...stats,
+      approvalRatePct: approvalRate,
+    },
+    citations: [paCite, cite("navitus-pa-forms", "Published PA criteria forms")],
+    summary: `${formatNumber(stats.total)} PA determinations through ${clock.today.toISOString().slice(0, 10)}: ${formatNumber(stats.approved)} approved, ${formatNumber(stats.denied)} denied, ${formatNumber(stats.pending)} pending; ${formatNumber(stats.byAi)} decided by AI, ${formatNumber(stats.cited)} with criteria citations.`,
+  };
+}
+
+export const getMacOverviewSchema = z.object({});
+
+async function getMacOverviewTool(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const [mac, appeals] = await Promise.all([
+    getMacOverview(clock),
+    getAppealOverview(clock),
+  ]);
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      mac: {
+        liveVersion: mac.liveVersion,
+        drugCount: mac.drugCount,
+        macClaims: mac.macClaims,
+        totalClaims: mac.totalClaims,
+        macPaidCents: mac.macPaidCents,
+        networkMarginCents: mac.networkMarginCents,
+        topRows: mac.topRows.slice(0, 8),
+      },
+      appeals: {
+        total: appeals.total,
+        underReview: appeals.underReview,
+        upheld: appeals.upheld,
+        overturned: appeals.overturned,
+        overturnRateBps: appeals.overturnRateBps,
+        adjustmentCents: appeals.adjustmentCents,
+        medianResolutionDays: appeals.medianResolutionDays,
+        withinStatute: appeals.withinStatute,
+        outsideStatute: appeals.outsideStatute,
+        denialsWithCitation: appeals.denialsWithCitation,
+        denials: appeals.denials,
+        recent: appeals.recent.slice(0, 5),
+      },
+    },
+    citations: [
+      {
+        sourceId: "wis-stat-632-865",
+        title: "Wis. Stat. § 632.865 — MAC appeals",
+        publisher: "Wisconsin Legislature",
+        url: "https://docs.legis.wisconsin.gov/statutes/statutes/632/865",
+        locator: "632.865(2)(b)",
+      },
+    ],
+    summary: `MAC list v${mac.liveVersion} covers ${formatNumber(mac.drugCount)} products; ${formatNumber(appeals.total)} appeals filed (${formatNumber(appeals.overturned)} overturned, ${formatNumber(appeals.withinStatute)} resolved within 21 days).`,
+  };
+}
+
+export const getMemberExperienceSchema = z.object({});
+
+async function getMemberExperience(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const reading = await getCurrentReading(clock);
+  const topDriver = reading.drivers[0];
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      censusNps: reading.census.nps,
+      censusScored: reading.census.scored,
+      promoters: reading.census.promoters,
+      passives: reading.census.passives,
+      detractors: reading.census.detractors,
+      surveyedNps: reading.surveyed.nps,
+      excluded: reading.excluded,
+      topDrivers: reading.drivers.slice(0, 6),
+      topThemes: reading.themes.slice(0, 5),
+    },
+    citations: CONTRACT_CITES,
+    summary: `Census NPS ${reading.census.nps} across ${formatNumber(reading.census.scored)} scored members${topDriver ? `; top driver ${topDriver.id} (${formatNumber(topDriver.membersAffected)} members)` : ""}.`,
+  };
+}
+
+export const getIntegrityOverviewSchema = z.object({});
+
+async function getIntegrityOverviewTool(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const overview = await getIntegrityOverview(clock);
+  const top = overview.signals.slice(0, 8);
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      bySeverity: overview.bySeverity,
+      totalExposureCents: overview.totalExposureCents,
+      claimsScreened: overview.claimsScreened,
+      membersScreened: overview.membersScreened,
+      plantedFound: overview.plantedFound,
+      plantedTotal: overview.plantedTotal,
+      topSignals: top.map((s) => ({
+        id: s.id,
+        detector: s.detector.name,
+        subjectLabel: s.subjectLabel,
+        severity: s.severity,
+        score: s.score,
+        exposureCents: s.exposureCents,
+        claimCount: s.claimCount,
+      })),
+    },
+    citations: CONTRACT_CITES,
+    summary: `${formatNumber(overview.signals.length)} integrity signal(s): ${overview.bySeverity.high} high, ${overview.bySeverity.elevated} elevated; ${formatCentsCompact(overview.totalExposureCents)} exposure above watch.`,
+  };
+}
+
+export const getRejectOverviewSchema = z.object({});
+
+async function getRejectOverview(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const rejects = await getRejectMix(clock);
+  const totalClaims = rejects.reduce((s, r) => s + r.claims, 0);
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      totalRejectedClaims: totalClaims,
+      codes: rejects.slice(0, 12),
+    },
+    citations: CONTRACT_CITES,
+    summary:
+      rejects[0]
+        ? `${formatNumber(totalClaims)} rejected claim(s); top code ${rejects[0].code} (${formatNumber(rejects[0].claims)} claims, ${formatNumber(rejects[0].members)} members).`
+        : "No rejected claims in the window.",
+  };
+}
+
+export const getClinicalOverviewSchema = z.object({});
+
+async function getClinicalOverviewTool(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const clinical = await getClinicalOverview(clock);
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      claimsScreened: clinical.claimsScreened,
+      membersScreened: clinical.membersScreened,
+      totalAlerts: clinical.totalAlerts,
+      majorAlerts: clinical.majorAlerts,
+      membersAffected: clinical.membersAffected,
+      byCode: clinical.byCode,
+      dose: clinical.dose,
+      topInteractions: clinical.interactions
+        .filter((i) => i.alerts > 0)
+        .slice(0, 5)
+        .map((i) => ({
+          rule: `${i.rule.a.label} + ${i.rule.b.label}`,
+          alerts: i.alerts,
+          members: i.members,
+        })),
+    },
+    citations: CONTRACT_CITES,
+    summary: `${formatNumber(clinical.totalAlerts)} clinical alert(s) on ${formatNumber(clinical.claimsScreened)} paid claims; ${formatNumber(clinical.membersAffected)} members affected; ${formatNumber(clinical.dose.atCeiling)} at opioid MME ceiling.`,
+  };
+}
+
+export const getEligibilityOverviewSchema = z.object({});
+
+async function getEligibilityOverview(
+  clock: SimulationClock,
+): Promise<ToolResult> {
+  const feed = await getFeedOverview(clock);
+  return {
+    data: {
+      asOf: clock.today.toISOString().slice(0, 10),
+      livesOnFile: feed.livesOnFile,
+      filesReceived: feed.filesReceived,
+      transactionsApplied: feed.transactionsApplied,
+      adds: feed.adds,
+      changes: feed.changes,
+      terms: feed.terms,
+      rejected: feed.rejected,
+      openRejects: feed.openRejects,
+      resolvedRejects: feed.resolvedRejects,
+      medianTurnaroundHours: feed.medianTurnaroundHours,
+      recentFiles: feed.files.slice(0, 5),
+    },
+    citations: CONTRACT_CITES,
+    summary: `${formatNumber(feed.livesOnFile)} lives on file; ${formatNumber(feed.rejected)} eligibility transaction reject(s) (${formatNumber(feed.openRejects)} open); median file turnaround ${feed.medianTurnaroundHours}h.`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
@@ -570,6 +856,15 @@ export type DataToolName =
   | "getTopSpend"
   | "getSettlementSnapshot"
   | "getGuaranteeScorecard"
+  | "getHighCostDrugUm"
+  | "searchFormularyUm"
+  | "getPriorAuthOverview"
+  | "getMacOverview"
+  | "getMemberExperience"
+  | "getIntegrityOverview"
+  | "getRejectOverview"
+  | "getClinicalOverview"
+  | "getEligibilityOverview"
   | "lookupClaims"
   | "getClaimDetail"
   | "composeReportBriefing";
@@ -607,6 +902,44 @@ export const DATA_TOOL_REGISTRY: Record<DataToolName, DataToolDef> = {
   getGuaranteeScorecard: {
     schema: getGuaranteeScorecardSchema,
     execute: (_a, clock) => getGuaranteeScorecard(clock),
+  },
+  getHighCostDrugUm: {
+    schema: getHighCostDrugUmSchema,
+    execute: (a, clock) =>
+      getHighCostDrugUm(clock, a as z.infer<typeof getHighCostDrugUmSchema>),
+  },
+  searchFormularyUm: {
+    schema: searchFormularyUmSchema,
+    execute: (a, clock) =>
+      searchFormularyUm(clock, a as z.infer<typeof searchFormularyUmSchema>),
+  },
+  getPriorAuthOverview: {
+    schema: getPriorAuthOverviewSchema,
+    execute: (_a, clock) => getPriorAuthOverview(clock),
+  },
+  getMacOverview: {
+    schema: getMacOverviewSchema,
+    execute: (_a, clock) => getMacOverviewTool(clock),
+  },
+  getMemberExperience: {
+    schema: getMemberExperienceSchema,
+    execute: (_a, clock) => getMemberExperience(clock),
+  },
+  getIntegrityOverview: {
+    schema: getIntegrityOverviewSchema,
+    execute: (_a, clock) => getIntegrityOverviewTool(clock),
+  },
+  getRejectOverview: {
+    schema: getRejectOverviewSchema,
+    execute: (_a, clock) => getRejectOverview(clock),
+  },
+  getClinicalOverview: {
+    schema: getClinicalOverviewSchema,
+    execute: (_a, clock) => getClinicalOverviewTool(clock),
+  },
+  getEligibilityOverview: {
+    schema: getEligibilityOverviewSchema,
+    execute: (_a, clock) => getEligibilityOverview(clock),
   },
   lookupClaims: {
     schema: lookupClaimsSchema,
