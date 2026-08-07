@@ -4,12 +4,6 @@ primary_region = "ord"
 [build]
   dockerfile = "Dockerfile"
 
-# The seeded book is too large to ship inside every image. It lives here, and
-# is updated with `node scripts/push-book.mjs` when the local book changes.
-[mounts]
-  source = "glass_book"
-  destination = "/data"
-
 [http_service]
   internal_port = 3000
   force_https = true
@@ -20,20 +14,6 @@ primary_region = "ord"
   min_machines_running = 1
   processes = ["app"]
 
-  # Without this a deploy reports success as soon as the machine is created,
-  # which it will do even if the app cannot read the book. The probe queries
-  # the rollup, so passing means the dashboards can render.
-  [[http_service.checks]]
-    interval = "30s"
-    timeout = "10s"
-    grace_period = "60s"
-    method = "GET"
-    path = "/api/health"
-
 [[vm]]
   size = "shared-cpu-2x"
-  # The seeded book is a ~900 MB SQLite file. Queries read the daily rollup
-  # rather than the claim table, so this is page cache rather than working set,
-  # but leaving room for it is the difference between a dashboard that answers
-  # instantly and one that goes to disk while an audience watches.
-  memory = "4gb"
+  memory = "2gb"
