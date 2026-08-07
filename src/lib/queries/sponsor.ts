@@ -10,10 +10,14 @@
  *
  * Cutting at the clock is not an optimisation, it is the point: the plan year
  * is seeded through December and most of it has not happened yet.
+ *
+ * Every aggregation is scoped by sponsorId so a second live book cannot leak
+ * into Steel Potatoes totals.
  */
 
 import { prisma } from "@/lib/db";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import { DEFAULT_BOOK } from "@/lib/book-context";
 
 export const PLAN_YEAR = 2026;
 
@@ -42,10 +46,11 @@ function window(clock: SimulationClock) {
 
 export async function getBookTotals(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<BookTotals> {
   const [agg, dims, members] = await Promise.all([
     prisma.bookDay.aggregate({
-      where: { date: window(clock) },
+      where: { sponsorId, date: window(clock) },
       _sum: {
         claimsSubmitted: true,
         claimsPaid: true,
@@ -68,7 +73,7 @@ export async function getBookTotals(
      * keys a day rather than several hundred.
      */
     prisma.bookDayDimension.aggregate({
-      where: { dimension: "channel", date: window(clock) },
+      where: { sponsorId, dimension: "channel", date: window(clock) },
       _sum: {
         nadacCents: true,
         dispensingFeeCents: true,
@@ -76,7 +81,7 @@ export async function getBookTotals(
         allowedCents: true,
       },
     }),
-    prisma.member.count(),
+    prisma.member.count({ where: { sponsorId } }),
   ]);
 
   const s = agg._sum;
@@ -105,6 +110,7 @@ export async function getBookTotals(
 async function rollup(
   clock: SimulationClock,
   dimension: string,
+  sponsorId: string,
 ): Promise<
   Array<{
     key: string;
@@ -119,7 +125,7 @@ async function rollup(
 > {
   const rows = await prisma.bookDayDimension.groupBy({
     by: ["key"],
-    where: { dimension, date: window(clock) },
+    where: { sponsorId, dimension, date: window(clock) },
     _sum: {
       claims: true,
       billedCents: true,
@@ -154,8 +160,9 @@ export interface ChannelRow {
 
 export async function getChannelMix(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ChannelRow[]> {
-  const rows = await rollup(clock, "channel");
+  const rows = await rollup(clock, "channel", sponsorId);
   return rows
     .map((r) => ({ channel: r.key, ...r }))
     .sort((a, b) => b.billedCents - a.billedCents);
@@ -170,8 +177,9 @@ export interface LevelRow {
 
 export async function getLevelMix(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<LevelRow[]> {
-  const rows = await rollup(clock, "level");
+  const rows = await rollup(clock, "level", sponsorId);
   return rows
     .map((r) => ({
       level: r.key,
@@ -192,9 +200,10 @@ export interface MonthPoint {
 
 export async function getMonthlyTrend(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<MonthPoint[]> {
   const days = await prisma.bookDay.findMany({
-    where: { date: window(clock) },
+    where: { sponsorId, date: window(clock) },
     select: {
       date: true,
       claimsPaid: true,
@@ -241,15 +250,18 @@ export interface RejectRow {
  */
 export async function getRejectMix(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<RejectRow[]> {
   const [rolled, detail] = await Promise.all([
-    rollup(clock, "reject"),
+    rollup(clock, "reject", sponsorId),
     prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT rejectCodes              AS code,
              rejectMessage            AS message,
              COUNT(DISTINCT memberId) AS members
       FROM Claim
-      WHERE responseStatus = 'R' AND dateOfService <= ${clock.today}
+      WHERE responseStatus = 'R'
+        AND sponsorId = ${sponsorId}
+        AND dateOfService <= ${clock.today}
       GROUP BY rejectCodes
     `,
   ]);
@@ -293,8 +305,9 @@ export interface TopDrugRow {
 export async function getTopDrugs(
   clock: SimulationClock,
   limit = 12,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<TopDrugRow[]> {
-  const rows = (await rollup(clock, "drug"))
+  const rows = (await rollup(clock, "drug", sponsorId))
     .sort((a, b) => b.billedCents - a.billedCents)
     .slice(0, limit);
 
@@ -333,8 +346,9 @@ export interface ClassRow {
 export async function getTopClasses(
   clock: SimulationClock,
   limit = 8,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<ClassRow[]> {
-  return (await rollup(clock, "class"))
+  return (await rollup(clock, "class", sponsorId))
     .map((r) => ({
       therapeuticClass: r.key,
       claims: r.claims,
@@ -353,8 +367,9 @@ export interface BasisRow {
 
 export async function getBasisMix(
   clock: SimulationClock,
+  sponsorId: string = DEFAULT_BOOK.sponsorId,
 ): Promise<BasisRow[]> {
-  return (await rollup(clock, "basis"))
+  return (await rollup(clock, "basis", sponsorId))
     .map((r) => ({
       basis: r.key,
       claims: r.claims,

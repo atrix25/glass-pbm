@@ -21,7 +21,7 @@ import {
   type DayActivity,
   type QueueItem,
 } from "@/lib/queries/operations";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { PA_STATUS_LABEL, formatDuration } from "@/lib/pa/status";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber } from "@/lib/utils";
@@ -29,14 +29,15 @@ import { formatNumber } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function OperationsPage() {
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
+  const sponsorId = book.sponsorId;
   const [snapshot, paStats, inFlight, decided, recentClaims] =
     await Promise.all([
-      getOperationsSnapshot(clock),
+      getOperationsSnapshot(clock, sponsorId),
       getPaQueueStats(clock),
       getInFlightPriorAuths(clock),
       getRecentlyDecidedPriorAuths(clock),
-      getRecentClaims(clock, 25),
+      getRecentClaims(clock, 25, sponsorId),
     ]);
 
   const { today, yesterday, recent, yearToDate, membership } = snapshot;

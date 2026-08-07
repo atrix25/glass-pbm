@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { getClock, getRole } from "@/lib/session";
+import { getBook, getClock, getRole } from "@/lib/session";
 import { RoleSwitcher } from "@/components/role-switcher";
+import { BookSwitcher } from "@/components/book-switcher";
 import { SideNav, type NavGroup } from "@/components/nav";
 import { DemoRail } from "@/components/demo-rail";
 import { ClockBar } from "@/components/clock-bar";
@@ -77,9 +78,10 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [role, clock, copy, copyPersistable] = await Promise.all([
+  const [role, clock, book, copy, copyPersistable] = await Promise.all([
     getRole(),
     getClock(),
+    getBook(),
     getCopyOverrides(),
     copyIsPersistable(),
   ]);
@@ -97,7 +99,7 @@ export default async function AppLayout({
           Glass
         </span>
         <span className="mr-8 ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 lg:mr-0">
-          ETG0013
+          {book.contractBadge}
         </span>
       </Link>
 
@@ -105,7 +107,8 @@ export default async function AppLayout({
         <SideNav groups={GROUPS} />
       </div>
 
-      <div className="border-t border-ink-200/70 p-2.5">
+      <div className="space-y-2 border-t border-ink-200/70 p-2.5">
+        <BookSwitcher current={book} />
         <RoleSwitcher current={role} />
       </div>
     </>

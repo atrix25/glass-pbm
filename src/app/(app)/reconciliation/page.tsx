@@ -17,16 +17,16 @@ import {
 } from "@/lib/queries/reconciliation";
 import { getGuaranteeReconciliation } from "@/lib/queries/reports";
 import { NETTING_PERMITTED } from "@/lib/contracts/guarantees";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCentsCompact, formatCentsWhole } from "@/lib/money";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReconciliationPage() {
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
   const [financial, rebate, scorecard, incidents] = await Promise.all([
-    getGuaranteeReconciliation(clock),
+    getGuaranteeReconciliation(clock, book.sponsorId),
     getRebateFloor(clock),
     getScorecard(clock),
     getIncidents(clock),

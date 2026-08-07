@@ -14,7 +14,7 @@ import {
 } from "@/components/ui";
 import { ClaimFilters } from "@/components/claim-filters";
 import { listClaims, type ClaimListRow } from "@/lib/queries/claims";
-import { getClock } from "@/lib/session";
+import { getClock, getBook } from "@/lib/session";
 import { formatCents } from "@/lib/money";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
 
@@ -47,7 +47,7 @@ export default async function ClaimsPage({
     return typeof v === "string" ? v : undefined;
   };
 
-  const clock = await getClock();
+  const [clock, book] = await Promise.all([getClock(), getBook()]);
   const result = await listClaims(
     {
       q: str("q"),
@@ -59,6 +59,7 @@ export default async function ClaimsPage({
       member: str("member"),
       scenario: str("scenario"),
       basis: str("basis"),
+      sponsorId: book.sponsorId,
       page: Number(str("page") ?? 1),
     },
     clock,

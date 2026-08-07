@@ -9,6 +9,7 @@ import {
   clampToPlanYear,
   resolveClock,
 } from "@/lib/clock";
+import { BOOK_COOKIE } from "@/lib/book-context";
 
 export async function signIn(formData: FormData) {
   const role = String(formData.get("role") ?? "sponsor") as Role;
@@ -66,4 +67,12 @@ export async function advanceClock(formData: FormData) {
 export async function resumeLiveClock() {
   const jar = await cookies();
   jar.delete(CLOCK_COOKIE);
+}
+
+export async function switchBook(formData: FormData) {
+  const bookId = String(formData.get("book") ?? "steel-potatoes");
+  const jar = await cookies();
+  jar.set(BOOK_COOKIE, bookId, { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  const next = String(formData.get("next") ?? "/sponsor");
+  redirect(next);
 }

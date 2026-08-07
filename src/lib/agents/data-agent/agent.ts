@@ -54,17 +54,20 @@ export async function answerDataQuestion(opts: {
   at?: Date;
   /** Prefer an explicit clock (API routes pass the session clock). */
   clock?: SimulationClock;
+  /** Active book sponsor; defaults to Steel Potatoes. */
+  sponsorId?: string;
   persist?: boolean;
 }): Promise<DataAnswer> {
   const started = Date.now();
   const clock =
     opts.clock ??
     (opts.at ? resolveClock(opts.at.toISOString()) : resolveClock(null));
+  const sponsorId = opts.sponsorId ?? "steel-potatoes";
 
   const run = await startRun({
     agentId: "data-agent",
     goal: opts.question,
-    subject: { type: "PlanSponsor", id: "steel-potatoes" },
+    subject: { type: "PlanSponsor", id: sponsorId },
     at: opts.at ?? clock.now,
   });
 
@@ -126,7 +129,7 @@ export async function answerDataQuestion(opts: {
     const result = await run.tool(
       call.tool,
       call.because,
-      () => def.execute(parsed.data, clock) as Promise<ToolResult>,
+      () => def.execute(parsed.data, clock, sponsorId) as Promise<ToolResult>,
       (r) => r.summary,
     );
 
