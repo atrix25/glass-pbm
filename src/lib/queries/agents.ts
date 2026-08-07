@@ -66,6 +66,7 @@ const MINUTES_PER_RUN: Record<string, number> = {
   "eligibility-resolver": 12,
   "appeal-drafter": 35,
   "member-service": 7,
+  "data-agent": 12,
 };
 
 function percentile(sorted: number[], p: number): number {

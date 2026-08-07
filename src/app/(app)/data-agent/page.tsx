@@ -1,0 +1,33 @@
+import { DataAgent } from "@/components/data-agent";
+import { SectionTitle } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+
+const SUGGESTIONS = [
+  "Which pricing guarantees missed?",
+  "Write the year-end rebate briefing",
+  "What drove PMPM last period?",
+  "How does our book compare under a traditional spread schedule?",
+  "Show top drugs by spend",
+  "Summarise settlement and rebate receivables",
+];
+
+export default function DataAgentPage() {
+  return (
+    <div className="space-y-4">
+      <SectionTitle description="Ask a book-of-business question or request a report briefing. The agent calls the same sponsor and contract queries the dashboards use — every figure is tool-backed, never invented.">
+        Data agent
+      </SectionTitle>
+
+      <p className="rounded-lg border border-ink-200 bg-ink-50/60 px-4 py-2.5 text-[12.5px] leading-relaxed text-ink-600">
+        For benefits and finance. Read-only: it will not change benefits (that
+        is the plan-design agent) and it will not answer member clinical
+        questions (that is member service). Ask for totals, guarantees,
+        rebates, trends, settlement, or say “write the year-end report
+        briefing.”
+      </p>
+
+      <DataAgent suggestions={SUGGESTIONS} />
+    </div>
+  );
+}

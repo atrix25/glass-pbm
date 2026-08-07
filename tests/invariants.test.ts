@@ -1537,6 +1537,14 @@ describe("the agents did only what they were allowed to do", () => {
     expect(offenders, "an agent reached outside its own toolbox").toEqual([]);
   });
 
+  it("registers the data agent with the same tools its registry exports", async () => {
+    const { agent } = await import("@/lib/agents/registry");
+    const { DATA_TOOL_REGISTRY } = await import("@/lib/agent/data-tools");
+    const def = agent("data-agent");
+    expect(def.consequential, "data agent is read-only").toEqual([]);
+    expect(new Set(def.tools)).toEqual(new Set(Object.keys(DATA_TOOL_REGISTRY)));
+  });
+
   it("wrote a reason before every step, not after", async () => {
     const blank = await prisma.agentStep.count({
       where: { OR: [{ because: "" }, { summary: "" }] },

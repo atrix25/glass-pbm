@@ -203,16 +203,48 @@ async function review() {
   );
 }
 
+/**
+ * Sponsor analytics questions that exercise each data-agent intent. Kept short
+ * so a full fleet seed finishes in seconds rather than minutes.
+ */
+async function dataAgent() {
+  const { answerDataQuestion } = await import(
+    "../src/lib/agents/data-agent/agent.js"
+  );
+  const questions = [
+    "How much has the plan spent year to date?",
+    "Which pricing guarantees missed?",
+    "Write the year-end rebate briefing",
+    "What drove PMPM last period?",
+    "Show top drugs by spend",
+    "How does our book compare under a traditional spread schedule?",
+    "Summarise settlement and rebate receivables",
+    "How is the operational scorecard looking?",
+    "Write the full year-end report briefing",
+  ];
+  const at = resolveClock(null).now;
+  console.log(`data-agent: ${questions.length} sponsor questions.`);
+  let completed = 0;
+  for (const [i, question] of questions.entries()) {
+    const out = await answerDataQuestion({ question, at, persist: true });
+    if (!out.handoff) completed++;
+    progress(i + 1, questions.length, "data-agent");
+  }
+  console.log(`  ${completed}/${questions.length} answered from the ledger.`);
+}
+
 async function main() {
   const started = Date.now();
 
   if (!only) {
     const cleared = await prisma.agentRun.deleteMany();
     console.log(`Cleared ${cleared.count} previous runs.`);
-    console.log(`Wrote ${await seedPolicies(prisma)} policy periods.`);
   } else {
     await prisma.agentRun.deleteMany({ where: { agentId: only } });
   }
+  // Always refresh policy history so a single-agent run still has a row in
+  // force for the new agents (e.g. data-agent) and the invariant suite agrees.
+  console.log(`Wrote ${await seedPolicies(prisma)} policy periods.`);
 
   if (wanted("pa-intake")) await paIntake();
   if (wanted("plan-design")) await planDesign();
@@ -220,6 +252,7 @@ async function main() {
   if (wanted("eligibility-resolver")) await eligibilityResolver();
   if (wanted("appeal-drafter")) await appealDrafter();
   if (wanted("member-service")) await memberService();
+  if (wanted("data-agent")) await dataAgent();
 
   // Always last: the reviews are about whatever proposals now exist.
   await review();
