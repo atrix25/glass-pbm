@@ -226,7 +226,19 @@ export async function searchFormularyUtilizationManagement(
 ): Promise<FormularyUmSearchResult> {
   const flag = opts.flag ?? "any";
   const limit = opts.limit ?? 25;
-  const where = umWhereForFlag(flag);
+  const nameQuery = opts.query?.trim();
+  /*
+   * Name filter must live in the Prisma where clause. Counting flag matches
+   * alone and then filtering an alphabetical prefix in memory inflated
+   * totalMatching and silently dropped real hits past the first 500 rows
+   * (Zytiga under a PA search never appeared).
+   */
+  const where = {
+    ...umWhereForFlag(flag),
+    ...(nameQuery
+      ? { drug: { name: { contains: nameQuery } } }
+      : {}),
+  };
 
   const [totalMatching, entries] = await Promise.all([
     prisma.formularyEntry.count({ where }),
@@ -237,18 +249,11 @@ export async function searchFormularyUtilizationManagement(
         criteriaTree: { select: { name: true } },
       },
       orderBy: { drug: { name: "asc" } },
-      take: opts.query ? 500 : limit,
+      take: limit,
     }),
   ]);
 
-  let rows = entries;
-  if (opts.query?.trim()) {
-    const q = opts.query.trim().toLowerCase();
-    rows = rows.filter((e) => e.drug.name.toLowerCase().includes(q));
-  }
-  rows = rows.slice(0, limit);
-
-  const drugs: FormularyUmSearchRow[] = rows.map((e) => {
+  const drugs: FormularyUmSearchRow[] = entries.map((e) => {
     const ql = qlSummary(e);
     const criteriaTreeName = e.criteriaTree?.name ?? null;
     return {
