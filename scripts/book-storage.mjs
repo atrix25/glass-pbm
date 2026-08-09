@@ -5,7 +5,16 @@
  * via environment variables (see scripts/push-book.mjs).
  */
 
-import { createReadStream, createWriteStream, existsSync, statSync, unlinkSync } from "node:fs";
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
@@ -74,38 +83,134 @@ export async function uploadBookGzip(localGzipPath) {
   return { size, etag: result.ETag ?? null };
 }
 
-/** Download and gunzip into destPath if missing or force=true. */
 /** Minimum plausible size for the seeded book (full book is ~1.3 GB). */
-const MIN_BOOK_BYTES = 500_000_000;
+export const MIN_BOOK_BYTES = 500_000_000;
 
-export async function downloadBookIfNeeded(destPath, { force = false } = {}) {
-  const existing = existsSync(destPath) ? statSync(destPath).size : 0;
-  if (!force && existing >= MIN_BOOK_BYTES) {
-    console.log(`Book already present at ${destPath} (${(existing / 1e9).toFixed(2)} GB), skipping download.`);
+/**
+ * Pre-marker deployments wrote straight to destPath. A book at or above this
+ * size is assumed finished (full book ~1.3 GB); anything between MIN_BOOK_BYTES
+ * and this floor is the sticky-truncation window and must be re-fetched.
+ */
+export const LEGACY_TRUST_BYTES = 1_200_000_000;
+
+/** Sidecar written only after a finished download; absence means "do not trust dest". */
+export function bookMarkerPath(destPath) {
+  return `${destPath}.complete`;
+}
+
+function partialPath(destPath) {
+  return `${destPath}.partial`;
+}
+
+function readMarker(destPath) {
+  const marker = bookMarkerPath(destPath);
+  if (!existsSync(marker)) return null;
+  try {
+    return JSON.parse(readFileSync(marker, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeMarker(destPath, uncompressedBytes) {
+  writeFileSync(
+    bookMarkerPath(destPath),
+    JSON.stringify({ uncompressedBytes, finishedAt: new Date().toISOString() }),
+  );
+}
+
+function removeIfExists(path) {
+  if (existsSync(path)) unlinkSync(path);
+}
+
+/**
+ * True when destPath is a finished book we can serve without re-fetching.
+ *
+ * A file that merely exists (even above MIN_BOOK_BYTES) is not enough: an
+ * interrupted gunzip used to leave a truncated SQLite that every later boot
+ * treated as complete. New downloads write a `.complete` marker; unmarked
+ * files are trusted only at the legacy full-book floor.
+ */
+export function localBookIsReady(
+  destPath,
+  minBytes = MIN_BOOK_BYTES,
+  legacyTrustBytes = LEGACY_TRUST_BYTES,
+) {
+  if (!existsSync(destPath)) return false;
+  const size = statSync(destPath).size;
+  if (size < minBytes) return false;
+  const marker = readMarker(destPath);
+  if (marker !== null) return marker.uncompressedBytes === size;
+
+  // One-time migration for volumes populated before markers existed.
+  if (size >= legacyTrustBytes) {
+    writeMarker(destPath, size);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Download and gunzip into destPath if missing, incomplete, or force=true.
+ *
+ * Bytes land on a `.partial` file and are renamed onto destPath only after the
+ * stream finishes, with a `.complete` marker written afterward. A crash mid-
+ * download therefore cannot sticky-truncate the live database.
+ */
+export async function downloadBookIfNeeded(
+  destPath,
+  { force = false, minBytes = MIN_BOOK_BYTES, client = null } = {},
+) {
+  if (!force && localBookIsReady(destPath, minBytes)) {
+    const size = statSync(destPath).size;
+    console.log(
+      `Book already present at ${destPath} (${(size / 1e9).toFixed(2)} GB), skipping download.`,
+    );
     return false;
   }
 
-  if (existing > 0) {
+  if (existsSync(destPath)) {
+    const existing = statSync(destPath).size;
     console.log(
-      `Removing incomplete book at ${destPath} (${(existing / 1e6).toFixed(0)} MB; need ≥${(MIN_BOOK_BYTES / 1e9).toFixed(1)} GB).`,
+      `Removing untrusted book at ${destPath} (${(existing / 1e6).toFixed(0)} MB; need a finished download ≥${(minBytes / 1e9).toFixed(1)} GB).`,
     );
-    unlinkSync(destPath);
+    removeIfExists(destPath);
   }
+  removeIfExists(bookMarkerPath(destPath));
+  removeIfExists(partialPath(destPath));
 
   const { bucket, key } = bookStorageConfig();
-  const client = createBookS3Client();
+  const s3 = client ?? createBookS3Client();
+  const tmpPath = partialPath(destPath);
 
   console.log(`Downloading s3://${bucket}/${key} → ${destPath}...`);
-  const response = await client.send(
-    new GetObjectCommand({ Bucket: bucket, Key: key }),
-  );
+  try {
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
 
-  if (!response.Body) {
-    throw new Error("S3 GetObject returned an empty body");
+    if (!response.Body) {
+      throw new Error("S3 GetObject returned an empty body");
+    }
+
+    await pipeline(response.Body, createGunzip(), createWriteStream(tmpPath));
+    const size = statSync(tmpPath).size;
+    if (size < minBytes) {
+      throw new Error(
+        `Downloaded book is only ${size} bytes; expected ≥ ${minBytes}`,
+      );
+    }
+
+    // Publish the bytes first, then the marker. A crash between these steps
+    // re-downloads on the next boot rather than serving an unmarked file.
+    renameSync(tmpPath, destPath);
+    writeMarker(destPath, size);
+    console.log(`Book ready (${(size / 1e9).toFixed(2)} GB uncompressed).`);
+    return true;
+  } catch (err) {
+    removeIfExists(tmpPath);
+    // Leave any pre-existing dest alone only when we never published this attempt.
+    // (We already removed an untrusted dest above.)
+    throw err;
   }
-
-  await pipeline(response.Body, createGunzip(), createWriteStream(destPath));
-  const size = statSync(destPath).size;
-  console.log(`Book ready (${(size / 1e9).toFixed(2)} GB uncompressed).`);
-  return true;
 }
