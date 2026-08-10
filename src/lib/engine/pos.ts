@@ -18,6 +18,7 @@ import {
   type AdjudicationContext,
   type PriorFill,
 } from "./adjudicate";
+import { priorPaidClaimsWhere } from "./prior-fills";
 import { loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
@@ -102,17 +103,25 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
 
   const dateOfService = new Date(`${req.dateOfService}T00:00:00.000Z`);
 
-  const [member, history, sameDay, opioids] = await Promise.all([
+  const [member, history, opioids] = await Promise.all([
     prisma.member.findUnique({
       where: { id: req.memberId },
       select: { firstName: true, lastName: true, cardholderId: true },
     }),
+    /*
+     * Paid fills that already sit on the books when this quote is priced —
+     * including earlier fills on the same calendar day. Seed and replay fold
+     * those into accumulators before the next claim; dropping them here quotes
+     * a deductible and out-of-pocket the member has already paid past.
+     *
+     * Same-day fills of other products are also concurrent therapy for DUR:
+     * two prescriptions started the same morning at two pharmacies is the
+     * exact case only the processor can see. A same-day fill of the same
+     * product is left out of the DUR set below (duplicate submission), but it
+     * still counts toward the member's position.
+     */
     prisma.claim.findMany({
-      where: {
-        memberId: req.memberId,
-        responseStatus: "P",
-        dateOfService: { lt: dateOfService },
-      },
+      where: priorPaidClaimsWhere(req.memberId, dateOfService),
       select: {
         claimNumber: true,
         dateOfService: true,
@@ -126,35 +135,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
         formularyLevel: true,
         brandSelectionPenaltyCents: true,
       },
-      orderBy: { dateOfService: "asc" },
-    }),
-    /*
-     * Fills dispensed the same day are concurrent therapy for clinical
-     * purposes and are not part of pricing, so they are fetched separately.
-     * Two prescriptions started the same morning at two pharmacies is the
-     * exact case only the processor can see, and cutting the window strictly
-     * before the date of service would drop it.
-     *
-     * A same-day fill of the same product is excluded: that is a duplicate
-     * submission, which the engine answers with a reject code rather than a
-     * clinical conflict.
-     */
-    prisma.claim.findMany({
-      where: {
-        memberId: req.memberId,
-        responseStatus: "P",
-        dateOfService,
-        drugId: { not: req.drugId },
-      },
-      select: {
-        claimNumber: true,
-        dateOfService: true,
-        daysSupply: true,
-        quantityDispensed: true,
-        drugId: true,
-        prescriberNpi: true,
-        pharmacyId: true,
-      },
+      orderBy: [{ dateOfService: "asc" }, { claimNumber: "asc" }],
     }),
     prisma.opioidProduct.findMany({ where: { convertible: true } }),
   ]);
@@ -174,9 +155,10 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
   };
 
   /*
-   * The accumulator is rebuilt from the claims that precede this date rather
+   * The accumulator is rebuilt from the claims that precede this fill rather
    * than read from the stored balance, because the stored balance is the end
-   * of the year. A fill dated in March has to be priced against March.
+   * of the year. A fill dated in March has to be priced against March — and
+   * against any earlier paid fills that morning.
    */
   const rxOopLevels = new Set(
     plan.costShareRules.filter((r) => r.accumulatesToRxOop).map((r) => r.level),
@@ -272,22 +254,24 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
    * claim rejected for a quantity limit is still a claim the pharmacy may
    * resubmit, and a major interaction is worth transmitting either way.
    */
-  const concurrent: ConcurrentFill[] = [...history, ...sameDay].map((c) => {
-    const filled = world.drugs.get(c.drugId);
-    return {
-      claimNumber: c.claimNumber,
-      drugId: c.drugId,
-      name: filled?.name ?? c.drugId,
-      molecule: filled?.molecule ?? null,
-      therapeuticClass: filled?.therapeuticClass ?? null,
-      dateOfService: c.dateOfService,
-      daysSupply: c.daysSupply,
-      quantityDispensed: c.quantityDispensed,
-      prescriberNpi: c.prescriberNpi,
-      pharmacyId: c.pharmacyId,
-      dailyMme: mmeOf(c.drugId, c.quantityDispensed, c.daysSupply),
-    };
-  });
+  const concurrent: ConcurrentFill[] = history
+    .filter((c) => c.drugId !== req.drugId)
+    .map((c) => {
+      const filled = world.drugs.get(c.drugId);
+      return {
+        claimNumber: c.claimNumber,
+        drugId: c.drugId,
+        name: filled?.name ?? c.drugId,
+        molecule: filled?.molecule ?? null,
+        therapeuticClass: filled?.therapeuticClass ?? null,
+        dateOfService: c.dateOfService,
+        daysSupply: c.daysSupply,
+        quantityDispensed: c.quantityDispensed,
+        prescriberNpi: c.prescriberNpi,
+        pharmacyId: c.pharmacyId,
+        dailyMme: mmeOf(c.drugId, c.quantityDispensed, c.daysSupply),
+      };
+    });
 
   const candidateMme = mmeOf(req.drugId, req.quantityDispensed, req.daysSupply);
   const dur = screenFill(
