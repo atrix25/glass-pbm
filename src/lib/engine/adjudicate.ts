@@ -1420,6 +1420,23 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     if (d) d.amountMicros = patientPayMicros;
   }
 
+  /*
+   * The same rule applies to the other cost-share components. Patient pay is
+   * the sum of deductible + copay/coinsurance + brand penalty before any cap;
+   * after an Rx OOP, federal OOP, or total-allowed clamp, those components
+   * must be reconciled to the capped amount or claim detail / POS fields
+   * report a copay and penalty that do not add up to what the member paid.
+   * Deductible already took priority above; shrink copay next, then penalty.
+   */
+  let remainingForComponents = patientPayMicros - appliedToDeductibleMicros;
+  if (costShareMicros > remainingForComponents) {
+    costShareMicros = remainingForComponents;
+  }
+  remainingForComponents -= costShareMicros;
+  if (brandPenaltyMicros > remainingForComponents) {
+    brandPenaltyMicros = remainingForComponents;
+  }
+
   return {
     patientPayMicros,
     appliedToDeductibleMicros,
