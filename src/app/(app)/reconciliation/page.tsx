@@ -151,11 +151,12 @@ export default async function ReconciliationPage() {
         </Table>
         <div className="border-t border-ink-200/70 px-5 py-4 text-[12.5px] leading-relaxed text-ink-600">
           <span className="font-medium text-ink-900">The rebate floor.</span>{" "}
-          Exhibit C promises at least{" "}
-          {formatCentsWhole(rebate.floorPerClaimCents)} of rebate for every
-          brand claim, whatever the manufacturer contracts actually yield. On{" "}
-          {formatNumber(rebate.brandClaims)} brand claims that floor is{" "}
-          {formatCentsCompact(rebate.floorCents)}; the book has accrued{" "}
+          Exhibit C promises a per-channel minimum rebate on each brand claim
+          ($100 retail through $750 specialty), whatever the manufacturer
+          contracts actually yield. On {formatNumber(rebate.brandClaims)} brand
+          claims the blended floor is{" "}
+          {formatCentsWhole(rebate.floorPerClaimCents)} a claim, or{" "}
+          {formatCentsCompact(rebate.floorCents)} in total; the book has accrued{" "}
           {formatCentsCompact(rebate.actualCents)}, or{" "}
           {formatCentsWhole(rebate.perClaimCents)} a claim.{" "}
           {rebate.met

@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { computeBrandRebateFloor } from "@/lib/contracts/rebate-floor";
 import { EXHIBIT_C_RATES, WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
@@ -170,12 +171,13 @@ export async function getGuaranteeReconciliation(clock: SimulationClock) {
 }
 
 export async function getRebateWaterfall(clock: SimulationClock) {
-  const [agg, members] = await Promise.all([
+  const [agg, members, cells] = await Promise.all([
     prisma.bookDay.aggregate({
       where: { date: window(clock) },
       _sum: { estimatedRebateCents: true, brandClaims: true },
     }),
     prisma.member.count(),
+    guaranteeCells(clock),
   ]);
 
   const brandClaims = agg._sum.brandClaims ?? 0;
@@ -190,16 +192,16 @@ export async function getRebateWaterfall(clock: SimulationClock) {
     memberMonths * WISCONSIN_CONTRACT.rebateAdminFeePmpmCents;
   const netToPlanCents = grossRebateCents - rebateAdminFeeCents;
 
-  // Exhibit C guarantees a floor per brand claim, separately from whatever the
-  // manufacturer contracts actually yield. The plan gets the larger of the two.
-  const minPerBrandClaimCents =
-    EXHIBIT_C_RATES.find(
-      (r) =>
-        r.lineOfBusiness === "Commercial" &&
-        r.channel === "Retail" &&
-        r.drugClass === "Brand",
-    )?.minRebatePerBrandClaimCents ?? 0;
-  const minGuaranteeCents = brandClaims * minPerBrandClaimCents;
+  // Exhibit C sets a distinct floor per channel. Sum brand volume from the
+  // guarantee cut (channel × brand class) rather than all-book brandClaims ×
+  // the retail rate alone — specialty at $750 must not be floored at $100.
+  const floor = computeBrandRebateFloor(
+    cells
+      .filter((c) => c.brandGeneric === "Brand")
+      .map((c) => ({ channel: c.channel, claims: c.claims })),
+  );
+  const minGuaranteeCents = floor.minGuaranteeCents;
+  const minPerBrandClaimCents = floor.blendedFloorPerClaimCents;
 
   return {
     grossRebateCents,
