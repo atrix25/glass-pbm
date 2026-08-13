@@ -18,6 +18,7 @@ import {
   type AdjudicationContext,
   type PriorFill,
 } from "./adjudicate";
+import { rebuildPharmacyAccumulators } from "./rebuild-accumulators";
 import { loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
@@ -124,7 +125,6 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
         patientPayCents: true,
         appliedToDeductibleCents: true,
         formularyLevel: true,
-        brandSelectionPenaltyCents: true,
       },
       orderBy: { dateOfService: "asc" },
     }),
@@ -178,11 +178,19 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
    * than read from the stored balance, because the stored balance is the end
    * of the year. A fill dated in March has to be priced against March.
    */
-  const rxOopLevels = new Set(
-    plan.costShareRules.filter((r) => r.accumulatesToRxOop).map((r) => r.level),
-  );
-  let rxOop = 0;
-  let deductible = 0;
+  const pharmacyAccum = rebuildPharmacyAccumulators(history, {
+    rxOopLevels: new Set(
+      plan.costShareRules.filter((r) => r.accumulatesToRxOop).map((r) => r.level),
+    ),
+    federalOopLevels: new Set(
+      plan.costShareRules
+        .filter((r) => r.accumulatesToFederalOop)
+        .map((r) => r.level),
+    ),
+  });
+  let deductible = pharmacyAccum.deductibleCents;
+  const rxOop = pharmacyAccum.rxOopCents;
+  const federalOop = pharmacyAccum.federalOopCents;
 
   /*
    * The medical side of an integrated deductible, which this system receives
@@ -197,21 +205,16 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
     );
   }
 
-  const priorFills: PriorFill[] = [];
-  for (const c of history) {
-    deductible += c.appliedToDeductibleCents;
-    if (rxOopLevels.size === 0 || rxOopLevels.has(c.formularyLevel ?? "")) {
-      rxOop += c.patientPayCents - c.brandSelectionPenaltyCents;
-    }
+  const priorFills: PriorFill[] = history.map((c) => {
     const filled = world.drugs.get(c.drugId);
-    priorFills.push({
+    return {
       dateOfService: c.dateOfService,
       daysSupply: c.daysSupply,
       quantityDispensed: c.quantityDispensed,
       drugId: c.drugId,
       therapeuticClass: filled?.therapeuticClass ?? null,
-    });
-  }
+    };
+  });
 
   /*
    * The pharmacy's cash price is not a plan input, so there is nothing in the
@@ -258,7 +261,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
     priorFills,
     accumulators: {
       rxOopAccumulatedCents: rxOop,
-      federalOopAccumulatedCents: rxOop,
+      federalOopAccumulatedCents: federalOop,
       deductibleAccumulatedCents: deductible,
     },
     approvedPAs: world.approvedPAs.get(req.memberId) ?? [],
