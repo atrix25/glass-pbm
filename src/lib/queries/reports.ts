@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { pricingGuaranteeMet } from "@/lib/contracts/guarantee-met";
 import { EXHIBIT_C_RATES, WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
@@ -160,7 +161,11 @@ export async function getGuaranteeReconciliation(clock: SimulationClock) {
           valueAtGuaranteeCents == null ? null : valueAtGuaranteeCents - b.billed,
         // A guarantee only binds once the category has enough volume.
         belowMinimumVolume: b.claims < WISCONSIN_CONTRACT.minClaimsPerCategory,
-        met: discountVarianceBps == null ? null : discountVarianceBps >= 0,
+        met: pricingGuaranteeMet(
+          discountVarianceBps,
+          b.claims,
+          WISCONSIN_CONTRACT.minClaimsPerCategory,
+        ),
       };
     })
     .sort(
