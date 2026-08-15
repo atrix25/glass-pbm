@@ -63,9 +63,9 @@ export default async function ReconciliationPage() {
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">
           <Stat
             label="Financial guarantees"
-            value={`${financial.filter((r) => r.met !== false).length} of ${financial.length}`}
+            value={`${financial.filter((r) => r.met === true).length} of ${financial.filter((r) => r.met !== null).length}`}
             tone="positive"
-            sub="Met on the book to date"
+            sub="Met on the book to date (categories above the claim minimum)"
           />
           <Stat
             label="Value above the guaranteed rate"
@@ -141,8 +141,20 @@ export default async function ReconciliationPage() {
                     : "—"}
                 </Td>
                 <Td align="right">
-                  <Badge tone={r.met === false ? "negative" : "positive"}>
-                    {r.met === false ? "missed" : "met"}
+                  <Badge
+                    tone={
+                      r.met === false
+                        ? "negative"
+                        : r.met === null
+                          ? "neutral"
+                          : "positive"
+                    }
+                  >
+                    {r.met === false
+                      ? "missed"
+                      : r.belowMinimumVolume
+                        ? "below minimum"
+                        : "met"}
                   </Badge>
                 </Td>
               </tr>

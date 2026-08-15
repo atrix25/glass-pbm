@@ -443,14 +443,13 @@ async function composeReportBriefing(
       "Exhibit C promises an aggregate discount off AWP by channel and drug class. Each row settles alone.",
     );
     for (const g of guarantees) {
-      const status =
-        g.met === null
+      const status = g.belowMinimumVolume
+        ? "below minimum volume"
+        : g.met === null
           ? "n/a"
-          : g.belowMinimumVolume
-            ? "below minimum volume"
-            : g.met
-              ? "met"
-              : "short";
+          : g.met
+            ? "met"
+            : "short";
       lines.push(
         `- ${g.channel} / ${g.scope}: actual ${bpsLabel(g.actualDiscountBps)} vs guaranteed ${bpsLabel(g.guaranteedBps)} (${status}); dollar variance ${g.dollarVarianceCents == null ? "—" : formatCents(g.dollarVarianceCents)}`,
       );
