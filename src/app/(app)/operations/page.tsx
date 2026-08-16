@@ -48,7 +48,7 @@ export default async function OperationsPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Steel Potatoes LLC, ${formatNumber(membership.lives)} covered lives on ${formatNumber(membership.contracts)} contracts. Everything on this page is cut against the simulation clock in the bar above: claims dated after that instant have not happened yet, and authorizations received but not yet decided are still open.`}
+        description={`Steel Potatoes LLC, ${formatNumber(membership.lives)} covered lives across ${formatNumber(membership.contracts)} employee enrollments. Everything on this page is cut against the simulation clock in the bar above: claims dated after that instant have not happened yet, and authorizations received but not yet decided are still open.`}
       >
         Live operations
       </SectionTitle>

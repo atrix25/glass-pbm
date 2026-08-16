@@ -53,7 +53,7 @@ export default async function MethodologyPage() {
           tone="invented"
           title="Invented outright"
           items={[
-            `${formatNumber(facts.members)} members across ${formatNumber(facts.contracts)} subscriber contracts, with names, addresses and diagnoses`,
+            `${formatNumber(facts.members)} members across ${formatNumber(facts.contracts)} employee enrollments, with names, addresses and diagnoses`,
             `${formatNumber(facts.claims)} fills: which drug, on what day, at which pharmacy, for how many days`,
             "Pharmacy cash prices and submitted ingredient costs",
             "Prescriber names and the answers they gave on prior authorization forms",
