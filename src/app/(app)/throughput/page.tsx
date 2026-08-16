@@ -2,7 +2,6 @@ import {
   Badge,
   Card,
   CardHeader,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -47,20 +46,6 @@ export default async function ThroughputPage() {
       >
         Throughput
       </SectionTitle>
-
-      <IncumbentNote>
-        Capacity is the last argument standing once pricing is on the table:
-        that claim adjudication is a decade of mainframe engineering, that the
-        volumes are unimaginable, and that a plan sponsor could not possibly run
-        one. The volumes are not unimaginable. Every prescription dispensed in
-        the United States in a year — about{" "}
-        {formatNumber(t.nationalScripts / 1_000_000_000, 1)} billion of them —
-        would take this engine {t.nationalHours.toFixed(1)} hours on a single
-        core of the machine named below. The hard parts of a pharmacy benefit
-        manager are the contract, the clinical policy, the rebate agreements and
-        the data. Compute has not been the hard part for twenty years, and the
-        pricing still reflects a decade when it was.
-      </IncumbentNote>
 
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">

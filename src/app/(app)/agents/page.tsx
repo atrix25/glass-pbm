@@ -3,7 +3,6 @@ import {
   Badge,
   Card,
   CardHeader,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -42,18 +41,6 @@ export default async function AgentsPage() {
       >
         Agent operations
       </SectionTitle>
-
-      <IncumbentNote>
-        Every pharmacy benefit manager will have a chatbot by the end of the
-        year, and it will sit on top of a claims system that cannot tell you why
-        it paid what it paid. That is the wrong order. The reason agents work
-        here is that the tools underneath them return structured answers with a
-        citation to the document the rule came from, so an agent can be held to
-        what a tool returned rather than to what it sounded confident about.
-        What you cannot buy from an incumbent is this page: an agent register
-        with an autonomy level, a run log, an override rate and a switch that
-        turns it off.
-      </IncumbentNote>
 
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">

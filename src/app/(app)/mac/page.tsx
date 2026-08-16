@@ -3,7 +3,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -41,20 +40,6 @@ export default async function MacPage() {
       >
         Maximum allowable cost
       </SectionTitle>
-
-      <IncumbentNote>
-        The MAC list is the most valuable thing a traditional PBM owns and the
-        one it will not put in a contract. Under a spread arrangement there are
-        two lists: a higher one that sets what the plan is billed and a lower
-        one that sets what the pharmacy is paid, the difference is revenue, and
-        neither is disclosed. Sponsors who ask are told the methodology is
-        proprietary. There is one list here, it is published in full below with
-        the arithmetic that produced each row, and the plan is billed the same
-        ceiling the pharmacy is paid. The margin the network earns above
-        acquisition cost — {formatCentsCompact(mac.networkMarginCents)} so far
-        this year — goes to pharmacies, and you can see it because it is not
-        hiding anywhere.
-      </IncumbentNote>
 
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">

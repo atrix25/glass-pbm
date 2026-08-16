@@ -3,7 +3,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   ProportionBar,
   SectionTitle,
   Stat,
@@ -42,20 +41,6 @@ export default async function SettlementPage() {
       <SectionTitle description="A PBM is a payments company wearing a clinical hat. It collects from the plan monthly, pays the network twice a month, and chases manufacturers for money it booked two quarters ago. Under pass-through the first two are equal by construction. The third is where the industry makes its money.">
         Settlement
       </SectionTitle>
-
-      <IncumbentNote>
-        The administrative fee in Contract ETG0013 is $2.10 per member per
-        month, plus $0.40 taken out of rebates. Across{" "}
-        {formatCentsCompact(invoices.billedToDateCents)} billed to the sponsor
-        so far this year, that fee is{" "}
-        {formatCentsCompact(invoices.adminFeeToDateCents)}, or{" "}
-        {formatBpsAsPercent(invoices.adminFeeShareBps, 2)} of the invoice. A
-        traditional contract does not charge more; it charges the same and keeps
-        the difference between what the plan is billed and what the pharmacy is
-        paid, plus the {formatCentsCompact(rebates.outstandingCents)} of rebate
-        money sitting in its account right now. That is the entire argument, and
-        it is visible on this page rather than asserted.
-      </IncumbentNote>
 
       {/* ------------------------------------------------------------------ */}
       {/* Rebate receivables                                                 */}

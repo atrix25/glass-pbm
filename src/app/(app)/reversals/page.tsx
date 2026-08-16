@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   ProportionBar,
   SectionTitle,
   Stat,
@@ -48,19 +47,6 @@ export default async function ReversalsPage() {
       >
         Reversals and recoveries
       </SectionTitle>
-
-      <IncumbentNote>
-        Every demo shows the happy path. The gap between a demo and a processor
-        is what happens when the fill does not happen: the pharmacy&rsquo;s
-        remittance has to shrink, the plan&rsquo;s invoice has to shrink, and
-        the member&rsquo;s deductible has to give the money back. A system that
-        cannot unwind a claim exactly will overstate spend by roughly two per
-        cent forever, which on this book is{" "}
-        {formatCentsCompact(Math.abs(rev.planPaidCents))} the plan would be
-        billed for prescriptions nobody collected. Contract ETG0013 charges
-        nothing extra to get this right, and no incumbent has ever put it on a
-        line item, because it is table stakes rather than a feature.
-      </IncumbentNote>
 
       {/* ------------------------------------------------------------------ */}
       {/* Reversals                                                          */}

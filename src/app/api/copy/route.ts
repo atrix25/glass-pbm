@@ -7,8 +7,8 @@ import { saveCopyOverride } from "@/lib/copy";
  *
  * The key is the text exactly as it was rendered, which the browser knows
  * because it read it out of the DOM before letting anyone type over it. A
- * replacement equal to the original, or empty, removes the override and puts
- * the written copy back.
+ * replacement equal to the original, or null, removes the override and puts
+ * the written copy back. An empty string clears the text on purpose.
  */
 export async function POST(request: Request) {
   let body: { original?: unknown; replacement?: unknown };

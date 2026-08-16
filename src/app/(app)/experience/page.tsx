@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -191,16 +190,6 @@ export default async function ExperiencePage() {
           </div>
         </Card>
       </div>
-
-      <IncumbentNote>
-        When an incumbent quotes you a net promoter score, this gap is what you
-        are looking at. It is a number computed from the people who chose to
-        answer, and the choosing is not random. Nobody is being dishonest; the
-        arithmetic simply cannot see the {formatNumber(c.scored - s.scored)}{" "}
-        members who did not reply. The census figure on the left is the one that
-        cannot be gamed by changing who gets the email, which is why it is the
-        one tracked here.
-      </IncumbentNote>
 
       {/* ------------------------------------------------------------------ */}
       {/* Distribution                                                       */}

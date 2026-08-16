@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -47,20 +46,6 @@ export default async function IntegrityPage() {
       >
         Program integrity
       </SectionTitle>
-
-      <IncumbentNote>
-        Program integrity is not a line item in Contract ETG0013. It is inside
-        the $2.10 per member per month administrative fee, along with claims
-        processing, prior authorisation, clinical review, member service and
-        reporting — every function in this build, for about $2.6 million a year
-        across this book. A traditional PBM does not charge a fee for this at
-        all; it takes spread instead, which on these same claims came to{" "}
-        <Link href="/reports" className="underline underline-offset-2">
-          $19.3 million
-        </Link>
-        . The detectors below are four SQL queries over data the plan already
-        owns.
-      </IncumbentNote>
 
       <Card>
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-4">

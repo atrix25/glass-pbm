@@ -368,41 +368,8 @@ export function DivergingBar({
 }
 
 /**
- * What the capability on this page is worth to the people selling it.
- *
- * Every function in this build sits inside one number: the $2.10 per member
- * per month administrative fee in Contract ETG0013. Clinical review, prior
- * authorisation, surveillance, member service and reporting are not priced
- * separately anywhere in the contract, because under a pass-through model
- * there is nowhere else for the money to come from. Setting each capability
- * against that fee is the most direct way to show what is actually being
- * bought, and it is a published figure rather than an estimate.
+ * Horizontal proportion bar used in the cost breakdown views.
  */
-export function IncumbentNote({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border border-amber-300/60 bg-amber-50/60 px-5 py-4",
-        className,
-      )}
-    >
-      <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-amber-900">
-        What this is worth to a PBM
-      </div>
-      <div className="mt-1.5 max-w-4xl text-[13px] leading-relaxed text-amber-950">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** Horizontal proportion bar used in the cost breakdown views. */
 export function ProportionBar({
   segments,
   className,

@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -164,12 +163,6 @@ export default async function AgentDetailPage({
           </div>
         </div>
       </Card>
-
-      <IncumbentNote>
-        {def.incumbent.charAt(0).toUpperCase() + def.incumbent.slice(1)}. This
-        agent has run {formatNumber(summary.runs)} times against this book at a
-        median of {formatNumber(summary.medianMs)} milliseconds.
-      </IncumbentNote>
 
       <Card>
         <CardHeader

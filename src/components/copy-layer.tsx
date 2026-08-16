@@ -49,19 +49,20 @@ const SKIP_TAGS = new Set([
 ]);
 
 /**
- * Live figures are not copy.
+ * Live figures can be cleared, but not rewritten into a frozen number.
  *
- * Every number on the site is computed per request, and freezing one into an
+ * Every number on the site is computed per request. Freezing one into an
  * override would turn a derived figure into a hard-coded one — the exact
- * failure the rest of this build exists to argue against. Text that is only
- * digits and punctuation is therefore not editable.
+ * failure the rest of this build exists to argue against. Number-only text is
+ * therefore editable so an author can delete stray figures left behind after
+ * clearing surrounding copy, but a non-empty replacement that is still only
+ * digits is refused at save time.
  */
-const NOT_COPY = /^[\s\d.,%$()+\-–—/:x×]*$/;
+const NUMBER_ONLY = /^[\s\d.,%$()+\-–—/:x×]*$/;
 
 function editable(node: Text): boolean {
   const text = node.nodeValue ?? "";
-  if (text.trim().length < 2) return false;
-  if (NOT_COPY.test(text)) return false;
+  if (text.trim().length < 1) return false;
 
   const parent = node.parentElement;
   if (!parent) return false;
@@ -211,8 +212,9 @@ export function CopyLayer({
       const raw = node.nodeValue ?? "";
       const trimmed = raw.trim();
       if (!trimmed) return;
+      if (!(trimmed in map)) return;
       const replacement = map[trimmed];
-      if (replacement === undefined || replacement === trimmed) return;
+      if (replacement === trimmed) return;
 
       // Keep the surrounding whitespace: JSX leaves newlines and indentation
       // around text, and dropping it closes up spaces between inline elements.
@@ -304,6 +306,20 @@ export function CopyLayer({
       const tail = span.dataset.copyTail ?? "";
       const next = (span.textContent ?? "").trim();
 
+      if (
+        save &&
+        next !== "" &&
+        next !== original &&
+        NUMBER_ONLY.test(next)
+      ) {
+        setStatus("Live figures can be cleared, but not rewritten");
+        window.setTimeout(() => setStatus(null), 2600);
+        const restore = span.dataset.copyWas ?? original;
+        span.replaceWith(document.createTextNode(`${lead}${restore}${tail}`));
+        editingNodeRef.current = null;
+        return;
+      }
+
       const restore = save ? next : (span.dataset.copyWas ?? original);
       span.replaceWith(document.createTextNode(`${lead}${restore}${tail}`));
       editingNodeRef.current = null;
@@ -317,6 +333,7 @@ export function CopyLayer({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             original,
+            // Empty string clears the rendered text; null restores the original.
             replacement: next === original ? null : next,
           }),
         });
@@ -326,7 +343,9 @@ export function CopyLayer({
             ? "Saved, but this machine cannot keep it past the next deploy"
             : next === original
               ? "Restored the original wording"
-              : "Saved",
+              : next === ""
+                ? "Cleared"
+                : "Saved",
         );
         router.refresh();
       } catch {
@@ -448,9 +467,9 @@ export function CopyLayer({
             Click any sentence to rewrite it.{" "}
             <span className="font-medium text-ink-800">Enter</span> saves,{" "}
             <span className="font-medium text-ink-800">Esc</span> cancels.
-            Clearing the box restores the written wording. Links, buttons and
-            computed figures stay as they are, so you can keep moving around
-            the site.
+            Clear the box and save to remove wording; live figures can be
+            cleared the same way, but not rewritten into a frozen number. Links
+            and buttons stay clickable so you can keep moving around the site.
             {!persistable ? (
               <span className="mt-1.5 block text-amber-700">
                 This machine cannot keep changes past the next deploy. Edit

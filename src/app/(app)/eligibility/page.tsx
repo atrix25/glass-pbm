@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   ProportionBar,
   SectionTitle,
   Stat,
@@ -58,18 +57,6 @@ export default async function EligibilityPage() {
       >
         Eligibility feed
       </SectionTitle>
-
-      <IncumbentNote>
-        Eligibility management is billed as its own competency: an
-        implementation fee in the tens of thousands to &ldquo;build the
-        interface,&rdquo; then an ongoing charge folded into administration, and
-        a change order any time the sponsor wants a field added. What is
-        actually happening is a text file with asterisks in it, parsed on a
-        schedule, validated against a plan table. The specification is public
-        and has not materially changed since 1991. The segments below are
-        rebuilt live from the columns they were parsed into — no stored copy,
-        nothing to drift — and the entire renderer is about two hundred lines.
-      </IncumbentNote>
 
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">

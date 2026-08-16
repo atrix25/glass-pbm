@@ -1,4 +1,4 @@
-import { Card, IncumbentNote, SectionTitle } from "@/components/ui";
+import { Card, SectionTitle } from "@/components/ui";
 import { PosTerminal } from "@/components/pos-terminal";
 import type { TraceSource } from "@/components/trace-viewer";
 import { getPosPickers } from "@/lib/queries/pos";
@@ -36,18 +36,6 @@ export default async function PosPage() {
           advises the pharmacist without changing what the claim pays.
         </p>
       </Card>
-
-      <IncumbentNote>
-        Concurrent drug utilisation review is sold as a &ldquo;clinical
-        program&rdquo; and priced accordingly: a per-member-per-month line item
-        on top of administration, typically $0.30 to $1.00, sometimes bundled
-        into a safety package quoted in the low dollars. Contract ETG0013 does
-        not price it separately, and neither does this. What it takes is a rule
-        table, a query for therapy still inside its days supply, and the
-        discipline to return the conflict in the same response as the price
-        rather than in a report next month. The rule table is the part worth
-        licensing; the rest is the transaction you are already running.
-      </IncumbentNote>
 
       <PosTerminal
         members={members}

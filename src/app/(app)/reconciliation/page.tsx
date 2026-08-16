@@ -2,7 +2,6 @@ import {
   Badge,
   Card,
   CardHeader,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -46,18 +45,6 @@ export default async function ReconciliationPage() {
       >
         Guarantee reconciliation
       </SectionTitle>
-
-      <IncumbentNote>
-        A traditional reconciliation arrives eleven months after the year it
-        describes, measures annually so a bad month disappears into a good year,
-        nets a category that missed against a category that beat, and is
-        computed by the party writing the cheque from data the sponsor cannot
-        see. Ask for the claim file behind a cell and you will be quoted for an
-        audit. This one is computed continuously from the same records that
-        priced the claims, each measure settles on its own, and the credit below
-        was calculated without anybody asking for it — including the one this
-        plan owes itself for four bad days in June.
-      </IncumbentNote>
 
       <Card>
         <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">

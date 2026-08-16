@@ -5,7 +5,6 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IncumbentNote,
   SectionTitle,
   Stat,
   Table,
@@ -45,18 +44,6 @@ export default async function ClinicalPage() {
       >
         Clinical safety
       </SectionTitle>
-
-      <IncumbentNote>
-        Patient safety is the strongest argument a PBM makes for its own
-        existence, and it is the argument that survives every conversation about
-        price. Contract ETG0013 prices it at nothing in particular: clinical
-        review sits inside the same $2.10 per member per month as everything
-        else. What follows is a rule table, a join against active therapy, and
-        the CDC&rsquo;s published conversion factors. The rule table is the only
-        part that is genuinely hard to build, and the honest position is that a
-        licensed interaction database is a real asset — see the note at the
-        bottom of this page.
-      </IncumbentNote>
 
       <Card>
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-4">

@@ -69,7 +69,9 @@ export async function saveCopyOverride(
 ): Promise<boolean> {
   const current = { ...(await getCopyOverrides()) };
 
-  if (replacement === null || replacement === original || replacement === "") {
+  // null restores the source wording. An empty string is an intentional clear
+  // and must stick, otherwise deleting copy silently puts the original back.
+  if (replacement === null || replacement === original) {
     delete current[original];
   } else {
     current[original] = replacement;
