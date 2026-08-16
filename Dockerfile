@@ -41,5 +41,10 @@ COPY --from=build /app/public ./public
 # Schema client is already traced into the standalone bundle. The book itself
 # is not copied: it is supplied by the glass_book volume at /data.
 
+# Correctness proof reads this Vitest artifact at runtime (see
+# getHarnessResults). The suite needs the full book, so we ship the last
+# committed run rather than regenerating inside the image.
+COPY tests/results.json ./tests/results.json
+
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

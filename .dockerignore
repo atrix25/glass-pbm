@@ -5,7 +5,6 @@ node_modules
 .DS_Store
 npm-debug.log*
 *.tsbuildinfo
-tests/results.json
 
 # 75 MB of NADAC source rows and the formulary PDF. These are inputs to the
 # ingest step, which has already run; its output lives on the Fly volume.
