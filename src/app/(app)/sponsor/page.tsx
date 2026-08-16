@@ -105,7 +105,7 @@ export default async function SponsorDashboard() {
             sub={`${formatPercent(totals.memberPaidCents / totals.totalBilledCents)} of total cost`}
           />
           <Stat
-            label="Spread retained by PBM"
+            label="Retained by PBM"
             value={formatCents(totals.spreadCents)}
             tone={totals.spreadCents === 0 ? "positive" : "negative"}
             sub="Billed to the plan minus paid to the pharmacy, summed over every claim"

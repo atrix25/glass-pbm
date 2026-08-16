@@ -423,7 +423,7 @@ export default async function SettlementPage() {
             sub="The PBM's entire revenue on this book"
           />
           <Stat
-            label="Spread retained"
+            label="Retained"
             value={formatCents(0)}
             tone="positive"
             sub="Pass-through, checked as an invariant"
