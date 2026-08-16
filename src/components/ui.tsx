@@ -131,7 +131,7 @@ export function Badge({
 }
 
 /**
- * Marks any figure that depends on the simulated AWP benchmark.
+ * Marks any figure that depends on the AWP benchmark.
  *
  * This is deliberately visually loud. A plan sponsor should be able to see, at
  * a glance, exactly which numbers rest on a benchmark nobody outside Medi-Span
@@ -151,7 +151,7 @@ export function SimulatedBadge({ className }: { className?: string }) {
         aria-hidden
         className="inline-block h-1.5 w-1.5 rounded-full bg-amber-600"
       />
-      simulated AWP
+      AWP
     </Link>
   );
 }

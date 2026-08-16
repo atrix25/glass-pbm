@@ -144,6 +144,7 @@ export default async function ClaimsPage({
 }
 
 function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
+  const reversal = c.transactionCode === "B2";
   const rejected = c.responseStatus === "R";
   const rejectCode = (() => {
     try {
@@ -163,6 +164,7 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
           </span>
           <span className="block whitespace-nowrap text-[11.5px] text-ink-500">
             {formatDate(c.dateOfService)} · {c.channel}
+            {reversal ? " · reversal" : ""}
           </span>
         </Link>
       </Td>
@@ -189,7 +191,9 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
         </span>
       </Td>
       <Td align="center">
-        {rejected ? (
+        {reversal ? (
+          <Badge tone="neutral">B2</Badge>
+        ) : rejected ? (
           <Badge tone="negative" className="tnum">
             {rejectCode ?? "R"}
           </Badge>
@@ -212,7 +216,11 @@ function ClaimRow({ claim: c }: { claim: ClaimListRow }) {
         )}
       </Td>
       <Td>
-        {rejected ? (
+        {reversal ? (
+          <span className="block max-w-[15rem] truncate text-[12px] text-ink-600">
+            {c.rejectMessage}
+          </span>
+        ) : rejected ? (
           <span className="block max-w-[15rem] truncate text-[12px] text-rose-700">
             {c.rejectMessage}
           </span>

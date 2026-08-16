@@ -878,7 +878,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
     },
     fired: true,
     detail:
-      "AWP is proprietary to Medi-Span and is not published. Exhibit C names Medi-Span as the sole pricing source for this contract, so the plan sponsor cannot independently verify this number. The figure shown is derived from NADAC and is marked simulated wherever it appears.",
+      "AWP is proprietary to Medi-Span and is not published. Exhibit C names Medi-Span as the sole pricing source for this contract, so the plan sponsor cannot independently verify this number. The figure shown is derived from NADAC and is marked AWP wherever it appears.",
     sourceDocumentId: SRC_AWP,
     citation:
       "Exhibit C footnote: Medi-Span is Navitus' only source of drug pricing data and is utilized for all claims adjudication.",

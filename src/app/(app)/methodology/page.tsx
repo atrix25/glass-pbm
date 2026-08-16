@@ -143,7 +143,7 @@ export default async function MethodologyPage() {
       <div id="awp" className="scroll-mt-24" />
       <Card className="border-amber-600/30">
         <CardHeader
-          title="How AWP is simulated"
+          title="How AWP is modeled"
           description="Average Wholesale Price is the benchmark every discount in this contract is quoted against, and it is not published. Medi-Span and First Databank license it. Exhibit C states that Medi-Span is Navitus' only source of drug pricing data and is used for all claims adjudication, which means the plan sponsor is contractually bound to a number it cannot audit."
         />
         <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed text-ink-700">
@@ -191,7 +191,7 @@ export default async function MethodologyPage() {
             <AssumptionRow
               label="Per-product spread"
               value={`+/- ${(DEFAULT_ASSUMPTIONS.variance * 100).toFixed(0)}%`}
-              why="Hashed from the NDC, so a drug always receives the same simulated AWP and a claim replays identically."
+              why="Hashed from the NDC, so a drug always receives the same AWP and a claim replays identically."
             />
           </tbody>
         </Table>

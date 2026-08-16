@@ -144,9 +144,9 @@ export default async function LoginPage() {
         </div>
 
         <footer className="mt-12 border-t border-white/10 pt-6 text-[12px] leading-relaxed text-white/35 sm:mt-16">
-          No real member data. Prices for the AWP benchmark are simulated
-          because AWP is proprietary and unpublished; every figure that depends
-          on it is badged as such throughout the application.
+          No real member data. AWP is proprietary and unpublished, so
+          every figure that depends on it is badged as such throughout the
+          application.
         </footer>
       </div>
     </main>

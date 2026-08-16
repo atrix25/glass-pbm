@@ -135,7 +135,7 @@ Then: “Members and fills are synthetic. The adjudication is not.”
 **Do:** Pricing guarantees, rebate waterfall, traditional-spread comparison, AWP sensitivity if visible.
 
 **Say:**  
-“This is where finance lives. Guarantees that can miss. Rebates as contractual floor—not pretend manufacturer invoices. And a counterfactual: what a spread PBM economics shape looks like next to pass-through. AWP is proprietary, so where we simulate it, we label it and run sensitivity—we don’t hide the opacity.”
+“This is where finance lives. Guarantees that can miss. Rebates as contractual floor—not pretend manufacturer invoices. And a counterfactual: what a spread PBM economics shape looks like next to pass-through. AWP is proprietary, so where we use it we label it and run sensitivity—we don’t hide the opacity.”
 
 **Impressive beat:** Contract reconciliation as a product surface, not a quarterly PDF.
 

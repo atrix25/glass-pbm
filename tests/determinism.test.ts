@@ -128,7 +128,7 @@ describe("the engine is a pure function of its inputs", () => {
         daysSupply: 30,
       });
 
-    // Same NDC across builds, so the simulated AWP must land on the same value.
+    // Same NDC across builds, so the AWP must land on the same value.
     const fixed = drug({ nadacPerUnit: 3.25, isBrandLabel: true });
     const runs = Array.from({ length: 10 }, () =>
       adjudicate(

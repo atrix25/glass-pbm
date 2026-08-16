@@ -162,7 +162,7 @@ export default async function ClaimProofPage({
           {!rejected && armInputs.length > 0 ? (
             <Card>
               <CardHeader
-                title="The lesser-of comparison"
+                title="Pricing comparisons"
                 description="Each arm priced the same fill. The contract pays the lowest."
               />
               <Table>

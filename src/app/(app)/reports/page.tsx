@@ -145,8 +145,8 @@ export default async function ReportsPage() {
             contract never applied to it.
           </p>
           <p>
-            Every figure in the AWP and variance columns inherits the simulated
-            AWP benchmark. <SimulatedBadge /> The next panel shows how far these
+            Every figure in the AWP and variance columns inherits the AWP
+            benchmark. <SimulatedBadge /> The next panel shows how far these
             conclusions move when that assumption is wrong.
           </p>
         </div>

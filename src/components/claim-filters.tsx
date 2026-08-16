@@ -6,9 +6,10 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS = [
-  { value: "all", label: "All claims" },
+  { value: "all", label: "All fills" },
   { value: "P", label: "Paid" },
   { value: "R", label: "Rejected" },
+  { value: "B2", label: "Reversals" },
 ];
 
 const CHANNELS = ["all", "Retail", "Retail90", "Mail", "Specialty"];

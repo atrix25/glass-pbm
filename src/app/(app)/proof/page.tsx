@@ -295,7 +295,7 @@ export default async function ProofPage() {
             </h2>
             <ul className="mt-2 space-y-2 text-[13px] leading-relaxed text-ink-700">
               <li>
-                <span className="font-medium">AWP is simulated.</span> It is
+                <span className="font-medium">AWP.</span> It is
                 proprietary to Medi-Span and cannot be published. Every figure
                 priced off it is derived from NADAC through a stated multiplier,
                 and the sensitivity analysis on the{" "}

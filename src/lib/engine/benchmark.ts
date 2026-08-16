@@ -54,7 +54,7 @@ export const DEFAULT_ASSUMPTIONS: BenchmarkAssumptions = {
 
 /**
  * Deterministic per-NDC jitter, so the same drug always receives the same
- * simulated AWP and a claim replays identically.
+ * AWP and a claim replays identically.
  */
 function ndcJitter(ndc: string): number {
   let hash = 2166136261;

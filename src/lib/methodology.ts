@@ -41,7 +41,7 @@ export const PIPELINE_STAGES: PipelineStageDoc[] = [
     label: "Pricing",
     decides:
       "Every applicable arm of the lesser-of calculation, which one won, and what the pharmacy is owed including the dispensing fee. For the comparison against a traditional contract, it also prices what a spread PBM would have billed the plan for the same fill.",
-    source: "Exhibit C, NADAC, simulated AWP",
+    source: "Exhibit C, NADAC, AWP",
   },
   {
     id: "costshare",

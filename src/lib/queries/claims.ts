@@ -20,6 +20,7 @@ export const CLAIM_LIST_SELECT = {
   id: true,
   claimNumber: true,
   dateOfService: true,
+  transactionCode: true,
   responseStatus: true,
   rejectCodes: true,
   rejectMessage: true,
@@ -71,7 +72,18 @@ function buildWhere(
   };
   const and: Prisma.ClaimWhereInput[] = [];
 
-  if (f.status && f.status !== "all") where.responseStatus = f.status;
+  /*
+   * Reversals (B2) keep the original date of service but were numbered after
+   * every fill in the book, so sorting the ledger by claim number alone puts
+   * a wall of negative rows at the top of every day. They have their own page
+   * at /reversals; the ledger defaults to fills unless the filter asks for them.
+   */
+  if (f.status === "B2") {
+    where.transactionCode = "B2";
+  } else {
+    where.transactionCode = "B1";
+    if (f.status && f.status !== "all") where.responseStatus = f.status;
+  }
   if (f.channel && f.channel !== "all") where.channel = f.channel;
   if (f.level && f.level !== "all") where.formularyLevel = f.level;
   if (f.drug) where.drugId = f.drug;
@@ -107,7 +119,13 @@ export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
   const rows = await prisma.claim.findMany({
     where,
     select: CLAIM_LIST_SELECT,
-    orderBy: [{ dateOfService: "desc" }, { claimNumber: "desc" }],
+    // Fills before reversals on the same day, so a demo never opens on a
+    // wall of B2 rows that only sort first because of how they were numbered.
+    orderBy: [
+      { dateOfService: "desc" },
+      { transactionCode: "asc" },
+      { claimNumber: "desc" },
+    ],
     skip: (page - 1) * perPage,
     take: perPage,
   });
@@ -117,11 +135,12 @@ export async function listClaims(f: ClaimFilters, clock: SimulationClock) {
    * counting a million and a half rows to display them would make the default
    * page load the slowest one in the application. That exact sum is already in
    * the daily rollup. Narrowed ledgers fall back to counting, over a set the
-   * filter has already made small.
+   * filter has already made small. The B2-only view is always counted.
    */
-  const totals = isUnfiltered(f)
-    ? await totalsFromRollup(clock)
-    : await totalsFromClaims(where);
+  const totals =
+    isUnfiltered(f) && f.status !== "B2"
+      ? await totalsFromRollup(clock)
+      : await totalsFromClaims(where);
 
   return {
     rows,
