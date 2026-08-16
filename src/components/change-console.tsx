@@ -244,9 +244,14 @@ export function ChangeConsole({
   };
 
   const applyDraft = (patch: Partial<Draft>, presetId: string | null) => {
-    setDraft({ ...initial, ...patch });
+    const next = { ...initial, ...patch };
+    setDraft(next);
     clearResults();
     setAppliedPreset(presetId);
+    // Same path as recommendations: picking a scenario answers the cost
+    // question immediately rather than parking the change in the levers and
+    // waiting for a second click.
+    void project(next);
   };
 
   const project = async (d: Draft) => {
@@ -400,7 +405,7 @@ export function ChangeConsole({
       <Card>
         <CardHeader
           title="Changes a plan sponsor actually asks for"
-          description="Pick one, or set the levers by hand below. Nothing is saved until you commit."
+          description="Pick one to load it into the levers and project the cost, or set the levers by hand below. Nothing is saved until you commit."
         />
         <div className="grid gap-px bg-ink-200/60 sm:grid-cols-2 lg:grid-cols-3">
           {PRESETS.map((p) => (

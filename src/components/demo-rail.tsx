@@ -83,8 +83,8 @@ export function DemoRail() {
     <div className="border-b border-ink-200/70 bg-white/80 backdrop-blur">
       <div className="flex items-center gap-2 px-4 py-1.5 sm:gap-4 sm:px-6 sm:py-2 lg:px-8">
         <Link
-          href="/walkthrough"
-          title="The full walkthrough: every page, what it is, and what to check"
+          href="/pitch"
+          title="Interactive plan sponsor pitch with recorded experiences"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-500 transition hover:bg-ink-100 hover:text-ink-800 sm:py-1"
         >
           <Presentation className="h-3.5 w-3.5 text-glass-600" />

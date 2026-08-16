@@ -12,6 +12,7 @@ const GROUPS: NavGroup[] = [
   {
     title: "Start here",
     items: [
+      { href: "/pitch", label: "Plan sponsor pitch", icon: "pitch" },
       { href: "/walkthrough", label: "Guided walkthrough", icon: "walkthrough" },
     ],
   },
