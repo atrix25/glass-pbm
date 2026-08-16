@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { adjudicate } from "@/lib/engine/adjudicate";
+import { simulateFill } from "@/lib/engine/pos";
 import { loadWorld } from "@/lib/engine/replay";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
@@ -446,8 +446,7 @@ export async function estimateCost(
       summary: "Not enough information on file to price this fill.",
     };
   }
-  const plan = world.plans.get(elig.benefitPlanId);
-  if (!plan) {
+  if (!world.plans.get(elig.benefitPlanId)) {
     return { data: { found: false }, citations: [], summary: "No plan on file." };
   }
 
@@ -457,7 +456,14 @@ export async function estimateCost(
       : args.channel === "Specialty" || entry?.level === "4"
         ? "ph-lumicera"
         : "ph-walgreens-mad";
-  const pharmacy = world.pharmacies.get(pharmacyId)!;
+  const pharmacy = world.pharmacies.get(pharmacyId);
+  if (!pharmacy) {
+    return {
+      data: { found: false },
+      citations: [],
+      summary: "No pharmacy on file for this channel.",
+    };
+  }
 
   const daysSupply = args.daysSupply ?? 30;
   // Quantity is not days supply. An injectable dispensed as 3 mL for a month
@@ -468,39 +474,24 @@ export async function estimateCost(
     args.quantity ??
     (await typicalQuantity(drug.id, daysSupply)) ??
     daysSupply;
-  const nadacTotalCents = Math.round(engineDrug.nadacPerUnit * quantity * 100);
 
-  const out = adjudicate({
-    request: {
-      dateOfService: new Date(),
-      cardholderId: "",
-      personCode: "01",
-      serviceProviderId: pharmacy.npi,
-      productServiceId: engineDrug.ndc11,
-      rxNumber: "QUOTE",
-      fillNumber: 0,
-      quantityDispensed: quantity,
-      daysSupply,
-      dawCode: "0",
-      usualAndCustomaryCents: Math.round(nadacTotalCents * 1.9),
-      ingredientCostSubmittedCents: Math.round(nadacTotalCents * 1.8),
-      compoundCode: "1",
-    },
-    member: { id: args.memberId, diagnosisCodes: member.diagnosisCodes, weightKg: member.weightKg },
-    eligibility: elig,
-    plan,
-    drug: engineDrug,
-    formularyEntry: entry,
-    pharmacy,
-    contract: world.contract,
-    priorFills: [],
-    accumulators: {
-      rxOopAccumulatedCents: 0,
-      federalOopAccumulatedCents: 0,
-      deductibleAccumulatedCents: 0,
-    },
-    approvedPAs: world.approvedPAs.get(args.memberId) ?? [],
+  /*
+   * Price through the same POS path the pharmacy counter uses. Quoting against
+   * empty history invents a copay the counter will not charge once the member
+   * has met an out-of-pocket limit — the demo member who hits the $600 Rx cap
+   * partway through the year is the concrete case.
+   */
+  const dateOfService = new Date().toISOString().slice(0, 10);
+  const sim = await simulateFill({
+    memberId: args.memberId,
+    drugId: drug.id,
+    pharmacyId,
+    dateOfService,
+    quantityDispensed: quantity,
+    daysSupply,
+    dawCode: "0",
   });
+  const out = sim.outcome;
 
   const citations = Array.from(
     new Map(
@@ -536,7 +527,8 @@ export async function estimateCost(
       memberPays: formatCents(out.patientPayCents),
       planPays: formatCents(out.planPaidCents),
       countsTowardPrescriptionLimit: ["1", "2"].includes(out.formularyLevel ?? ""),
-      note: "Quoted by running the same adjudication engine that processes real claims, against today's date and a zero accumulator balance.",
+      rxOopAccumulatedCents: sim.context.rxOopAccumulatedCents,
+      note: "Quoted by running the same adjudication engine that processes real claims, against today's date and this member's accumulated out-of-pocket.",
     },
     citations,
     summary: `A ${daysSupply}-day fill of ${tidyName(drug.name)} at ${pharmacy.name} would cost the member ${formatCents(out.patientPayCents)} of a ${formatCents(out.totalBilledCents)} total.`,
