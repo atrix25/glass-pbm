@@ -118,7 +118,9 @@ const CASES: ExceptionCase[] = [
   },
   {
     // The appeal of the step-8 Skyrizi refusal, decided by somebody else and
-    // overturned on documentation that was missing the first time.
+    // overturned on documentation that was missing the first time. Kept inside
+    // the expedited day so the case demonstrates independent review rather than
+    // a turnaround breach; the June incident already owns the late ones.
     paNumber: "AP2026000204",
     memberIndex: 2,
     kind: "Appeal",
@@ -129,7 +131,7 @@ const CASES: ExceptionCase[] = [
     drugPicker: { fromAppealOf: "PA2026000102" },
     rationale:
       "Appeals the refusal recorded on PA2026000102. The prescriber has since documented that phototherapy is not accessible to the member and that methotrexate is contraindicated by liver disease.",
-    decidedAfterHours: 46,
+    decidedAfterHours: 18,
     outcome: "Approved",
     approvedDays: 365,
     decidedBy: APPEALS_REVIEWER,
@@ -178,7 +180,11 @@ export async function seedExceptions(
       });
       if (!original) continue;
       drugId = original.drugId;
-      treeId = original.treeId;
+      // Appeals and grievances contest a prior determination; they do not walk
+      // the criteria tree again, so they must not inherit a treeId that would
+      // imply a deciding step they never took.
+      treeId =
+        c.kind === "Appeal" || c.kind === "Grievance" ? null : original.treeId;
       againstPaNumber = original.paNumber;
       originalReviewer = original.decidedBy;
     } else {
@@ -223,50 +229,55 @@ export async function seedExceptions(
         ? null
         : new Date(sla.startedAt.getTime() + c.decidedAfterHours * 3_600_000);
 
+    const row = {
+      memberId: member.id,
+      drugId,
+      treeId,
+      decidingStepNumber: null as number | null,
+      requestType: c.kind,
+      urgency: c.urgency,
+      prescriberName: c.prescriberName,
+      status: statusFor(c, decidedAt),
+      determination: c.outcome,
+      denyReason: c.denyReason ?? null,
+      approvedDays: c.outcome === "Approved" ? (c.approvedDays ?? 365) : null,
+      approvedEffectiveDate: c.outcome === "Approved" ? decidedAt : null,
+      approvedTerminationDate:
+        c.outcome === "Approved" && decidedAt
+          ? new Date(
+              decidedAt.getTime() + (c.approvedDays ?? 365) * 86_400_000,
+            )
+          : null,
+      receivedAt,
+      prescriberStatementAt: statementAt,
+      // A grievance is a complaint about conduct, so it has no determination
+      // deadline; an exception with no supporting statement has not started
+      // one yet. Both are null for different reasons and neither is late.
+      decisionDueAt:
+        c.kind === "Grievance" || sla.awaitingSupportingStatement
+          ? null
+          : sla.dueAt,
+      decidedAt,
+      decidedBy: c.decidedBy ?? null,
+      escalated: true,
+      reviewerNote: [
+        againstPaNumber ? `Contests ${againstPaNumber}.` : null,
+        c.rationale,
+        c.note,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    };
+
     await prisma.priorAuthorization.upsert({
       where: { paNumber: c.paNumber },
-      update: {},
+      update: row,
       create: {
         paNumber: c.paNumber,
-        memberId: member.id,
-        drugId,
-        treeId,
-        requestType: c.kind,
-        urgency: c.urgency,
-        prescriberName: c.prescriberName,
         prescriberNpi: null,
         requestedQuantity: 30,
         requestedDaysSupply: 30,
-        status: statusFor(c, decidedAt),
-        determination: c.outcome,
-        denyReason: c.denyReason ?? null,
-        approvedDays: c.outcome === "Approved" ? (c.approvedDays ?? 365) : null,
-        approvedEffectiveDate: c.outcome === "Approved" ? decidedAt : null,
-        approvedTerminationDate:
-          c.outcome === "Approved" && decidedAt
-            ? new Date(
-                decidedAt.getTime() + (c.approvedDays ?? 365) * 86_400_000,
-              )
-            : null,
-        receivedAt,
-        prescriberStatementAt: statementAt,
-        // A grievance is a complaint about conduct, so it has no determination
-        // deadline; an exception with no supporting statement has not started
-        // one yet. Both are null for different reasons and neither is late.
-        decisionDueAt:
-          c.kind === "Grievance" || sla.awaitingSupportingStatement
-            ? null
-            : sla.dueAt,
-        decidedAt,
-        decidedBy: c.decidedBy ?? null,
-        escalated: true,
-        reviewerNote: [
-          againstPaNumber ? `Contests ${againstPaNumber}.` : null,
-          c.rationale,
-          c.note,
-        ]
-          .filter(Boolean)
-          .join(" "),
+        ...row,
       },
     });
     written++;

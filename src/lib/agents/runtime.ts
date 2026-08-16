@@ -91,7 +91,6 @@ export class Run {
     this.inputTokens += thought.usage.inputTokens;
     this.outputTokens += thought.usage.outputTokens;
     this.costMillicents += thought.usage.costMillicents;
-    this.brains.add(thought.brain);
     if (thought.model) this.modelName = thought.model;
     this.push({
       kind: "Think",
@@ -205,6 +204,7 @@ export class Run {
   }
 
   private push(s: Omit<StepRecord, "ordinal">) {
+    this.brains.add(s.brain);
     this.steps.push({ ...s, ordinal: this.steps.length + 1 });
   }
 

@@ -232,8 +232,11 @@ describe("a projection is the same measurement on fewer members", () => {
   }, 120_000);
 
   it("agrees with the full run on how far a change moves the score", async () => {
+    // CLARINEX-D barely moves the book; diclofenac is the heaviest PA reject
+    // in the recommendations and moves NPS by more than a point, so the
+    // sample-vs-full agreement below is actually testing something.
     const change = {
-      formulary: [{ nameContains: "CLARINEX-D", requiresPA: false }],
+      formulary: [{ nameContains: "diclofenac", requiresPA: false }],
     };
 
     const [sampled, full] = [
