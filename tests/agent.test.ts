@@ -114,6 +114,26 @@ describe("the numbers in the answer match the database", () => {
     if (data.memberPays) expect(r.text).toContain(data.memberPays);
   });
 
+  /*
+   * Margaret's story is that she hits the $600 Rx OOP limit partway through
+   * the year. A quote that ignores her accumulator will invent a Level 1
+   * copay the pharmacy counter would never charge. The number has to come
+   * from POS-style history rebuild, not a fresh zero balance.
+   */
+  it("quotes $0 for Margaret's Level 1 fill after she has met the Rx OOP limit", async () => {
+    const r = await ask(MARGARET.id, "How much would a fill of lisinopril cost me?");
+    const est = r.runs.find((x) => x.tool === "estimateCost");
+    expect(est).toBeDefined();
+    const data = (est!.result as ToolResult).data as {
+      memberPays?: string;
+      rxOopAccumulatedCents?: number;
+      benefitLevel?: string;
+    };
+    expect(data.rxOopAccumulatedCents ?? 0).toBeGreaterThanOrEqual(60_000);
+    expect(data.benefitLevel).toBe("1");
+    expect(data.memberPays).toBe("$0.00");
+  });
+
   it("reports the same prior authorization outcome the record holds", async () => {
     const r = await ask(JENNIFER.id, "Why was my prior authorization denied?");
     const pa = await prisma.priorAuthorization.findFirst({
