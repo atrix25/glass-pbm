@@ -16,6 +16,7 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { getClock } from "@/lib/session";
 
 export interface Citation {
   sourceId: string;
@@ -144,8 +145,13 @@ export const getAccumulatorsSchema = z.object({
 export async function getAccumulators(
   args: z.infer<typeof getAccumulatorsSchema>,
 ): Promise<ToolResult> {
+  const clock = await getClock();
   const claims = await prisma.claim.findMany({
-    where: { memberId: args.memberId, responseStatus: "P" },
+    where: {
+      memberId: args.memberId,
+      responseStatus: "P",
+      dateOfService: { lte: clock.today },
+    },
     select: { patientPayCents: true, formularyLevel: true },
   });
   const span = await prisma.eligibilitySpan.findFirst({
@@ -201,9 +207,11 @@ export const getClaimsSchema = z.object({
 export async function getClaims(
   args: z.infer<typeof getClaimsSchema>,
 ): Promise<ToolResult> {
+  const clock = await getClock();
   const claims = await prisma.claim.findMany({
     where: {
       memberId: args.memberId,
+      dateOfService: { lte: clock.today },
       ...(args.onlyRejected ? { responseStatus: "R" } : {}),
       ...(args.drugName
         ? { drug: { name: { contains: args.drugName } } }
