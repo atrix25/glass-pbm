@@ -171,14 +171,51 @@ const controlledList = CONTROLLED_CLASSES.map(
   (c) => `'${c.replace(/'/g, "''")}'`,
 ).join(",");
 
+export interface DetectorRunOptions {
+  /**
+   * Only claims on or before this instant count. The simulation clock cuts the
+   * book the same way every other page does: a fill dated after "now" has not
+   * happened yet, so it cannot raise a signal or inflate peer medians.
+   */
+  asOf?: Date;
+}
+
+/**
+ * SQL fragment restricting paid B1 claims to the as-of instant.
+ *
+ * Detectors run over raw SQL, so the cut has to live in the query rather than
+ * in a later filter — peer medians and observed rates are computed from the
+ * same row set, and filtering signals after the fact would leave them scored
+ * against a future they have not reached.
+ */
+export function claimAsOfSql(asOf: Date | undefined, alias = "c"): string {
+  if (!asOf) return "1=1";
+  return `${alias}.dateOfService <= ${asOf.getTime()}`;
+}
+
+/**
+ * Prefer the seeded IntegritySignal rows when every stored window has already
+ * closed under the clock. Otherwise the overview must re-score: those rows
+ * were written against the full plan year, and reading them early would report
+ * exposure and severity that the claimsScreened denominator does not include.
+ */
+export function storedIntegritySignalsAreCurrent(
+  clockNow: Date,
+  maxWindowEnd: Date | null,
+): boolean {
+  if (!maxWindowEnd) return false;
+  return maxWindowEnd.getTime() <= clockNow.getTime();
+}
+
 export async function runAllDetectors(
   prisma: PrismaClient,
+  opts: DetectorRunOptions = {},
 ): Promise<DetectedSignal[]> {
   const [a, b, c, d] = await Promise.all([
-    detectOpioidOverutilisation(prisma),
-    detectControlledShopping(prisma),
-    detectPrescriberConcentration(prisma),
-    detectPharmacyMix(prisma),
+    detectOpioidOverutilisation(prisma, opts.asOf),
+    detectControlledShopping(prisma, opts.asOf),
+    detectPrescriberConcentration(prisma, opts.asOf),
+    detectPharmacyMix(prisma, opts.asOf),
   ]);
   return [...a, ...b, ...c, ...d];
 }
@@ -193,7 +230,9 @@ export async function runAllDetectors(
  */
 async function detectOpioidOverutilisation(
   prisma: PrismaClient,
+  asOf?: Date,
 ): Promise<DetectedSignal[]> {
+  const asOfSql = claimAsOfSql(asOf);
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       memberId: string;
@@ -218,6 +257,7 @@ async function detectOpioidOverutilisation(
       FROM Claim c JOIN OpioidProduct o ON o.drugId = c.drugId
       WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
         AND o.convertible = 1 AND c.daysSupply > 0
+        AND ${asOfSql}
     ),
     concurrent AS (
       SELECT s.memberId, s.id, SUM(x.dmme) AS totalMme
@@ -251,7 +291,9 @@ async function detectOpioidOverutilisation(
                   ELSE c.quantityDispensed * o.strengthMg * o.mmeFactor / c.daysSupply
              END AS dmme
       FROM Claim c JOIN OpioidProduct o ON o.drugId = c.drugId
-      WHERE c.responseStatus = 'P' AND o.convertible = 1 AND c.daysSupply > 0
+      WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+        AND o.convertible = 1 AND c.daysSupply > 0
+        AND ${asOfSql}
     )
     SELECT CAST(MAX(dmme) AS REAL) AS v FROM op GROUP BY memberId
   `);
@@ -299,7 +341,9 @@ async function detectOpioidOverutilisation(
 
 async function detectControlledShopping(
   prisma: PrismaClient,
+  asOf?: Date,
 ): Promise<DetectedSignal[]> {
+  const asOfSql = claimAsOfSql(asOf);
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       memberId: string;
@@ -328,6 +372,7 @@ async function detectControlledShopping(
     JOIN Member m ON m.id = c.memberId
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
       AND d.therapeuticClass IN (${controlledList})
+      AND ${asOfSql}
     GROUP BY c.memberId
     HAVING fills >= 6
   `);
@@ -402,7 +447,9 @@ async function detectControlledShopping(
 
 async function detectPrescriberConcentration(
   prisma: PrismaClient,
+  asOf?: Date,
 ): Promise<DetectedSignal[]> {
+  const asOfSql = claimAsOfSql(asOf);
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       npi: string;
@@ -431,6 +478,7 @@ async function detectPrescriberConcentration(
     JOIN Drug d ON d.id = c.drugId
     JOIN Prescriber p ON p.npi = c.prescriberNpi
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+      AND ${asOfSql}
     GROUP BY c.prescriberNpi
     HAVING total >= 200
   `);
@@ -497,7 +545,9 @@ async function detectPrescriberConcentration(
 
 async function detectPharmacyMix(
   prisma: PrismaClient,
+  asOf?: Date,
 ): Promise<DetectedSignal[]> {
+  const asOfSql = claimAsOfSql(asOf);
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       pharmacyId: string;
@@ -523,6 +573,7 @@ async function detectPharmacyMix(
     JOIN Drug d ON d.id = c.drugId
     JOIN Pharmacy ph ON ph.id = c.pharmacyId
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+      AND ${asOfSql}
     GROUP BY c.pharmacyId
     HAVING total >= 1000
   `);
