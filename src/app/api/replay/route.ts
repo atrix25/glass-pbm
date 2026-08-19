@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
+import { readJson, route } from "@/lib/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -17,8 +18,8 @@ interface ReplayBody {
   sampleRate?: number;
 }
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as ReplayBody | ConfigOverride;
+export const POST = route("POST /api/replay", async (request: Request) => {
+  const body = await readJson<ReplayBody | ConfigOverride>(request);
 
   // Older callers posted the override at the top level. Accepting both keeps a
   // saved request or a copied fetch working.
@@ -39,4 +40,4 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(result);
-}
+});

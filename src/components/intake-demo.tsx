@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Play } from "lucide-react";
 import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
+import { describeFailure, postJson } from "@/lib/post-json";
 import { cn } from "@/lib/utils";
 
 export interface IntakeOption {
@@ -131,15 +132,9 @@ export function IntakeDemo({ options }: { options: IntakeOption[] }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/agents/intake", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paId }),
-      });
-      if (!res.ok) throw new Error("The agent could not read that request.");
-      setData((await res.json()) as IntakeResponse);
+      setData(await postJson<IntakeResponse>("/api/agents/intake", { paId }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(describeFailure(e, "The agent could not read that request."));
     } finally {
       setBusy(false);
     }

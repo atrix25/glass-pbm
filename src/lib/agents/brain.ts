@@ -114,9 +114,18 @@ export async function judge<T>(opts: {
       },
       elapsedMs: Date.now() - started,
     };
-  } catch {
+  } catch (error) {
     // A model that is unreachable or returns something off-schema does not get
     // to stop the work. The scripted planner answers and the step says so.
+    //
+    // Logged, though: with a key configured, every one of these is a run that
+    // was meant to be a model run and silently was not, and "brain:
+    // deterministic" on the step looks the same whether that was the design or
+    // an expired key.
+    console.error(
+      "[brain] model call failed, falling back to the planner",
+      error,
+    );
     const value = await opts.fallback();
     return {
       value,

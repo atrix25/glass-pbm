@@ -9,6 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { HttpError, readJson, route } from "@/lib/http";
 import { paDeadlines } from "@/lib/pa/engine";
 import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
@@ -20,14 +21,11 @@ interface Body {
   note?: string;
 }
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as Body;
+export const POST = route("POST /api/pa/decide", async (request: Request) => {
+  const body = await readJson<Body>(request);
 
   if (!body?.paId || !body?.reviewer || !body?.action) {
-    return NextResponse.json(
-      { error: "paId, reviewer, and action are required." },
-      { status: 400 },
-    );
+    throw new HttpError(400, "paId, reviewer, and action are required.");
   }
 
   const verdict = mayRecord(body.reviewer, body.action);
@@ -50,9 +48,7 @@ export async function POST(request: Request) {
       prescriberStatementAt: true,
     },
   });
-  if (!pa) {
-    return NextResponse.json({ error: "No such request." }, { status: 404 });
-  }
+  if (!pa) throw new HttpError(404, "No such request.");
 
   const clock = await getClock();
   const now = clock.now;
@@ -69,12 +65,9 @@ export async function POST(request: Request) {
    * appeal is a new request with its own clock rather than an edit to this one.
    */
   if (pa.determination && pa.decidedAt && pa.decidedAt <= now) {
-    return NextResponse.json(
-      {
-        error:
-          "This request has already been determined. Contest it by filing an appeal, which is decided by a different reviewer and carries its own deadline.",
-      },
-      { status: 409 },
+    throw new HttpError(
+      409,
+      "This request has already been determined. Contest it by filing an appeal, which is decided by a different reviewer and carries its own deadline.",
     );
   }
 
@@ -126,4 +119,4 @@ export async function POST(request: Request) {
     regulatoryDueAt: deadlines.regulatory.dueAt,
     contractualDueAt: deadlines.contractual.dueAt,
   });
-}
+});

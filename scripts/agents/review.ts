@@ -168,7 +168,10 @@ function intakeOverride(
   try {
     payload = JSON.parse(p.payload);
     truth = JSON.parse(groundTruth);
-  } catch {
+  } catch (error) {
+    // A run whose payload cannot be read is skipped rather than reviewed, but
+    // silently skipping it makes the override rate quietly wrong.
+    console.warn(`  skipped a run with unreadable payload`, error);
     return null;
   }
 

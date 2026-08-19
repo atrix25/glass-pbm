@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
+import { HttpError, readJson, route } from "@/lib/http";
 import { getClock } from "@/lib/session";
 import { getCurrentReading, saveSnapshot } from "@/lib/queries/nps";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as { label?: string; note?: string };
+export const POST = route("POST /api/nps/snapshot", async (request: Request) => {
+  const body = await readJson<{ label?: string; note?: string }>(request);
   const label = body.label?.trim();
-  if (!label) {
-    return NextResponse.json({ error: "A label is required." }, { status: 400 });
-  }
+  if (!label) throw new HttpError(400, "A label is required.");
 
   const clock = await getClock();
   const reading = await getCurrentReading(clock);
@@ -26,4 +25,4 @@ export async function POST(request: Request) {
     npsCensus: reading.census.nps,
     npsSurveyed: reading.surveyed.nps,
   });
-}
+});

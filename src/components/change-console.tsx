@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
 import { formatCents, formatCentsWhole } from "@/lib/money";
+import { describeFailure, postJson } from "@/lib/post-json";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 import type { ConfigOverride } from "@/lib/engine/replay";
 
@@ -214,6 +215,7 @@ export function ChangeConsole({
   const [projecting, setProjecting] = useState(false);
   const [committed, setCommitted] = useState<string | null>(null);
   const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const changes = describeChanges(baseline, draft);
   const dirty = changes.length > 0;
@@ -230,6 +232,7 @@ export function ChangeConsole({
     setResult(null);
     setProjection(null);
     setCommitted(null);
+    setFailure(null);
   };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
@@ -256,16 +259,19 @@ export function ChangeConsole({
 
   const project = async (d: Draft) => {
     setProjecting(true);
+    setFailure(null);
     try {
-      const res = await fetch("/api/replay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      setProjection(
+        await postJson<ReplayResponse>("/api/replay", {
           override: buildOverride(baseline, d),
           sampleRate: PROJECTION_SAMPLE,
         }),
-      });
-      setProjection((await res.json()) as ReplayResponse);
+      );
+    } catch (e) {
+      // A replay that failed used to leave the panel empty, which is what an
+      // untouched console looks like. A number nobody got is worth saying.
+      setProjection(null);
+      setFailure(describeFailure(e, "The projection did not complete."));
     } finally {
       setProjecting(false);
     }
@@ -274,13 +280,16 @@ export function ChangeConsole({
   const run = async () => {
     setRunning(true);
     setCommitted(null);
+    setFailure(null);
     try {
-      const res = await fetch("/api/replay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ override: buildOverride(baseline, draft) }),
-      });
-      setResult((await res.json()) as ReplayResponse);
+      setResult(
+        await postJson<ReplayResponse>("/api/replay", {
+          override: buildOverride(baseline, draft),
+        }),
+      );
+    } catch (e) {
+      setResult(null);
+      setFailure(describeFailure(e, "The replay did not complete."));
     } finally {
       setRunning(false);
     }
@@ -316,32 +325,37 @@ export function ChangeConsole({
 
   const commit = async () => {
     if (!result) return;
-    const res = await fetch("/api/changes/commit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        label: changes[0] ?? "Benefit change",
-        description: changes.join(" "),
-        override: buildOverride(baseline, draft),
-        changeSummary: changes,
-        metrics: {
-          claimsEvaluated: result.claimsEvaluated,
-          claimsChanged: result.claimsChanged,
-          membersAffected: result.membersAffected,
-          planDeltaCents: result.planPaidAfterCents - result.planPaidBeforeCents,
-          memberDeltaCents:
-            result.memberPaidAfterCents - result.memberPaidBeforeCents,
-          newRejects: result.newRejects,
+    setFailure(null);
+    try {
+      const { contentHash } = await postJson<{ contentHash: string }>(
+        "/api/changes/commit",
+        {
+          label: changes[0] ?? "Benefit change",
+          description: changes.join(" "),
+          override: buildOverride(baseline, draft),
+          changeSummary: changes,
+          metrics: {
+            claimsEvaluated: result.claimsEvaluated,
+            claimsChanged: result.claimsChanged,
+            membersAffected: result.membersAffected,
+            planDeltaCents:
+              result.planPaidAfterCents - result.planPaidBeforeCents,
+            memberDeltaCents:
+              result.memberPaidAfterCents - result.memberPaidBeforeCents,
+            newRejects: result.newRejects,
+          },
+          diffs: result.diffs.slice(0, 100),
+          // The member-experience reading the decision was taken against, so the
+          // history on /experience records what this change did rather than only
+          // that it happened.
+          nps: result.nps?.after ?? null,
         },
-        diffs: result.diffs.slice(0, 100),
-        // The member-experience reading the decision was taken against, so the
-        // history on /experience records what this change did rather than only
-        // that it happened.
-        nps: result.nps?.after ?? null,
-      }),
-    });
-    const json = (await res.json()) as { contentHash: string };
-    setCommitted(json.contentHash);
+      );
+      setCommitted(contentHash);
+    } catch (e) {
+      setCommitted(null);
+      setFailure(describeFailure(e, "The change was not recorded."));
+    }
   };
 
   return (
@@ -652,6 +666,15 @@ export function ChangeConsole({
               <div className="flex items-center justify-center gap-3 px-6 py-16 text-[13px] text-ink-600">
                 <Loader2 className="h-4 w-4 animate-spin text-glass-600" />
                 Re-adjudicating the full plan year…
+              </div>
+            </Card>
+          ) : null}
+
+          {failure ? (
+            <Card className="border-rose-600/25 bg-rose-50/50">
+              <div className="flex items-start gap-2.5 px-4 py-3.5 text-[13px] leading-relaxed text-rose-900">
+                <TriangleAlert className="mt-[2px] h-3.5 w-3.5 shrink-0 text-rose-600" />
+                <span>{failure}</span>
               </div>
             </Card>
           ) : null}

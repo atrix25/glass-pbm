@@ -15,6 +15,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { HttpError, readJson, route } from "@/lib/http";
 import { paDeadlines } from "@/lib/pa/engine";
 import { exceptionKind, mayAppeal, type ExceptionKind } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
@@ -31,15 +32,10 @@ interface Body {
   rationale?: string;
 }
 
-export async function POST(request: Request) {
-  const body = (await request.json()) as Body;
+export const POST = route("POST /api/pa/exception", async (request: Request) => {
+  const body = await readJson<Body>(request);
   const info = exceptionKind(body?.kind);
-  if (!info) {
-    return NextResponse.json(
-      { error: "Unrecognised request kind." },
-      { status: 400 },
-    );
-  }
+  if (!info) throw new HttpError(400, "Unrecognised request kind.");
 
   let memberId = body.memberId;
   let drugId = body.drugId;
@@ -64,12 +60,7 @@ export async function POST(request: Request) {
         drugId: true,
       },
     });
-    if (!against) {
-      return NextResponse.json(
-        { error: "No such request to contest." },
-        { status: 404 },
-      );
-    }
+    if (!against) throw new HttpError(404, "No such request to contest.");
     const source = against as typeof against & {
       memberId: string;
       drugId: string;
@@ -79,23 +70,18 @@ export async function POST(request: Request) {
   }
 
   if (!memberId || !drugId) {
-    return NextResponse.json(
-      { error: "A member and a drug are required." },
-      { status: 400 },
-    );
+    throw new HttpError(400, "A member and a drug are required.");
   }
 
   if (body.kind === "Appeal") {
     if (!against) {
-      return NextResponse.json(
-        { error: "An appeal must name the determination it contests." },
-        { status: 400 },
+      throw new HttpError(
+        400,
+        "An appeal must name the determination it contests.",
       );
     }
     const verdict = mayAppeal(against);
-    if (!verdict.allowed) {
-      return NextResponse.json({ error: verdict.reason }, { status: 409 });
-    }
+    if (!verdict.allowed) throw new HttpError(409, verdict.reason);
   }
 
   // Filed against the simulated present, so a request filed on stage lands in
@@ -154,4 +140,4 @@ export async function POST(request: Request) {
       ? "Filed. The regulatory clock has not started, because an exception request needs the prescriber's supporting statement before the plan can decide it."
       : "Filed, and the clock is running.",
   });
-}
+});

@@ -11,6 +11,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { postJson } from "@/lib/post-json";
 import { cn } from "@/lib/utils";
 
 interface Citation {
@@ -60,6 +61,8 @@ interface Answer {
 interface Turn {
   question: string;
   answer: Answer | null;
+  /** Set when the question could not be answered, so the thread says so. */
+  error?: string;
 }
 
 const TOOL_LABEL: Record<string, string> = {
@@ -111,14 +114,20 @@ export function Assistant({
     setBusy(true);
     setTurns((t) => [...t, { question: q, answer: null }]);
     try {
-      const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, memberId }),
+      const answer = await postJson<Answer>("/api/assistant", {
+        question: q,
+        memberId,
       });
-      const answer = (await res.json()) as Answer;
       setTurns((t) =>
         t.map((turn, i) => (i === t.length - 1 ? { ...turn, answer } : turn)),
+      );
+    } catch (e) {
+      // Without this the turn kept its null answer and the thread showed the
+      // question with nothing under it, which reads as the agent ignoring it.
+      const error =
+        e instanceof Error ? e.message : "The question could not be answered.";
+      setTurns((t) =>
+        t.map((turn, i) => (i === t.length - 1 ? { ...turn, error } : turn)),
       );
     } finally {
       setBusy(false);
@@ -339,6 +348,10 @@ function Exchange({ turn }: { turn: Turn }) {
               ))}
             </div>
           ) : null}
+        </div>
+      ) : turn.error ? (
+        <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-rose-50 px-4 py-3 text-[13px] leading-relaxed text-rose-800 ring-1 ring-inset ring-rose-600/15">
+          {turn.error}
         </div>
       ) : null}
     </div>
