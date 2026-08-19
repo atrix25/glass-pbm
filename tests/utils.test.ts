@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHANNEL_LABEL,
+  cn,
   formatDate,
   formatDateTime,
   formatNumber,
@@ -24,6 +25,13 @@ describe("format utilities", () => {
     expect(formatNumber(1234.5, 2)).toBe("1,234.50");
     expect(formatPercent(0.1267)).toBe("12.7%");
     expect(formatPercent(0.1267, 2)).toBe("12.67%");
+  });
+
+  it("merges classes and lets later Tailwind utilities override conflicts", () => {
+    expect(cn("px-2", ["font-medium", false && "hidden"], "text-sm")).toBe(
+      "px-2 font-medium text-sm",
+    );
+    expect(cn("px-2 text-sm", "px-4")).toBe("text-sm px-4");
   });
 });
 
