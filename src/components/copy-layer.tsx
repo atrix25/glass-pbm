@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Check, Pencil } from "lucide-react";
 import type { CopyOverrides } from "@/lib/copy";
+import { postJson } from "@/lib/post-json";
 
 /**
  * Edit the words on the page, on the page.
@@ -328,18 +329,13 @@ export function CopyLayer({
 
       setStatus("Saving");
       try {
-        const res = await fetch("/api/copy", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            original,
-            // Empty string clears the rendered text; null restores the original.
-            replacement: next === original ? null : next,
-          }),
+        const saved = await postJson<{ persisted?: boolean }>("/api/copy", {
+          original,
+          // Empty string clears the rendered text; null restores the original.
+          replacement: next === original ? null : next,
         });
-        const json = (await res.json()) as { persisted?: boolean };
         setStatus(
-          json.persisted === false
+          saved.persisted === false
             ? "Saved, but this machine cannot keep it past the next deploy"
             : next === original
               ? "Restored the original wording"

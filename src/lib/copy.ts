@@ -48,9 +48,14 @@ export async function getCopyOverrides(): Promise<CopyOverrides> {
           typeof replacement === "string" && replacement !== original,
       ),
     );
-  } catch {
+  } catch (error) {
     // No file yet, or a hand-edit left it unparseable. Either way the site
-    // should render its original wording rather than fail to render at all.
+    // should render its original wording rather than fail to render at all —
+    // but a malformed file is a real problem for whoever wrote it, and reading
+    // it back as "no overrides" without a word looks identical to having none.
+    if (!isMissingFile(error)) {
+      console.error(`[copy] ignoring unreadable ${FILE}`, error);
+    }
     return {};
   }
 }
@@ -85,9 +90,14 @@ export async function saveCopyOverride(
     await mkdir(path.dirname(FILE), { recursive: true });
     await writeFile(FILE, `${JSON.stringify(sorted, null, 2)}\n`, "utf8");
     return true;
-  } catch {
+  } catch (error) {
+    console.error(`[copy] could not write ${FILE}`, error);
     return false;
   }
+}
+
+function isMissingFile(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 /**
@@ -107,6 +117,8 @@ export async function copyIsPersistable(): Promise<boolean> {
     await access(path.dirname(FILE), constants.W_OK);
     return true;
   } catch {
+    // Expected on the deployed machine, so this is a fact about the host and
+    // not a fault: reported to the toolbar rather than logged on every render.
     return false;
   }
 }

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
 import { formatDuration } from "@/lib/pa/status";
+import { describeFailure, postJson } from "@/lib/post-json";
 import type { ReviewBucket, ReviewItem } from "@/lib/queries/pa";
 import { cn } from "@/lib/utils";
 
@@ -264,30 +265,21 @@ function ReviewPanel({
     setRefused(null);
     if (kind === "pharmacist") setResult(null);
     try {
-      const res = await fetch("/api/pa/decide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paId: item.id,
-          reviewer:
-            kind === "pharmacist"
-              ? { kind, label: reviewer.label, licence: reviewer.licence }
-              : { kind, label: "Glass criteria engine" },
-          action,
-          note: note || undefined,
-        }),
+      const data = await postJson<DecideResult>("/api/pa/decide", {
+        paId: item.id,
+        reviewer:
+          kind === "pharmacist"
+            ? { kind, label: reviewer.label, licence: reviewer.licence }
+            : { kind, label: "Glass criteria engine" },
+        action,
+        note: note || undefined,
       });
-      const data = (await res.json()) as DecideResult;
-      if (!res.ok) {
-        // The 403 on an automated refusal is the demonstration, so it is shown
-        // as an answer from the server rather than as a failure of the page.
-        setRefused(data.error ?? "The server declined that.");
-        return;
-      }
       setResult(data);
       router.refresh();
-    } catch {
-      setRefused("The request did not reach the server.");
+    } catch (e) {
+      // The 403 on an automated refusal is the demonstration, so the server's
+      // own wording is shown as an answer rather than as a failure of the page.
+      setRefused(describeFailure(e, "The server declined that."));
     } finally {
       setBusy(null);
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { saveCopyOverride } from "@/lib/copy";
+import { HttpError, readJson, route } from "@/lib/http";
 
 /**
  * Save one wording change.
@@ -10,36 +11,29 @@ import { saveCopyOverride } from "@/lib/copy";
  * replacement equal to the original, or null, removes the override and puts
  * the written copy back. An empty string clears the text on purpose.
  */
-export async function POST(request: Request) {
-  let body: { original?: unknown; replacement?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Expected JSON." }, { status: 400 });
-  }
-
-  const { original, replacement } = body;
+export const POST = route("POST /api/copy", async (request: Request) => {
+  const { original, replacement } = await readJson<{
+    original?: unknown;
+    replacement?: unknown;
+  }>(request);
 
   if (typeof original !== "string" || original.trim() === "") {
-    return NextResponse.json(
-      { error: "An override needs the original text to key off." },
-      { status: 400 },
-    );
+    throw new HttpError(400, "An override needs the original text to key off.");
   }
 
   if (replacement !== null && typeof replacement !== "string") {
-    return NextResponse.json(
-      { error: "Replacement must be a string, or null to clear it." },
-      { status: 400 },
+    throw new HttpError(
+      400,
+      "Replacement must be a string, or null to clear it.",
     );
   }
 
   // Long enough for a paragraph, short enough that a runaway paste cannot turn
   // the overrides file into something nobody can read in a diff.
   if (typeof replacement === "string" && replacement.length > 4000) {
-    return NextResponse.json(
-      { error: "That is longer than any single piece of copy on the site." },
-      { status: 400 },
+    throw new HttpError(
+      400,
+      "That is longer than any single piece of copy on the site.",
     );
   }
 
@@ -50,4 +44,4 @@ export async function POST(request: Request) {
   revalidatePath("/", "layout");
 
   return NextResponse.json({ ok: true, persisted });
-}
+});

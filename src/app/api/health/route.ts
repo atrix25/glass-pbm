@@ -24,6 +24,9 @@ export async function GET() {
     }
     return NextResponse.json({ ok: true, bookDays: days });
   } catch (e) {
+    // The probe's answer goes to whatever is polling it; the cause belongs in
+    // the logs of the machine that failed the probe.
+    console.error("[api] GET /api/health could not read the book", e);
     return NextResponse.json(
       { ok: false, reason: e instanceof Error ? e.message : "unknown" },
       { status: 503 },

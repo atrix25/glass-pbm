@@ -6,6 +6,7 @@ import { Badge, Card, CardHeader, SimulatedBadge, Table, Td, Th } from "@/compon
 import { TraceViewer, type TraceSource } from "@/components/trace-viewer";
 import { NcpdpPanel } from "@/components/ncpdp-panel";
 import { formatCents } from "@/lib/money";
+import { describeFailure, postJson } from "@/lib/post-json";
 import { closureOn } from "@/lib/pa/emergency-supply";
 import { cn, formatDate } from "@/lib/utils";
 import {
@@ -197,10 +198,8 @@ export function PosTerminal({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/pos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      setResult(
+        await postJson<PosResult>("/api/pos", {
           memberId,
           drugId,
           pharmacyId,
@@ -212,12 +211,9 @@ export function PosTerminal({
           prescriberNpi: prescriberNpi || null,
           ...override,
         }),
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Adjudication failed");
-      setResult(body as PosResult);
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Adjudication failed");
+      setError(describeFailure(e, "Adjudication failed"));
       setResult(null);
     } finally {
       setBusy(false);

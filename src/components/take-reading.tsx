@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { describeFailure, postJson } from "@/lib/post-json";
 
 /**
  * Record where the score stands today, under a label.
@@ -25,17 +26,12 @@ export function TakeReading() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/nps/snapshot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: trimmed }),
-      });
-      if (!res.ok) throw new Error(await res.text());
+      await postJson<unknown>("/api/nps/snapshot", { label: trimmed });
       setLabel("");
       setOpen(false);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not take the reading.");
+      setError(describeFailure(e, "Could not take the reading."));
     } finally {
       setBusy(false);
     }

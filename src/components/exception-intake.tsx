@@ -19,6 +19,7 @@ import { useState } from "react";
 import { CheckCircle2, Clock, Loader2, Send } from "lucide-react";
 import { Badge, Table, Td, Th } from "@/components/ui";
 import { EXCEPTION_KINDS, type ExceptionKind } from "@/lib/pa/review";
+import { describeFailure, postJson } from "@/lib/post-json";
 import { cn } from "@/lib/utils";
 
 export interface AppealTarget {
@@ -61,25 +62,23 @@ export function ExceptionIntake({ targets }: { targets: AppealTarget[] }) {
     setBusy(true);
     setFiled(null);
     try {
-      const res = await fetch("/api/pa/exception", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          // An appeal must name what it contests. Everything else inherits the
-          // member and drug from the request it was filed against, which is how
-          // these arrive in practice.
-          againstPaId: target?.paId,
-          memberId: target?.memberId,
-          drugId: target?.drugId,
-          urgency,
-          supportingStatement: statement || undefined,
-          rationale: rationale || undefined,
-        }),
+      const filing = await postJson<Filed>("/api/pa/exception", {
+        kind,
+        // An appeal must name what it contests. Everything else inherits the
+        // member and drug from the request it was filed against, which is how
+        // these arrive in practice.
+        againstPaId: target?.paId,
+        memberId: target?.memberId,
+        drugId: target?.drugId,
+        urgency,
+        supportingStatement: statement || undefined,
+        rationale: rationale || undefined,
       });
-      setFiled((await res.json()) as Filed);
-    } catch {
-      setFiled({ error: "The filing did not reach the server." });
+      setFiled(filing);
+    } catch (e) {
+      // A refused filing answers with `{ error }` under a 4xx, which used to be
+      // read as a successful Filed record and rendered as a receipt.
+      setFiled({ error: describeFailure(e, "The filing did not go through.") });
     } finally {
       setBusy(false);
     }
