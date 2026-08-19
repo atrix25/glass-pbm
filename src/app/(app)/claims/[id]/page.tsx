@@ -17,6 +17,7 @@ import { getClaimDetail, getRelatedFills } from "@/lib/queries/claims";
 import { reproduceClaim } from "@/lib/engine/reproduce";
 import { SOURCES } from "@/lib/sources";
 import { formatCents, formatUnitPrice } from "@/lib/money";
+import { getClock } from "@/lib/session";
 import { formatDate, formatPercent, levelMeta } from "@/lib/utils";
 import { REJECT_MEMBER_EXPLANATION, type TraceStepInput } from "@/lib/engine/types";
 
@@ -35,7 +36,8 @@ export default async function ClaimProofPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const claim = await getClaimDetail(id);
+  const clock = await getClock();
+  const claim = await getClaimDetail(id, clock);
   if (!claim) notFound();
 
   /*
@@ -48,7 +50,7 @@ export default async function ClaimProofPage({
   const trace: TraceStepInput[] = claim.traceJson
     ? (JSON.parse(claim.traceJson) as TraceStepInput[])
     : (reproduced?.outcome.trace ?? []);
-  const related = await getRelatedFills(claim.memberId, claim.drugId);
+  const related = await getRelatedFills(claim.memberId, claim.drugId, clock);
   const rejected = claim.responseStatus === "R";
   const rejectCodes: string[] = JSON.parse(claim.rejectCodes);
   const meta = levelMeta(claim.formularyLevel);
