@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { runIntake } from "@/lib/agents/pa-intake/agent";
+import { idSchema, parseBody } from "@/lib/api/body";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+const BODY = z.object({ paId: idSchema });
 
 /**
  * Runs the intake agent live against a request that is already in the book.
@@ -13,7 +17,9 @@ export const maxDuration = 60;
  * turn the operations page into a log of people pressing buttons.
  */
 export async function POST(request: Request) {
-  const { paId } = (await request.json()) as { paId: string };
+  const body = await parseBody(request, BODY);
+  if (!body.ok) return body.response;
+  const { paId } = body.data;
 
   const [note, pa] = await Promise.all([
     prisma.clinicalNote.findUnique({ where: { paId } }),

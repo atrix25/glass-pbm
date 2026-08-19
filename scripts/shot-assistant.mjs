@@ -5,6 +5,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const question = process.argv[2] ?? "is Skyrizi covered";
 const out = process.argv[3] ?? "assistant.png";
@@ -13,7 +14,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1200 },
   deviceScaleFactor: 2,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 
 const errors = [];

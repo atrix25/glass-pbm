@@ -5,6 +5,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const [, , path = "/", out = "shot.png"] = process.argv;
 
@@ -12,7 +13,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   deviceScaleFactor: 2,
-  httpCredentials: { username: "josh", password: "stock200" },
+  httpCredentials: demoCredentials(),
 });
 await page.goto(`http://localhost:3000${path}`, {
   waitUntil: "networkidle",

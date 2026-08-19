@@ -22,7 +22,18 @@ export async function getRole(): Promise<Role> {
   return "sponsor";
 }
 
+/** Member ids in this book: `mbr-DEMO-0001-01`. */
+const MEMBER_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+
+/**
+ * The member the session is looking at.
+ *
+ * The cookie is written by a form and can therefore hold anything, so it is
+ * checked against the shape of an id here rather than at each of the two dozen
+ * call sites that read it and put it in front of somebody.
+ */
 export async function getActiveMemberId(): Promise<string> {
   const jar = await cookies();
-  return jar.get("glass_member")?.value ?? DEFAULT_MEMBER_ID;
+  const raw = jar.get("glass_member")?.value;
+  return raw && MEMBER_ID.test(raw) ? raw : DEFAULT_MEMBER_ID;
 }

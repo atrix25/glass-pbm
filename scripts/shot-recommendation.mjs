@@ -8,12 +8,13 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1100 },
   deviceScaleFactor: 2,
-  httpCredentials: { username: "josh", password: "stock200" },
+  httpCredentials: demoCredentials(),
 });
 
 const errors = [];

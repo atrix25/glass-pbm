@@ -9,6 +9,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const browser = await chromium.launch();
 const page = await browser.newPage({
@@ -16,7 +17,7 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
   isMobile: true,
   hasTouch: true,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 
 let failures = 0;
@@ -85,7 +86,7 @@ check(
 // Desktop must be exactly as it was: rail always visible, no hamburger.
 const wide = await browser.newPage({
   viewport: { width: 1440, height: 900 },
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 await wide.goto("http://localhost:3000/sponsor", {
   waitUntil: "networkidle",

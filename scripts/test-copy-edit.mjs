@@ -7,6 +7,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const BASE = "http://localhost:3000";
 const TARGET = "Guided walkthrough";
@@ -16,7 +17,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   deviceScaleFactor: 1,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 
 const problems = [];

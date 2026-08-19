@@ -1,33 +1,68 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { parseBody } from "@/lib/api/body";
 import { prisma } from "@/lib/db";
-import type { ConfigOverride } from "@/lib/engine/replay";
-import type { NpsReading } from "@/lib/nps/reading";
 import { RUBRIC_VERSION } from "@/lib/nps/rubric";
 import { getClock } from "@/lib/session";
 
 export const runtime = "nodejs";
 
-interface CommitBody {
-  label: string;
-  description?: string;
-  override: ConfigOverride;
-  changeSummary: string[];
-  metrics: {
-    claimsEvaluated: number;
-    claimsChanged: number;
-    membersAffected: number;
-    planDeltaCents: number;
-    memberDeltaCents: number;
-    newRejects: number;
-  };
-  diffs: unknown[];
-  /** The post-change reading from the replay this decision was taken against. */
-  nps?: NpsReading | null;
-}
+const finiteNumber = z.number().finite();
+
+const SEGMENTS = z.object({
+  scored: finiteNumber,
+  promoters: finiteNumber,
+  passives: finiteNumber,
+  detractors: finiteNumber,
+  nps: finiteNumber,
+});
+
+/**
+ * The post-change reading from the replay this decision was taken against.
+ *
+ * Only the parts that are filed are checked; a reading arrives from the same
+ * page that computed it, but it is written straight into the history table, and
+ * a snapshot is worth nothing if its figures are whatever was posted.
+ */
+const READING = z.object({
+  census: SEGMENTS,
+  surveyed: SEGMENTS,
+  histogram: z.array(finiteNumber).max(64),
+  drivers: z
+    .array(
+      z.object({
+        id: z.string().max(120),
+        membersAffected: finiteNumber,
+        totalPoints: finiteNumber,
+      }),
+    )
+    .max(200),
+});
+
+const BODY = z.object({
+  label: z.string().trim().min(1).max(200),
+  description: z.string().max(4000).nullish(),
+  override: z.record(z.string(), z.unknown()),
+  changeSummary: z.array(z.string().max(2000)).max(200),
+  metrics: z.object({
+    claimsEvaluated: finiteNumber,
+    claimsChanged: finiteNumber,
+    membersAffected: finiteNumber,
+    planDeltaCents: finiteNumber,
+    memberDeltaCents: finiteNumber,
+    newRejects: finiteNumber,
+  }),
+  // Only the first hundred are stored, so a longer array is a larger request
+  // than it can possibly need to be.
+  diffs: z.array(z.unknown()).max(1000),
+  nps: READING.nullish(),
+});
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as CommitBody;
+  const parsed = await parseBody(request, BODY);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const payload = JSON.stringify(body.override);
   const contentHash = createHash("sha256").update(payload).digest("hex");
 

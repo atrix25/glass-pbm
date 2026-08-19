@@ -1,12 +1,13 @@
 /** Screenshots edit mode with a sentence open for rewriting. */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 2,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 
 await page.goto("http://localhost:3000/walkthrough", {

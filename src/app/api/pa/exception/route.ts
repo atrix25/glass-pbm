@@ -14,26 +14,30 @@
  */
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { idSchema, parseBody } from "@/lib/api/body";
 import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
-import { exceptionKind, mayAppeal, type ExceptionKind } from "@/lib/pa/review";
+import { exceptionKind, mayAppeal } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
 
-interface Body {
+const BODY = z.object({
   /** The request being contested, for an appeal; the drug's own PA otherwise. */
-  againstPaId?: string;
-  memberId?: string;
-  drugId?: string;
-  kind: ExceptionKind;
-  urgency?: "Standard" | "Expedited";
+  againstPaId: idSchema.optional(),
+  memberId: idSchema.optional(),
+  drugId: idSchema.optional(),
+  kind: z.string().min(1).max(40),
+  urgency: z.enum(["Standard", "Expedited"]).optional(),
   /** The prescriber's supporting statement, if it came in with the filing. */
-  supportingStatement?: string;
-  rationale?: string;
-}
+  supportingStatement: z.string().max(8000).optional(),
+  rationale: z.string().max(8000).optional(),
+});
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Body;
-  const info = exceptionKind(body?.kind);
+  const parsed = await parseBody(request, BODY);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
+  const info = exceptionKind(body.kind);
   if (!info) {
     return NextResponse.json(
       { error: "Unrecognised request kind." },
