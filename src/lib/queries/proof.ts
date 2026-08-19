@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
+import { getPaidPopulationTotals } from "@/lib/queries/population";
 
 /**
  * The proof page reports what the harness actually found on its last run.
@@ -251,17 +252,12 @@ export async function getBranchCoverage() {
  * population rather than a population invented to make the numbers look good.
  */
 export async function getPopulationReconciliation() {
-  const [members, paid, agg] = await Promise.all([
-    prisma.member.count(),
-    prisma.claim.count({ where: { responseStatus: "P" } }),
-    prisma.claim.aggregate({
-      where: { responseStatus: "P" },
-      _sum: { totalBilledCents: true, patientPayCents: true },
-    }),
-  ]);
-
-  const billed = agg._sum.totalBilledCents ?? 0;
-  const memberPaid = agg._sum.patientPayCents ?? 0;
+  const {
+    members,
+    paidClaims: paid,
+    billedCents: billed,
+    memberPaidCents: memberPaid,
+  } = await getPaidPopulationTotals();
 
   return [
     {
