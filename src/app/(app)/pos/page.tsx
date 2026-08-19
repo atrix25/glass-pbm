@@ -1,18 +1,10 @@
 import { Card, SectionTitle } from "@/components/ui";
 import { PosTerminal } from "@/components/pos-terminal";
-import type { TraceSource } from "@/components/trace-viewer";
 import { getPosPickers } from "@/lib/queries/pos";
 import { getClock } from "@/lib/session";
-import { SOURCES } from "@/lib/sources";
+import { SOURCE_MAP } from "@/lib/sources";
 
 export const dynamic = "force-dynamic";
-
-const SOURCE_MAP: Record<string, TraceSource> = Object.fromEntries(
-  SOURCES.map((s) => [
-    s.id,
-    { id: s.id, title: s.title, publisher: s.publisher, url: s.url },
-  ]),
-);
 
 export default async function PosPage() {
   const clock = await getClock();

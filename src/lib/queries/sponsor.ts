@@ -14,6 +14,7 @@
 
 import { prisma } from "@/lib/db";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import { getDrugMetaById } from "@/lib/queries/drug-meta";
 
 export const PLAN_YEAR = 2026;
 
@@ -298,16 +299,7 @@ export async function getTopDrugs(
     .sort((a, b) => b.billedCents - a.billedCents)
     .slice(0, limit);
 
-  const drugs = await prisma.drug.findMany({
-    where: { id: { in: rows.map((r) => r.key) } },
-    select: {
-      id: true,
-      name: true,
-      therapeuticClass: true,
-      isSpecialty: true,
-    },
-  });
-  const byId = new Map(drugs.map((d) => [d.id, d]));
+  const byId = await getDrugMetaById(rows.map((r) => r.key));
 
   return rows.map((r) => {
     const d = byId.get(r.key);
