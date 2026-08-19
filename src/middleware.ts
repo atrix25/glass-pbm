@@ -5,11 +5,13 @@ import { NextResponse, type NextRequest } from "next/server";
 // an official ETF or Navitus system by anyone who stumbles onto the host.
 // Unset DEMO_PASSWORD disables the gate, which is what local development wants.
 
-// Overridable so the deployed host can change them without a code change, but
-// defaulted so there is one fewer secret to keep in step with the invitations.
+// Usernames are not secrets and may be defaulted. Passwords come from the
+// environment only: a password compiled into the repository is public the
+// moment the repository is, and the second account is simply absent until one
+// is supplied.
 const USERNAME = process.env.DEMO_USERNAME ?? "josh";
 const SECOND_USERNAME = process.env.DEMO_USERNAME_2 ?? "test";
-const SECOND_PASSWORD = process.env.DEMO_PASSWORD_2 ?? "glasspba";
+const SECOND_PASSWORD = process.env.DEMO_PASSWORD_2;
 
 // Header values are Latin-1; keep this ASCII.
 const REALM = 'Basic realm="Glass proof of concept", charset="UTF-8"';
@@ -45,10 +47,11 @@ export function middleware(request: NextRequest) {
       // before any is acted on: returning as soon as one matches would make a
       // correct name measurably slower to reject than a wrong one.
       let ok = false;
-      for (const account of [
-        { username: USERNAME, password: expected },
-        { username: SECOND_USERNAME, password: SECOND_PASSWORD },
-      ]) {
+      const accounts = [{ username: USERNAME, password: expected }];
+      if (SECOND_PASSWORD) {
+        accounts.push({ username: SECOND_USERNAME, password: SECOND_PASSWORD });
+      }
+      for (const account of accounts) {
         const nameOk = constantTimeEqual(username, account.username);
         const passwordOk = constantTimeEqual(password, account.password);
         ok = (nameOk && passwordOk) || ok;

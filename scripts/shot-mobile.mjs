@@ -5,6 +5,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const [, , path = "/", out = "/tmp/mobile.png", width = "390"] = process.argv;
 const w = Number(width);
@@ -15,7 +16,7 @@ const page = await browser.newPage({
   deviceScaleFactor: 2,
   isMobile: true,
   hasTouch: true,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 
 await page.goto(`http://localhost:3000${path}`, {

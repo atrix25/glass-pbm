@@ -8,27 +8,57 @@
  */
 
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { idSchema, parseBody } from "@/lib/api/body";
 import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
-import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
+import { mayRecord } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
 
-interface Body {
-  paId: string;
-  reviewer: Reviewer;
-  action: ReviewAction;
-  note?: string;
-}
+// The reviewer and the action are the two things `mayRecord` decides on, so
+// they are checked against their unions here rather than cast: an unrecognised
+// `record` value would otherwise fall past every branch of that function and be
+// written to the determination column verbatim.
+const REVIEWER = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("automation"),
+    label: z.string().min(1).max(200),
+  }),
+  z.object({
+    kind: z.literal("pharmacist"),
+    label: z.string().min(1).max(200),
+    licence: z.string().min(1).max(100),
+  }),
+]);
+
+const ACTION = z.discriminatedUnion("record", [
+  z.object({
+    record: z.literal("Approved"),
+    approvedDays: z.number().int().positive().max(3650),
+    decidingStep: z.number().int().nonnegative().max(1000).nullish(),
+  }),
+  z.object({
+    record: z.literal("Denied"),
+    reason: z.string().min(1).max(4000),
+    decidingStep: z.number().int().nonnegative().max(1000).nullish(),
+  }),
+  z.object({
+    record: z.literal("Escalated"),
+    reason: z.string().min(1).max(4000),
+  }),
+]);
+
+const BODY = z.object({
+  paId: idSchema,
+  reviewer: REVIEWER,
+  action: ACTION,
+  note: z.string().max(4000).nullish(),
+});
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Body;
-
-  if (!body?.paId || !body?.reviewer || !body?.action) {
-    return NextResponse.json(
-      { error: "paId, reviewer, and action are required." },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseBody(request, BODY);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const verdict = mayRecord(body.reviewer, body.action);
   if (!verdict.allowed) {

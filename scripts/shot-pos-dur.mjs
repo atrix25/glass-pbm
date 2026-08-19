@@ -6,6 +6,7 @@
  */
 
 import { chromium } from "playwright";
+import { demoCredentials } from "./demo-credentials.mjs";
 
 const [, , index = "0", out = "pos-dur.png", mode] = process.argv;
 
@@ -13,7 +14,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   deviceScaleFactor: 2,
-  httpCredentials: { username: "josh", password: "glass2026" },
+  httpCredentials: demoCredentials(),
 });
 await page.goto("http://localhost:3000/pos", {
   waitUntil: "networkidle",

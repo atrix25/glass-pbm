@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { parseBody } from "@/lib/api/body";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+
+// The engine reads only the override fields it knows, so what is checked here
+// is the envelope: an object, and a sample rate that is genuinely a fraction.
+// The rate is the interesting one — zero or negative samples nothing and would
+// answer "nothing would change" to every question asked of the console.
+const BODY = z.union([
+  z.object({
+    override: z.record(z.string(), z.unknown()).optional(),
+    sampleRate: z.number().gt(0).lte(1).optional(),
+  }),
+  z.record(z.string(), z.unknown()),
+]);
 
 interface ReplayBody {
   override: ConfigOverride;
@@ -18,12 +32,14 @@ interface ReplayBody {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as ReplayBody | ConfigOverride;
+  const parsed = await parseBody(request, BODY);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data as ReplayBody | ConfigOverride;
 
   // Older callers posted the override at the top level. Accepting both keeps a
   // saved request or a copied fetch working.
   const isWrapped = typeof body === "object" && body !== null && "override" in body;
-  const override = (isWrapped ? (body as ReplayBody).override : body) ?? {};
+  const override = ((isWrapped ? (body as ReplayBody).override : body) ?? {}) as ConfigOverride;
   const sampleRate = isWrapped ? (body as ReplayBody).sampleRate : undefined;
   const projecting = sampleRate !== undefined && sampleRate < 1;
 

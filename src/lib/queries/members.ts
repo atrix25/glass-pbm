@@ -16,6 +16,27 @@ export interface MemberListRow {
   isDemo: boolean;
 }
 
+function clampInt(
+  value: number | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  if (value === undefined || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+}
+
+/**
+ * A search term as a LIKE pattern.
+ *
+ * The term is bound as a parameter, so quoting is not the concern; the
+ * wildcards are. Left unescaped, a term of `%` matches every member and a
+ * typed `_` silently matches any character, which reads as a broken search.
+ */
+function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /** The membership directory, with each member's book as of the clock. */
 export async function listMembers(
   opts: {
@@ -26,20 +47,28 @@ export async function listMembers(
   },
   clock: SimulationClock,
 ): Promise<{ rows: MemberListRow[]; total: number; pages: number; page: number }> {
-  const perPage = opts.perPage ?? 30;
-  const page = Math.max(1, opts.page ?? 1);
+  // Paging comes off a query string, so it is coerced to a whole number in a
+  // sane range rather than trusted: a non-numeric page would otherwise reach
+  // SQLite as `OFFSET NaN`, and an unbounded page size is a way to ask for the
+  // whole membership in one request.
+  const perPage = clampInt(opts.perPage, 30, 1, 200);
+  const page = clampInt(opts.page, 1, 1, 1_000_000);
   const q = opts.q?.trim() ?? "";
-  const like = `%${q.replace(/['%_]/g, "")}%`;
+  const like = `%${escapeLike(q)}%`;
+  // One of two fixed clauses, chosen here. ORDER BY cannot be a bound
+  // parameter, so the only safe form is a value that never comes from input.
   const orderBy =
     opts.sort === "name" ? "m.lastName ASC, m.firstName ASC" : "billedCents DESC";
 
   const where = q
-    ? `WHERE (m.lastName LIKE '${like}' OR m.firstName LIKE '${like}' OR m.cardholderId LIKE '${like}')`
+    ? `WHERE (m.lastName LIKE ? ESCAPE '\\' OR m.firstName LIKE ? ESCAPE '\\' OR m.cardholderId LIKE ? ESCAPE '\\')`
     : "";
+  const likeParams = q ? [like, like, like] : [];
 
   const day = clock.today.getTime();
 
-  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+  const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+    `
     SELECT m.id, m.firstName, m.lastName, m.cardholderId, m.personCode, m.city,
            COALESCE(bp.name, 'IYC Health Plan') AS planName,
            SUM(CASE WHEN c.responseStatus = 'P' THEN 1 ELSE 0 END) AS claims,
@@ -47,18 +76,24 @@ export async function listMembers(
            COALESCE(SUM(c.totalBilledCents), 0) AS billedCents,
            COALESCE(SUM(c.patientPayCents), 0)  AS memberPaidCents
     FROM Member m
-    LEFT JOIN Claim c ON c.memberId = m.id AND c.dateOfService <= ${day}
+    LEFT JOIN Claim c ON c.memberId = m.id AND c.dateOfService <= ?
     LEFT JOIN EligibilitySpan es ON es.memberId = m.id
     LEFT JOIN BenefitPlan bp ON bp.id = es.benefitPlanId
     ${where}
     GROUP BY m.id
     ORDER BY ${orderBy}
-    LIMIT ${perPage} OFFSET ${(page - 1) * perPage}
-  `);
+    LIMIT ? OFFSET ?
+  `,
+    day,
+    ...likeParams,
+    perPage,
+    (page - 1) * perPage,
+  );
 
-  const [countRow] = await prisma.$queryRawUnsafe<Array<{ n: number | bigint }>>(`
-    SELECT COUNT(*) AS n FROM Member m ${where}
-  `);
+  const [countRow] = await prisma.$queryRawUnsafe<Array<{ n: number | bigint }>>(
+    `SELECT COUNT(*) AS n FROM Member m ${where}`,
+    ...likeParams,
+  );
   const total = Number(countRow?.n ?? 0);
 
   return {
