@@ -3,6 +3,7 @@ import type { SimulationClock } from "@/lib/clock";
 import { CRITERIA_TREES } from "@/lib/pa/criteria";
 import type { PADetermination } from "@/lib/pa/engine";
 import { buildEpaExchange, type EpaExchange } from "@/lib/pa/epa";
+import { asOfPriorAuth } from "@/lib/pa/status";
 
 /**
  * The queue as of the clock.
@@ -34,7 +35,7 @@ export async function listPriorAuths(
           }
         : arrived;
 
-  return prisma.priorAuthorization.findMany({
+  const rows = await prisma.priorAuthorization.findMany({
     where: {
       ...scope,
       ...(filter?.urgency ? { urgency: filter.urgency } : {}),
@@ -48,6 +49,10 @@ export async function listPriorAuths(
     orderBy: [{ receivedAt: "desc" }],
     take: 200,
   });
+  // Arrive-only and in-flight filters still load rows whose eventual
+  // determination sits in the future; strip it so the queue cannot show a
+  // deciding step that has not happened yet at this instant.
+  return rows.map((r) => asOfPriorAuth(r, clock.now));
 }
 
 export async function getPriorAuthQueueStats(clock: SimulationClock) {
@@ -105,9 +110,16 @@ export async function getPriorAuthQueueStats(clock: SimulationClock) {
  * every step in the tree so the page can show the questions that were never
  * reached alongside the ones that were.
  */
-export async function getPriorAuthDetail(id: string) {
-  const pa = await prisma.priorAuthorization.findFirst({
-    where: { OR: [{ id }, { paNumber: id }] },
+export async function getPriorAuthDetail(
+  id: string,
+  clock: SimulationClock,
+) {
+  // Same cut as the queue: a request that has not arrived yet does not exist.
+  const raw = await prisma.priorAuthorization.findFirst({
+    where: {
+      OR: [{ id }, { paNumber: id }],
+      receivedAt: { lte: clock.now },
+    },
     include: {
       member: true,
       drug: true,
@@ -123,7 +135,9 @@ export async function getPriorAuthDetail(id: string) {
       },
     },
   });
-  if (!pa) return null;
+  if (!raw) return null;
+
+  const pa = asOfPriorAuth(raw, clock.now);
 
   const walked = new Map(
     pa.decisionSteps.map((d) => [d.criteriaStep.stepNumber, d]),
@@ -167,9 +181,13 @@ export async function getPriorAuthDetail(id: string) {
  * answer today against a possibly-revised tree, which is a different and less
  * useful claim than what it did answer.
  */
-export async function getEpaExchange(id: string): Promise<EpaExchange | null> {
-  const detail = await getPriorAuthDetail(id);
-  if (!detail?.pa.treeId) return null;
+export async function getEpaExchange(
+  id: string,
+  clock: SimulationClock,
+): Promise<EpaExchange | null> {
+  const detail = await getPriorAuthDetail(id, clock);
+  // No determination yet at this instant — there is no completed exchange to show.
+  if (!detail?.pa.treeId || !detail.pa.determination) return null;
 
   const { pa, path } = detail;
   const tree = CRITERIA_TREES.find((t) => t.id === pa.treeId);
@@ -450,9 +468,14 @@ export async function getIntakeOptions(clock: SimulationClock) {
 }
 
 /** Claims that this authorization let through, so the PA ties to money. */
-export async function getPaClaims(memberId: string, drugId: string) {
+export async function getPaClaims(
+  memberId: string,
+  drugId: string,
+  clock: SimulationClock,
+) {
+  // Same cut as the claim ledger: fills after the pin have not been submitted.
   return prisma.claim.findMany({
-    where: { memberId, drugId },
+    where: { memberId, drugId, dateOfService: { lte: clock.today } },
     select: {
       id: true,
       claimNumber: true,

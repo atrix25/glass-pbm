@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
+import { asOfPriorAuth } from "@/lib/pa/status";
 
 export interface MemberListRow {
   id: string;
@@ -82,19 +83,30 @@ export async function listMembers(
   };
 }
 
-export async function getMemberDetail(id: string) {
-  return prisma.member.findUnique({
+export async function getMemberDetail(
+  id: string,
+  clock: SimulationClock,
+) {
+  const member = await prisma.member.findUnique({
     where: { id },
     include: {
       sponsor: true,
       eligibilitySpans: { include: { benefitPlan: true } },
       accumulators: true,
       priorAuths: {
+        where: { receivedAt: { lte: clock.now } },
         include: { drug: true, tree: true },
         orderBy: { receivedAt: "desc" },
       },
     },
   });
+  if (!member) return null;
+  // Strip determinations that land after the pin so member history agrees
+  // with the PA queue's live state.
+  return {
+    ...member,
+    priorAuths: member.priorAuths.map((pa) => asOfPriorAuth(pa, clock.now)),
+  };
 }
 
 export async function getMemberClaims(memberId: string) {
