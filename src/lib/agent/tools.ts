@@ -15,7 +15,9 @@ import { loadWorld } from "@/lib/engine/replay";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
+import { asOfPriorAuth } from "@/lib/pa/status";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { getClock } from "@/lib/session";
 
 export interface Citation {
   sourceId: string;
@@ -555,9 +557,11 @@ export const getPriorAuthStatusSchema = z.object({
 export async function getPriorAuthStatus(
   args: z.infer<typeof getPriorAuthStatusSchema>,
 ): Promise<ToolResult> {
-  const pas = await prisma.priorAuthorization.findMany({
+  const clock = await getClock();
+  const rows = await prisma.priorAuthorization.findMany({
     where: {
       memberId: args.memberId,
+      receivedAt: { lte: clock.now },
       ...(args.drugName ? { drug: { name: { contains: args.drugName } } } : {}),
     },
     include: {
@@ -567,6 +571,7 @@ export async function getPriorAuthStatus(
     },
     orderBy: { receivedAt: "desc" },
   });
+  const pas = rows.map((pa) => asOfPriorAuth(pa, clock.now));
 
   if (pas.length === 0) {
     return {
