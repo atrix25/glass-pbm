@@ -1,0 +1,13 @@
+---
+description: Postgres-safe SQL and Prisma pool conventions
+globs: src/lib/queries/**/*.ts,src/lib/pg-sql.ts,src/lib/db.ts,src/lib/nps/**/*.ts,src/lib/integrity/**/*.ts
+alwaysApply: false
+---
+
+# Postgres SQL (read-model / NPS / integrity)
+
+- Prefer Prisma for simple CRUD; raw SQL goes through `prisma` from `@/lib/db` (dialect adapter applied).
+- Never interpolate `date.getTime()` into SQL — use `Date` binds or ISO strings.
+- Aggregates: non-grouped columns need `MAX(...)` / `MIN(...)`; `HAVING` must use aggregates, not SELECT aliases.
+- Timestamps are not integers: do not `CAST(timestamp AS REAL)`; use `EXTRACT(EPOCH FROM …) * 1000` if ms are required.
+- Behind PgBouncer, keep per-process pools small; avoid parallelizing many long `$queryRaw` calls.

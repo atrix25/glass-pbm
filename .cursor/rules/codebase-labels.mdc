@@ -1,0 +1,29 @@
+---
+description: Glass codebase area labels — where changes belong
+alwaysApply: true
+---
+
+# Codebase labels
+
+Full map: [docs/codebase-map.md](../../docs/codebase-map.md)
+
+| Label | Paths |
+|-------|--------|
+| **surface** | `src/app/**` |
+| **ui** | `src/components/**` |
+| **read-model** | `src/lib/queries/**` |
+| **engine** | `src/lib/engine/**` |
+| **clinical** | `src/lib/clinical/**`, `src/lib/pa/**` |
+| **nps** | `src/lib/nps/**` |
+| **integrity** | `src/lib/integrity/**`, `src/lib/agents/**` |
+| **platform** | `src/lib/db.ts`, `src/lib/pg-sql.ts`, `src/lib/auth.ts`, `src/middleware.ts`, `src/lib/jobs.ts` |
+| **schema** | `prisma/**` |
+| **ops** | `scripts/**`, `fly.toml`, `docs/**` |
+| **proof** | `tests/**` |
+
+Rules of thumb:
+
+- Pages call **read-model** loaders; keep heavy SQL out of page files.
+- **engine** changes need **proof** tests.
+- Raw SQL must be Postgres-safe (`GROUP BY`, dates as `Date` not epoch ms). See `src/lib/pg-sql.ts`.
+- Long book scans (NPS/experience) stay sequential — do not `Promise.all` pool-heavy queries behind PgBouncer.
