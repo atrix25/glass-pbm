@@ -42,10 +42,8 @@ export interface SnapshotRow {
 export async function getCurrentReading(
   clock: SimulationClock,
 ): Promise<NpsReading> {
-  const [experiences, enrolled] = await Promise.all([
-    buildExperiences(clock),
-    prisma.member.count(),
-  ]);
+  const experiences = await buildExperiences(clock);
+  const enrolled = await prisma.member.count();
   const reading = readingFrom(experiences);
   reading.excluded = enrolled - reading.census.scored;
   return reading;
@@ -62,18 +60,14 @@ export async function getReadingWithExamples(clock: SimulationClock): Promise<{
   examples: { detractors: ExampleMember[]; promoters: ExampleMember[] };
   quotes: FeedbackQuote[];
 }> {
-  const [experiences, enrolled] = await Promise.all([
-    buildExperiences(clock),
-    prisma.member.count(),
-  ]);
+  const experiences = await buildExperiences(clock);
+  const enrolled = await prisma.member.count();
   const reading = readingFrom(experiences);
   // Members who never presented a prescription leave no row to count, so the
   // exclusion is the difference between the book and the scored population.
   reading.excluded = enrolled - reading.census.scored;
-  const [examples, quotes] = await Promise.all([
-    pickExamples(experiences),
-    pickQuotes(experiences, reading),
-  ]);
+  const examples = await pickExamples(experiences);
+  const quotes = await pickQuotes(experiences, reading);
   return { reading, examples, quotes };
 }
 

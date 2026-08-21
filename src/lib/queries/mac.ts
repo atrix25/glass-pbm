@@ -108,8 +108,8 @@ export async function getMacOverview(
         paidCents: number;
       }>
     >`
-      SELECT m.drugId AS drugId, d.name AS drugName, d.ndc11 AS ndc11,
-             m.unitPrice AS unitPrice, m.nadacUnitPrice AS nadacUnitPrice,
+      SELECT m.drugId AS drugId, MAX(d.name) AS drugName, MAX(d.ndc11) AS ndc11,
+             MAX(m.unitPrice) AS unitPrice, MAX(m.nadacUnitPrice) AS nadacUnitPrice,
              COUNT(c.id) AS claims, SUM(c.pharmacyPaidCents) AS paidCents
       FROM MacPrice m
       JOIN Drug d ON d.id = m.drugId

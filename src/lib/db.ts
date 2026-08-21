@@ -16,11 +16,33 @@ import {
  * is adapted on the way in so the existing query surface keeps working.
  */
 function connectionUrl(): string {
-  return (
+  const raw =
     process.env.DATABASE_URL_DIRECT ??
     process.env.DATABASE_URL ??
-    "postgresql://localhost:5432/glass"
-  );
+    "postgresql://localhost:5432/glass";
+  try {
+    const url = new URL(raw);
+    // Keep Prisma pools small behind PgBouncer so multiple Fly machines
+    // don't exhaust MPG (Experience/NPS holds connections for a long time).
+    if (!url.searchParams.has("connection_limit")) {
+      url.searchParams.set(
+        "connection_limit",
+        process.env.PRISMA_CONNECTION_LIMIT ?? "2",
+      );
+    }
+    if (!url.searchParams.has("pool_timeout")) {
+      url.searchParams.set("pool_timeout", process.env.PRISMA_POOL_TIMEOUT ?? "60");
+    }
+    if (
+      !url.searchParams.has("pgbouncer") &&
+      /pgbouncer|pooler/i.test(url.hostname)
+    ) {
+      url.searchParams.set("pgbouncer", "true");
+    }
+    return url.toString();
+  } catch {
+    return raw;
+  }
 }
 
 function wrapClient(client: PrismaClient): PrismaClient {

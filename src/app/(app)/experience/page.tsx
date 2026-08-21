@@ -41,12 +41,11 @@ const GROUP_ORDER: RubricGroup[] = [
 
 export default async function ExperiencePage() {
   const clock = await getClock();
-  const [{ reading, examples, quotes }, snapshots, recommendations] =
-    await Promise.all([
-      getReadingWithExamples(clock),
-      getSnapshots(),
-      getRecommendations(clock),
-    ]);
+  // Load sequentially so the heavy claim scan does not compete with snapshot /
+  // recommendation queries for the small Prisma pool behind PgBouncer.
+  const { reading, examples, quotes } = await getReadingWithExamples(clock);
+  const snapshots = await getSnapshots();
+  const recommendations = await getRecommendations(clock);
 
   const c = reading.census;
   const s = reading.surveyed;
