@@ -51,6 +51,76 @@ const SKIP_TABLES = new Set([
   "TenantConfig",
 ]);
 
+/** Parent → child order when FK checks cannot be deferred (Fly MPG). */
+const TABLE_ORDER = [
+  "SourceDocument",
+  "PlanSponsor",
+  "Contract",
+  "Network",
+  "Pharmacy",
+  "NetworkPharmacy",
+  "Drug",
+  "DrugPrice",
+  "Formulary",
+  "FormularyEntry",
+  "BenefitPlan",
+  "CostShareRule",
+  "Member",
+  "EligibilitySpan",
+  "EligibilityFile",
+  "EligibilityTransaction",
+  "AccumulatorFile",
+  "Accumulator",
+  "AccumulatorTransfer",
+  "AccumulatorTransaction",
+  "Prescriber",
+  "ContractRate",
+  "RebateContract",
+  "RebateTerm",
+  "PACriteriaTree",
+  "CriteriaStep",
+  "ConfigVersion",
+  "Claim",
+  "BookDay",
+  "BookDayDimension",
+  "TraceStep",
+  "PriorAuthorization",
+  "PADecisionStep",
+  "NpsSnapshot",
+  "ReadjudicationRun",
+  "AuditFinding",
+  "AuditFindingResult",
+  "OpioidProduct",
+  "DurAlert",
+  "IntegritySignal",
+  "MacList",
+  "MacPrice",
+  "MacPriceChange",
+  "MacAppeal",
+  "RebateAccrual",
+  "RebateInvoice",
+  "RemittanceRun",
+  "RemittanceLine",
+  "SponsorInvoice",
+  "AgentPolicy",
+  "AgentRun",
+  "AgentStep",
+  "AgentProposal",
+  "ClinicalNote",
+  "ChatSession",
+  "ChatMessage",
+  "EvalCase",
+  "EvalResult",
+  "ThroughputRun",
+  "ServiceIncident",
+];
+
+function orderedTables(available: string[]): string[] {
+  const ordered = TABLE_ORDER.filter((t) => available.includes(t));
+  const rest = available.filter((t) => !TABLE_ORDER.includes(t)).sort();
+  return [...ordered, ...rest];
+}
+
 function run(cmd: string, args: string[]) {
   const r = spawnSync(cmd, args, { stdio: "inherit", env: process.env });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed`);
@@ -121,18 +191,28 @@ async function main() {
   run("npx", ["prisma", "db", "push", "--skip-generate"]);
 
   const sqlite = new DatabaseSync(SQLITE, { readOnly: true });
-  const tables = sqlite
-    .prepare(
-      `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma%' ORDER BY name`,
-    )
-    .all()
-    .map((r: Record<string, unknown>) => String(r.name))
-    .filter((t) => !SKIP_TABLES.has(t));
+  const tables = orderedTables(
+    sqlite
+      .prepare(
+        `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma%' ORDER BY name`,
+      )
+      .all()
+      .map((r: Record<string, unknown>) => String(r.name))
+      .filter((t) => !SKIP_TABLES.has(t)),
+  );
 
   const client = new pg.Client({ connectionString: DATABASE_URL });
   await client.connect();
-  await client.query("SET session_replication_role = replica");
-  await client.query("SET synchronous_commit = off");
+  try {
+    await client.query("SET session_replication_role = replica");
+  } catch {
+    console.log("session_replication_role unavailable — using FK-safe table order");
+  }
+  try {
+    await client.query("SET synchronous_commit = off");
+  } catch {
+    /* optional */
+  }
 
   console.log(`Importing ${tables.length} tables from ${SQLITE}`);
 
@@ -197,8 +277,16 @@ async function main() {
     console.log(`  ${table}: done ${total} in ${secs}s`);
   }
 
-  await client.query("SET session_replication_role = DEFAULT");
-  await client.query("SET synchronous_commit = on");
+  try {
+    await client.query("SET session_replication_role = DEFAULT");
+  } catch {
+    /* optional */
+  }
+  try {
+    await client.query("SET synchronous_commit = on");
+  } catch {
+    /* optional */
+  }
 
   await client.query(`
     INSERT INTO "TenantConfig" (id, "contractId", "sponsorId", "defaultMemberId", "displayName", "demoFeatures", "updatedAt")

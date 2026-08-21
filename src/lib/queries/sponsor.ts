@@ -246,7 +246,7 @@ export async function getRejectMix(
     rollup(clock, "reject"),
     prisma.$queryRaw<Array<Record<string, unknown>>>`
       SELECT rejectCodes              AS code,
-             rejectMessage            AS message,
+             MAX(rejectMessage)       AS message,
              COUNT(DISTINCT memberId) AS members
       FROM Claim
       WHERE responseStatus = 'R' AND dateOfService <= ${clock.today}

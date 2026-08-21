@@ -105,7 +105,7 @@ async function rejectsByDrug(
   limit: number,
 ): Promise<DrugRejectRow[]> {
   return prisma.$queryRawUnsafe<DrugRejectRow[]>(
-    `SELECT c.drugId AS drugId, d.name AS name, c.formularyLevel AS level,
+    `SELECT c.drugId AS drugId, MAX(d.name) AS name, MAX(c.formularyLevel) AS level,
             COUNT(DISTINCT c.memberId) AS members, COUNT(*) AS claims
      FROM Claim c JOIN Drug d ON d.id = c.drugId
      WHERE c.responseStatus = 'R'

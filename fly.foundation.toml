@@ -1,0 +1,35 @@
+# Staging / foundation deploy — does not replace glass-pbm-demo
+app = "glass-pbm-foundation"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  app = "node /app/server.js"
+  worker = "node /app/scripts/worker-entry.mjs"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 2
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "30s"
+    grace_period = "180s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"
+  processes = ["worker"]
