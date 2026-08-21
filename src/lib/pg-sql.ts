@@ -145,6 +145,16 @@ export function adaptSqliteDialect(sql: string): string {
     /\b(isTransdermal|convertible|is340B|isDesignatedSpecialty|awpIsSimulated|isSpecialtyClaim|rebateEligible|excludedFromDiscountGuarantee|fired|active|demoFeatures)\s*=\s*0\b/g,
     "$1 IS FALSE",
   );
+  // SQLite stored dates as ms integers; CAST(date AS REAL) meant "ms since epoch".
+  s = s.replace(
+    /CAST\(\s*(MIN|MAX)\s*\(\s*([^)]+?(?:dateOfService|decidedAt|receivedAt|submittedAt|publishedAt|effectiveDate|retroReportedAt|reportedTerminationDate)[^)]*)\s*\)\s*AS\s+REAL\s*\)/gi,
+    "((EXTRACT(EPOCH FROM $1($2)) * 1000))",
+  );
+  // dateOfService + daysSupply * 86400000 (SQLite ms arithmetic)
+  s = s.replace(
+    /(\w+\.)?(dateOfService)\s*\+\s*(\w+\.)?(daysSupply)\s*\*\s*\d+/gi,
+    "($1$2 + (($3$4) * INTERVAL '1 day'))",
+  );
   return s;
 }
 

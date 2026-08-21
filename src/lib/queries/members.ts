@@ -37,21 +37,21 @@ export async function listMembers(
     ? `WHERE (m.lastName LIKE '${like}' OR m.firstName LIKE '${like}' OR m.cardholderId LIKE '${like}')`
     : "";
 
-  const day = clock.today.getTime();
+  const dayIso = clock.today.toISOString();
 
   const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
     SELECT m.id, m.firstName, m.lastName, m.cardholderId, m.personCode, m.city,
-           COALESCE(bp.name, 'IYC Health Plan') AS planName,
+           MAX(COALESCE(bp.name, 'IYC Health Plan')) AS planName,
            SUM(CASE WHEN c.responseStatus = 'P' THEN 1 ELSE 0 END) AS claims,
            SUM(CASE WHEN c.responseStatus = 'R' THEN 1 ELSE 0 END) AS rejects,
            COALESCE(SUM(c.totalBilledCents), 0) AS billedCents,
            COALESCE(SUM(c.patientPayCents), 0)  AS memberPaidCents
     FROM Member m
-    LEFT JOIN Claim c ON c.memberId = m.id AND c.dateOfService <= ${day}
+    LEFT JOIN Claim c ON c.memberId = m.id AND c.dateOfService <= '${dayIso}'
     LEFT JOIN EligibilitySpan es ON es.memberId = m.id
     LEFT JOIN BenefitPlan bp ON bp.id = es.benefitPlanId
     ${where}
-    GROUP BY m.id
+    GROUP BY m.id, m.firstName, m.lastName, m.cardholderId, m.personCode, m.city
     ORDER BY ${orderBy}
     LIMIT ${perPage} OFFSET ${(page - 1) * perPage}
   `);
