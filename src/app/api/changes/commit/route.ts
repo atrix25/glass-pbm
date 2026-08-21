@@ -4,7 +4,10 @@ import { prisma } from "@/lib/db";
 import type { ConfigOverride } from "@/lib/engine/replay";
 import type { NpsReading } from "@/lib/nps/reading";
 import { RUBRIC_VERSION } from "@/lib/nps/rubric";
-import { getClock } from "@/lib/session";
+import { getClock, getSessionUser } from "@/lib/session";
+import { recordAudit } from "@/lib/audit";
+import { canMutate } from "@/lib/auth";
+import { demoFeaturesEnabled } from "@/lib/config";
 
 export const runtime = "nodejs";
 
@@ -27,6 +30,13 @@ interface CommitBody {
 }
 
 export async function POST(request: Request) {
+  if (!demoFeaturesEnabled()) {
+    const user = await getSessionUser();
+    if (!user || !canMutate(user.role)) {
+      return NextResponse.json({ error: "Insufficient role." }, { status: 403 });
+    }
+  }
+
   const body = (await request.json()) as CommitBody;
   const payload = JSON.stringify(body.override);
   const contentHash = createHash("sha256").update(payload).digest("hex");
@@ -88,6 +98,15 @@ export async function POST(request: Request) {
       },
     });
   }
+
+  const actor = await getSessionUser();
+  await recordAudit({
+    actorId: actor?.id,
+    action: "config.commit",
+    entity: "ConfigVersion",
+    entityId: version.id,
+    detail: { label: body.label, contentHash },
+  });
 
   return NextResponse.json({ id: version.id, contentHash });
 }

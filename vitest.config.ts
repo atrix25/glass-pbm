@@ -7,7 +7,8 @@ export default defineConfig({
     // The invariant and replay suites read the whole seeded book.
     testTimeout: 120_000,
     hookTimeout: 120_000,
-    // A shared SQLite file does not want concurrent readers from many workers.
+    // Shared Postgres can allow parallel workers; keep single-thread until the
+    // suite is split so write-heavy invariants do not race.
     pool: "threads",
     poolOptions: { threads: { singleThread: true } },
     reporters: ["default", ["json", { outputFile: "tests/results.json" }]],

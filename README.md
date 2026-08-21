@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Glass
 
-## Getting Started
+Transparent PBM proof of concept (Wisconsin ETF / Navitus ETG0013), evolving into a **single-tenant production** deploy.
 
-First, run the development server:
+## Architecture (foundation)
+
+- **Postgres** book (not SQLite-on-volume)
+- **Stateless Fly app** (≥2 machines) + **worker** for replay / NPS / rollups
+- **Session or Basic auth**, durable copy overrides + harness results in DB
+- Ops: [docs/ops-runbook.md](docs/ops-runbook.md) · Cutover: [docs/cutover.md](docs/cutover.md) · Growth: [docs/data-growth.md](docs/data-growth.md)
+
+## Local
 
 ```bash
+brew services start postgresql@16   # or: docker compose up -d postgres
+cp .env.example .env                # DATABASE_URL=postgresql://…
+npm install
+npm run db:generate && npm run db:push
+# Optional import from existing SQLite book:
+npm run db:import
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Separate terminal:
+npm run worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Script | Purpose |
+|--------|---------|
+| `npm run worker` | Job worker |
+| `npm run db:import` | SQLite → Postgres import |
+| `npm run harness:publish` | Push `tests/results.json` into `HarnessResult` |
+| `npm run deploy` | `fly deploy` + health wait |

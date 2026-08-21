@@ -14,7 +14,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -1941,4 +1941,141 @@ model MacAppeal {
   @@index([submittedAt])
   @@index([pharmacyId])
   @@index([outcome])
+}
+
+// ---------------------------------------------------------------------------
+// Production foundation: jobs, durable product state, auth, tenant config
+// ---------------------------------------------------------------------------
+
+/// Single-tenant deploy knobs. One row per deployment (id = "default").
+model TenantConfig {
+  id                 String   @id @default("default")
+  contractId         String   @default("etg0013")
+  sponsorId          String   @default("steel-potatoes")
+  defaultMemberId    String   @default("mbr-DEMO-0001-01")
+  displayName        String   @default("Glass")
+  demoFeatures       Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+}
+
+/// Async work claimed by workers with FOR UPDATE SKIP LOCKED.
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  status      String    @default("pending") // pending | running | succeeded | failed | cancelled
+  payload     String    @default("{}")
+  progress    Float     @default(0)
+  result      String?
+  error       String?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  runs        JobRun[]
+
+  @@index([status, createdAt])
+  @@index([type, status])
+}
+
+model JobRun {
+  id         String    @id @default(cuid())
+  jobId      String
+  job        Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  workerId   String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  error      String?
+  log        String?
+
+  @@index([jobId])
+}
+
+/// Browser copy overrides — durable across deploys (replaces content/*.json on disk).
+model CopyOverride {
+  id          String   @id @default(cuid())
+  original    String   @unique
+  replacement String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
+}
+
+/// Correctness harness artifact published by CI (replaces baked tests/results.json).
+model HarnessResult {
+  id        String   @id @default(cuid())
+  /// Full vitest JSON report.
+  payload   String
+  /// Object-storage key when the payload lives outside the row.
+  objectKey String?
+  commitSha String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Append-only audit of consequential writes (PA, benefit change, config, auth).
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String?
+  entityId  String?
+  detail    String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  /// plan_sponsor | ops | pharmacist | readonly | admin
+  role         String        @default("readonly")
+  passwordHash String?
+  /// External IdP subject when using OIDC.
+  oidcSub      String?       @unique
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sessions     Session[]
+  jobs         Job[]
+  copyEdits    CopyOverride[]
+  auditEvents  AuditEvent[]
+  apiKeys      ApiKey[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  /// Optional server-side as-of date when demo clock is disabled.
+  asOfDate  DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Service credentials for pharmacy POS / switch adapters.
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  scopes     String    @default("[\"pos\"]")
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([active])
 }

@@ -1,29 +1,57 @@
 import { PrismaClient } from "@/generated/prisma";
+import {
+  adaptSqliteDialect,
+  quotePgSql,
+  sqlitePlaceholdersToPg,
+} from "@/lib/pg-sql";
 
 /**
- * One connection to SQLite, and a patient one.
+ * Shared Prisma client for Postgres.
  *
- * Prisma sizes its pool for a network database, which is wrong for a file.
- * SQLite admits a single writer, and in write-ahead-log mode each pooled
- * connection carries its own read snapshot, so a pool turns ordinary contention
- * into errors that look like defects in the data:
+ * Prefer DATABASE_URL pointing at a pooler (PgBouncer / Fly Postgres pooler)
+ * for the app tier. Direct URLs are fine for workers and migrations
+ * (set DATABASE_URL_DIRECT when migrating).
  *
- *   - rows written on one connection are invisible to a sibling whose snapshot
- *     predates the commit, so inserting a child row fails a foreign key check
- *     against a parent that plainly exists;
- *   - two connections writing at once leave one waiting on a lock until it
- *     times out mid-batch.
- *
- * Both appeared while seeding a million and a half claims, only once the file
- * was large enough for commits to take real time, and both moved to a different
- * table on each run — the signature of a race rather than a bug in what is being
- * written. Serialising costs nothing here, because the writes were already
- * serialised by the engine underneath; the pool only obscured it.
+ * Raw SQL written for SQLite (unquoted PascalCase identifiers, `?` binds)
+ * is adapted on the way in so the existing query surface keeps working.
  */
 function connectionUrl(): string {
-  const base = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  if (base.includes("connection_limit=")) return base;
-  return `${base}${base.includes("?") ? "&" : "?"}connection_limit=1&socket_timeout=120`;
+  return (
+    process.env.DATABASE_URL_DIRECT ??
+    process.env.DATABASE_URL ??
+    "postgresql://localhost:5432/glass"
+  );
+}
+
+function wrapClient(client: PrismaClient): PrismaClient {
+  const raw = client.$queryRaw.bind(client);
+  const rawUnsafe = client.$queryRawUnsafe.bind(client);
+  const exec = client.$executeRaw.bind(client);
+  const execUnsafe = client.$executeRawUnsafe.bind(client);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (client as any).$queryRaw = (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const adapted = strings.map((part) => quotePgSql(adaptSqliteDialect(part)));
+    const next = Object.assign([...adapted], { raw: adapted }) as TemplateStringsArray;
+    return raw(next, ...values);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (client as any).$executeRaw = (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const adapted = strings.map((part) => quotePgSql(adaptSqliteDialect(part)));
+    const next = Object.assign([...adapted], { raw: adapted }) as TemplateStringsArray;
+    return exec(next, ...values);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (client as any).$queryRawUnsafe = (query: string, ...values: unknown[]) =>
+    rawUnsafe(sqlitePlaceholdersToPg(query), ...values);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (client as any).$executeRawUnsafe = (query: string, ...values: unknown[]) =>
+    execUnsafe(sqlitePlaceholdersToPg(query), ...values);
+
+  return client;
 }
 
 const globalForPrisma = globalThis as unknown as {
@@ -32,9 +60,11 @@ const globalForPrisma = globalThis as unknown as {
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: { db: { url: connectionUrl() } },
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-  });
+  wrapClient(
+    new PrismaClient({
+      datasources: { db: { url: connectionUrl() } },
+      log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+    }),
+  );
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

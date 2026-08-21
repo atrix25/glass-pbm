@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-bookworm
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: glass
+      POSTGRES_PASSWORD: glass
+      POSTGRES_DB: glass
+    volumes:
+      - glass_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glass -d glass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  glass_pg:

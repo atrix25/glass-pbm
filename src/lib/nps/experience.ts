@@ -89,12 +89,12 @@ async function claimSignals(cutoff: Date): Promise<Map<string, ClaimAgg>> {
       SUM(CASE WHEN c.responseStatus = 'P' AND c.appliedToDeductibleCents > 0 THEN 1 ELSE 0 END) AS deductibleClaims,
       SUM(CASE WHEN c.responseStatus = 'P' AND c.channel IN ('Mail', 'Retail90') THEN 1 ELSE 0 END) AS extendedSupplyClaims,
       SUM(CASE WHEN c.transactionCode = 'B2' THEN 1 ELSE 0 END) AS reversals,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '75'  THEN 1 ELSE 0 END) AS rejPa,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '608' THEN 1 ELSE 0 END) AS rejStep,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '76'  THEN 1 ELSE 0 END) AS rejQty,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '79'  THEN 1 ELSE 0 END) AS rejRefill,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '69'  THEN 1 ELSE 0 END) AS rejTerm,
-      SUM(CASE WHEN c.responseStatus = 'R' AND json_extract(c.rejectCodes, '$[0]') = '40'  THEN 1 ELSE 0 END) AS rejOon
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '75'  THEN 1 ELSE 0 END) AS rejPa,
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '608' THEN 1 ELSE 0 END) AS rejStep,
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '76'  THEN 1 ELSE 0 END) AS rejQty,
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '79'  THEN 1 ELSE 0 END) AS rejRefill,
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '69'  THEN 1 ELSE 0 END) AS rejTerm,
+      SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '40'  THEN 1 ELSE 0 END) AS rejOon
     FROM Claim c
     WHERE c.dateOfService <= ${cutoff}
     GROUP BY c.memberId
@@ -116,8 +116,8 @@ interface PaAgg {
  * Authorisation outcomes, measured against what the contract promised.
  *
  * "Slow" is not a judgement invented here: it is the turnaround guarantee in
- * src/lib/contracts/guarantees.ts, 72 hours standard and 24 expedited. Dates
- * are stored as epoch milliseconds, so the arithmetic is plain subtraction.
+ * src/lib/contracts/guarantees.ts, 72 hours standard and 24 expedited.
+ * Latency is measured in milliseconds via EXTRACT(EPOCH …).
  */
 async function paSignals(cutoff: Date): Promise<Map<string, PaAgg>> {
   const standardMs = STANDARD_PROMISE_HOURS * 3_600_000;
@@ -125,21 +125,21 @@ async function paSignals(cutoff: Date): Promise<Map<string, PaAgg>> {
 
   const rows = await prisma.$queryRaw<PaAgg[]>`
     SELECT
-      p.memberId AS memberId,
+      p."memberId" AS "memberId",
       SUM(CASE WHEN p.determination = 'Denied' THEN 1 ELSE 0 END) AS denied,
       SUM(CASE
             WHEN p.determination = 'Approved'
-             AND (p.decidedAt - p.receivedAt) >
+             AND (EXTRACT(EPOCH FROM (p."decidedAt" - p."receivedAt")) * 1000) >
                  (CASE WHEN p.urgency = 'Expedited' THEN ${expeditedMs} ELSE ${standardMs} END)
             THEN 1 ELSE 0 END) AS slow,
       SUM(CASE
             WHEN p.determination = 'Approved'
-             AND (p.decidedAt - p.receivedAt) <=
+             AND (EXTRACT(EPOCH FROM (p."decidedAt" - p."receivedAt")) * 1000) <=
                  (CASE WHEN p.urgency = 'Expedited' THEN ${expeditedMs} ELSE ${standardMs} END)
-            THEN 1 ELSE 0 END) AS onTime
-    FROM PriorAuthorization p
-    WHERE p.decidedAt IS NOT NULL AND p.decidedAt <= ${cutoff}
-    GROUP BY p.memberId
+            THEN 1 ELSE 0 END) AS "onTime"
+    FROM "PriorAuthorization" p
+    WHERE p."decidedAt" IS NOT NULL AND p."decidedAt" <= ${cutoff}
+    GROUP BY p."memberId"
   `;
 
   const map = new Map<string, PaAgg>();

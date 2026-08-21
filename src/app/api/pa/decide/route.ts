@@ -11,7 +11,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
 import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
-import { getClock } from "@/lib/session";
+import { getClock, getSessionUser } from "@/lib/session";
+import { recordAudit } from "@/lib/audit";
+import { canDecidePa } from "@/lib/auth";
+import { demoFeaturesEnabled } from "@/lib/config";
 
 interface Body {
   paId: string;
@@ -36,6 +39,13 @@ export async function POST(request: Request) {
       { error: verdict.refusal, requiresSignature: verdict.requiresSignature },
       { status: 403 },
     );
+  }
+
+  if (!demoFeaturesEnabled()) {
+    const user = await getSessionUser();
+    if (!user || !canDecidePa(user.role)) {
+      return NextResponse.json({ error: "Insufficient role." }, { status: 403 });
+    }
   }
 
   const pa = await prisma.priorAuthorization.findUnique({
@@ -114,6 +124,15 @@ export async function POST(request: Request) {
       decisionDueAt: sla.dueAt,
       reviewerNote: body.note ?? null,
     },
+  });
+
+  const actor = await getSessionUser();
+  await recordAudit({
+    actorId: actor?.id,
+    action: "pa.decide",
+    entity: "PriorAuthorization",
+    entityId: pa.id,
+    detail: { determination: action.record, reviewer: body.reviewer },
   });
 
   return NextResponse.json({
