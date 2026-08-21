@@ -196,12 +196,12 @@ export async function buildExperiences(
 ): Promise<MemberExperience[]> {
   const cutoff = clock.now;
 
-  const [claims, pas, durs, clawbacks] = await Promise.all([
-    claimSignals(cutoff),
-    paSignals(cutoff),
-    durSignals(cutoff),
-    clawbackMembers(cutoff),
-  ]);
+  // Run sequentially: each claim pass can hold a pool connection for a long
+  // time, and parallelising them exhausts Prisma behind PgBouncer (P2024).
+  const claims = await claimSignals(cutoff);
+  const pas = await paSignals(cutoff);
+  const durs = await durSignals(cutoff);
+  const clawbacks = await clawbackMembers(cutoff);
 
   const out: MemberExperience[] = [];
 
