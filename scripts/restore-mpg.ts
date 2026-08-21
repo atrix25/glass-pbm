@@ -12,10 +12,10 @@
 import { spawnSync } from "node:child_process";
 import pg from "pg";
 
-const URL = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
 const DUMP = process.env.BOOK_DUMP ?? "/tmp/glass-local.dump";
 
-if (!URL) {
+if (!databaseUrl) {
   console.error("DATABASE_URL required");
   process.exit(1);
 }
@@ -30,7 +30,7 @@ function run(cmd: string, args: string[], env?: NodeJS.ProcessEnv) {
 }
 
 async function main() {
-  const client = new pg.Client({ connectionString: URL });
+  const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   console.log("Connected");
 
@@ -64,7 +64,7 @@ async function main() {
   console.log(`Restoring ${DUMP}…`);
   const restore = spawnSync(
     "pg_restore",
-    ["--no-owner", "--no-acl", "--data-only", "-d", URL, DUMP],
+    ["--no-owner", "--no-acl", "--data-only", "-d", databaseUrl, DUMP],
     { encoding: "utf8" },
   );
   if (restore.stderr) process.stderr.write(restore.stderr);
@@ -75,10 +75,10 @@ async function main() {
 
   console.log("Recreating schema / FKs via prisma db push…");
   run("npx", ["prisma", "db", "push", "--skip-generate"], {
-    DATABASE_URL: URL,
+    DATABASE_URL: databaseUrl,
   });
 
-  const verify = new pg.Client({ connectionString: URL });
+  const verify = new pg.Client({ connectionString: databaseUrl });
   await verify.connect();
   const counts = await verify.query<{ t: string; n: string }>(`
     SELECT 'Claim' AS t, COUNT(*)::text AS n FROM "Claim"

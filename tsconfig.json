@@ -38,6 +38,8 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts/import-sqlite-to-pg.ts"
+    "scripts/import-sqlite-to-pg.ts",
+    "scripts/restore-mpg.ts",
+    "scripts/restore-mpg-tables.ts"
   ]
 }
