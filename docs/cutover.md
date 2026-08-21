@@ -10,3 +10,15 @@
 8. Flip `DEMO_FEATURES=0` and `AUTH_MODE=session` when ready for real auth; bootstrap an admin via `PUT /api/auth`.
 
 Until step 5, the previous SQLite+volume image remains the live demo.
+
+## MPG book reload (staging)
+
+`fly mpg proxy` + local `pg_restore` is unreliable for the full book (WireGuard drops mid-COPY). Prefer restore **inside** the Fly private network:
+
+1. `pg_dump --no-owner --no-acl -Fc -d glass -f /tmp/glass-local.dump` (local Postgres 16).
+2. `fly ssh sftp put -a glass-pbm-foundation --machine <id> /tmp/glass-local.dump /tmp/glass-local.dump`
+3. On the app machine: install `postgresql-client-16`, connect to the MPG **Direct IP** (not pgbouncer) with `?sslmode=disable`.
+4. Drop FKs → truncate → `pg_restore --data-only` → `DATABASE_URL=…?sslmode=disable npx prisma db push`.
+5. Verify: Claim ≈ 1.62M, Member ≈ 103k, BookDay = 365. `/api/health` alone is not enough (it only checks BookDay).
+
+Helpers: `scripts/restore-mpg.ts`, `scripts/restore-mpg-tables.ts` (local/proxy with retries).
