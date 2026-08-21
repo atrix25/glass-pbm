@@ -75,7 +75,12 @@ export function quotePgSql(sql: string): string {
       while (j < sql.length && /[A-Za-z0-9_]/.test(sql[j])) j += 1;
       const word = sql.slice(i, j);
       const upper = word.toUpperCase();
-      if (KEYWORDS.has(upper) || word.startsWith("$")) {
+      if (
+        KEYWORDS.has(upper) ||
+        word.startsWith("$") ||
+        // ALL_CAPS tokens are SQL keywords/functions (LOWER, ROW_NUMBER, …)
+        /^[A-Z][A-Z0-9_]*$/.test(word)
+      ) {
         out += word;
       } else if (/^[A-Z]/.test(word) || /[A-Z]/.test(word.slice(1))) {
         // PascalCase table or camelCase column
