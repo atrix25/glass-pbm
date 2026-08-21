@@ -165,7 +165,7 @@ async function ruleSideCounts(
       const rows = await prisma.$queryRawUnsafe<Array<{ n: number }>>(`
         SELECT COUNT(*) AS n FROM Claim c JOIN Drug d ON d.id = c.drugId
         WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
-          AND c.dateOfService <= ${clock.now.getTime()}
+          AND c.dateOfService <= '${clock.now.toISOString()}'
           AND ${matcherSql(rule[side], "d")}
       `);
       out.set(`${rule.id}|${side}`, Number(rows[0]?.n ?? 0));

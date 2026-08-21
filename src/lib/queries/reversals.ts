@@ -217,15 +217,13 @@ export async function getRecoveryOverview(
     }>
   >`
     SELECT c.memberId AS memberId,
-           m.firstName || ' ' || m.lastName AS memberName,
-           e.reportedTerminationDate AS terminationDate,
-           e.retroReportedAt AS reportedAt,
+           MAX(m.firstName || ' ' || m.lastName) AS memberName,
+           MAX(e.reportedTerminationDate) AS terminationDate,
+           MAX(e.retroReportedAt) AS reportedAt,
            COUNT(*) AS claims,
            SUM(c.planPaidCents) AS plan,
            SUM(c.patientPayCents) AS member,
-           -- SQLite hands back a BigInt for MAX over an integer column, which
-           -- the Date constructor will not take.
-           CAST(MAX(c.dateOfService) AS REAL) AS lastFill
+           (EXTRACT(EPOCH FROM MAX(c.dateOfService)) * 1000) AS lastFill
     FROM Claim c
     JOIN EligibilitySpan e ON e.memberId = c.memberId
     JOIN Member m ON m.id = c.memberId
@@ -235,7 +233,7 @@ export async function getRecoveryOverview(
       AND c.dateOfService > e.reportedTerminationDate
       AND c.dateOfService <= ${clock.now}
     GROUP BY c.memberId
-    ORDER BY plan DESC
+    ORDER BY SUM(c.planPaidCents) DESC
   `;
 
   const lags = rows

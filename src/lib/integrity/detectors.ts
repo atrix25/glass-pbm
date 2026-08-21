@@ -224,23 +224,24 @@ async function detectOpioidOverutilisation(
       FROM op s JOIN op x ON x.memberId = s.memberId
         AND x.dateOfService <= s.dateOfService
         AND x.dateOfService + x.daysSupply * ${DAY_MS} > s.dateOfService
-      GROUP BY s.id
+      GROUP BY s.id, s.memberId
     )
     SELECT op.memberId AS memberId,
-           m.firstName AS firstName, m.lastName AS lastName,
+           MAX(m.firstName) AS firstName, MAX(m.lastName) AS lastName,
            COUNT(DISTINCT op.prescriberNpi) AS prescribers,
            COUNT(DISTINCT op.pharmacyId) AS pharmacies,
            COUNT(*) AS fills,
-           CAST(MAX(cc.totalMme) AS REAL) AS maxMme,
+           CAST(MAX(cc.totalMme) AS DOUBLE PRECISION) AS maxMme,
            SUM(op.planPaidCents) AS exposure,
-           CAST(MIN(op.dateOfService) AS REAL) AS firstFill,
-           CAST(MAX(op.dateOfService) AS REAL) AS lastFill
+           (EXTRACT(EPOCH FROM MIN(op.dateOfService)) * 1000) AS firstFill,
+           (EXTRACT(EPOCH FROM MAX(op.dateOfService)) * 1000) AS lastFill
     FROM op
     JOIN concurrent cc ON cc.id = op.id
     JOIN Member m ON m.id = op.memberId
     GROUP BY op.memberId
-    HAVING prescribers >= 3 AND pharmacies >= 3
-       AND maxMme >= ${MME_THRESHOLDS.avoidOrJustify}
+    HAVING COUNT(DISTINCT op.prescriberNpi) >= 3
+       AND COUNT(DISTINCT op.pharmacyId) >= 3
+       AND MAX(cc.totalMme) >= ${MME_THRESHOLDS.avoidOrJustify}
   `);
 
   const allMme = await prisma.$queryRawUnsafe<Array<{ v: number }>>(`
@@ -315,13 +316,13 @@ async function detectControlledShopping(
     }>
   >(`
     SELECT c.memberId AS memberId,
-           m.firstName AS firstName, m.lastName AS lastName,
+           MAX(m.firstName) AS firstName, MAX(m.lastName) AS lastName,
            COUNT(*) AS fills,
            COUNT(DISTINCT c.prescriberNpi) AS prescribers,
            COUNT(DISTINCT c.pharmacyId) AS pharmacies,
            SUM(c.planPaidCents) AS exposure,
-           CAST(MIN(c.dateOfService) AS REAL) AS firstFill,
-           CAST(MAX(c.dateOfService) AS REAL) AS lastFill,
+           (EXTRACT(EPOCH FROM MIN(c.dateOfService)) * 1000) AS firstFill,
+           (EXTRACT(EPOCH FROM MAX(c.dateOfService)) * 1000) AS lastFill,
            COUNT(DISTINCT d.therapeuticClass) AS classes
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
@@ -329,7 +330,7 @@ async function detectControlledShopping(
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
       AND d.therapeuticClass IN (${controlledList})
     GROUP BY c.memberId
-    HAVING fills >= 6
+    HAVING COUNT(*) >= 6
   `);
 
   // Band by fill count, because breadth of prescribers scales with volume and
@@ -419,20 +420,20 @@ async function detectPrescriberConcentration(
     }>
   >(`
     SELECT c.prescriberNpi AS npi,
-           p.firstName AS firstName, p.lastName AS lastName,
-           p.credential AS credential, p.specialty AS specialty,
+           MAX(p.firstName) AS firstName, MAX(p.lastName) AS lastName,
+           MAX(p.credential) AS credential, MAX(p.specialty) AS specialty,
            COUNT(*) AS total,
            SUM(CASE WHEN d.therapeuticClass IN (${controlledList}) THEN 1 ELSE 0 END) AS controlled,
            COUNT(DISTINCT c.memberId) AS members,
            SUM(CASE WHEN d.therapeuticClass IN (${controlledList}) THEN c.planPaidCents ELSE 0 END) AS exposure,
-           CAST(MIN(c.dateOfService) AS REAL) AS firstFill,
-           CAST(MAX(c.dateOfService) AS REAL) AS lastFill
+           (EXTRACT(EPOCH FROM MIN(c.dateOfService)) * 1000) AS firstFill,
+           (EXTRACT(EPOCH FROM MAX(c.dateOfService)) * 1000) AS lastFill
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
     JOIN Prescriber p ON p.npi = c.prescriberNpi
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
     GROUP BY c.prescriberNpi
-    HAVING total >= 200
+    HAVING COUNT(*) >= 200
   `);
 
   const bySpecialty = new Map<string, number[]>();
@@ -511,20 +512,20 @@ async function detectPharmacyMix(
       lastFill: number;
     }>
   >(`
-    SELECT c.pharmacyId AS pharmacyId, ph.name AS name,
-           ph.pharmacyType AS pharmacyType,
+    SELECT c.pharmacyId AS pharmacyId, MAX(ph.name) AS name,
+           MAX(ph.pharmacyType) AS pharmacyType,
            COUNT(*) AS total,
            SUM(CASE WHEN d.therapeuticClass IN (${controlledList}) THEN 1 ELSE 0 END) AS controlled,
            COUNT(DISTINCT c.memberId) AS members,
            SUM(CASE WHEN d.therapeuticClass IN (${controlledList}) THEN c.planPaidCents ELSE 0 END) AS exposure,
-           CAST(MIN(c.dateOfService) AS REAL) AS firstFill,
-           CAST(MAX(c.dateOfService) AS REAL) AS lastFill
+           (EXTRACT(EPOCH FROM MIN(c.dateOfService)) * 1000) AS firstFill,
+           (EXTRACT(EPOCH FROM MAX(c.dateOfService)) * 1000) AS lastFill
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
     JOIN Pharmacy ph ON ph.id = c.pharmacyId
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
     GROUP BY c.pharmacyId
-    HAVING total >= 1000
+    HAVING COUNT(*) >= 1000
   `);
 
   const stats = peerStats(rows.map((r) => Number(r.controlled) / Number(r.total)));
