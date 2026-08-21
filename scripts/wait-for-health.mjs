@@ -1,15 +1,8 @@
 /**
- * Block until the deployed app is actually serving.
- *
- * A single-machine Fly app is stopped while its config is updated and is only
- * started again by an incoming request, so `flyctl deploy` reports success
- * against a machine that is not running. The first visitor then absorbs the
- * cold start, which for this app means waiting for a ~900 MB image to
- * materialise. Paying that here, once, is the whole point.
+ * Block until the deployed app is ready (Postgres + BookDay rollup).
  */
 
 const URL = process.env.HEALTH_URL ?? "https://glass-pbm-demo.fly.dev/api/health";
-// First boot may download and gunzip ~325 MB from object storage.
 const DEADLINE_MS = 10 * 60 * 1000;
 
 const started = Date.now();
@@ -19,8 +12,6 @@ while (Date.now() - started < DEADLINE_MS) {
   attempt++;
   const elapsed = ((Date.now() - started) / 1000).toFixed(0);
   try {
-    // The first query against a cold ~1.3 GB SQLite book can take 20–30s even
-    // after Next.js is listening; a shorter timeout makes deploy look hung.
     const res = await fetch(URL, { signal: AbortSignal.timeout(120_000) });
     const body = await res.json();
     if (res.ok && body.ok) {
@@ -31,8 +22,8 @@ while (Date.now() - started < DEADLINE_MS) {
   } catch (e) {
     console.log(`  ${elapsed}s  attempt ${attempt}: ${e instanceof Error ? e.message : e}`);
   }
-  await new Promise((r) => setTimeout(r, 5000));
+  await new Promise((r) => setTimeout(r, 5_000));
 }
 
-console.error(`still not healthy after ${DEADLINE_MS / 1000}s`);
+console.error(`not healthy after ${DEADLINE_MS / 1000}s`);
 process.exit(1);

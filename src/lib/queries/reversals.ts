@@ -93,10 +93,10 @@ export async function getReversalOverview(
   // The lag between the fill and the reversal is the operational tell: a
   // processor that only accepts same-day reversals is not a processor.
   const lags = await prisma.$queryRaw<Array<{ lag: number; n: number }>>`
-    SELECT CAST((adjudicatedAt - dateOfService) / 86400000 AS INTEGER) AS lag,
+    SELECT CAST(EXTRACT(EPOCH FROM ("adjudicatedAt" - "dateOfService")) / 86400 AS INTEGER) AS lag,
            COUNT(*) AS n
-    FROM Claim
-    WHERE transactionCode = 'B2' AND adjudicatedAt <= ${clock.now}
+    FROM "Claim"
+    WHERE "transactionCode" = 'B2' AND "adjudicatedAt" <= ${clock.now}
     GROUP BY lag ORDER BY lag
   `;
   let seen = 0;

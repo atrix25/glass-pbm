@@ -111,13 +111,13 @@ async function measurePa(
   const rows = await prisma.$queryRaw<
     Array<{ month: number; sample: number; hits: number }>
   >`
-    SELECT CAST(STRFTIME('%m', receivedAt / 1000, 'unixepoch') AS INTEGER) - 1 AS month,
+    SELECT EXTRACT(MONTH FROM "receivedAt")::int - 1 AS month,
            COUNT(*) AS sample,
-           SUM(CASE WHEN (decidedAt - receivedAt) <= ${hours * 3_600_000}
+           SUM(CASE WHEN (EXTRACT(EPOCH FROM ("decidedAt" - "receivedAt")) * 1000) <= ${hours * 3_600_000}
                     THEN 1 ELSE 0 END) AS hits
-    FROM PriorAuthorization
-    WHERE decidedAt IS NOT NULL AND urgency = ${urgency}
-      AND STRFTIME('%Y', receivedAt / 1000, 'unixepoch') = ${String(PLAN_YEAR)}
+    FROM "PriorAuthorization"
+    WHERE "decidedAt" IS NOT NULL AND urgency = ${urgency}
+      AND EXTRACT(YEAR FROM "receivedAt")::int = ${PLAN_YEAR}
     GROUP BY month
   `;
   return rows.map((r) => ({
@@ -154,12 +154,12 @@ async function measureAppeals(): Promise<Measurement[]> {
   const rows = await prisma.$queryRaw<
     Array<{ month: number; sample: number; hits: number }>
   >`
-    SELECT CAST(STRFTIME('%m', submittedAt / 1000, 'unixepoch') AS INTEGER) - 1 AS month,
+    SELECT EXTRACT(MONTH FROM "submittedAt")::int - 1 AS month,
            COUNT(*) AS sample,
-           SUM(CASE WHEN (decidedAt - submittedAt) <= ${21 * DAY_MS}
+           SUM(CASE WHEN (EXTRACT(EPOCH FROM ("decidedAt" - "submittedAt")) * 1000) <= ${21 * DAY_MS}
                     THEN 1 ELSE 0 END) AS hits
-    FROM MacAppeal
-    WHERE STRFTIME('%Y', submittedAt / 1000, 'unixepoch') = ${String(PLAN_YEAR)}
+    FROM "MacAppeal"
+    WHERE EXTRACT(YEAR FROM "submittedAt")::int = ${PLAN_YEAR}
     GROUP BY month
   `;
   return rows.map((r) => ({
@@ -183,22 +183,22 @@ async function measureAccuracy(): Promise<Measurement[]> {
   const rows = await prisma.$queryRaw<
     Array<{ month: number; sample: number; defects: number }>
   >`
-    SELECT CAST(STRFTIME('%m', dateOfService / 1000, 'unixepoch') AS INTEGER) - 1 AS month,
+    SELECT EXTRACT(MONTH FROM "dateOfService")::int - 1 AS month,
            COUNT(*) AS sample,
            SUM(CASE
-                 WHEN transactionCode = 'B1' AND responseStatus = 'P'
-                      AND (totalBilledCents <> pharmacyPaidCents + patientPayCents
-                           OR planPaidCents + patientPayCents <> totalBilledCents
-                           OR patientPayCents > totalBilledCents)
+                 WHEN "transactionCode" = 'B1' AND "responseStatus" = 'P'
+                      AND ("totalBilledCents" <> "pharmacyPaidCents" + "patientPayCents"
+                           OR "planPaidCents" + "patientPayCents" <> "totalBilledCents"
+                           OR "patientPayCents" > "totalBilledCents")
                  THEN 1
-                 WHEN responseStatus = 'R'
-                      AND (planPaidCents <> 0 OR patientPayCents <> 0
-                           OR pharmacyPaidCents <> 0)
+                 WHEN "responseStatus" = 'R'
+                      AND ("planPaidCents" <> 0 OR "patientPayCents" <> 0
+                           OR "pharmacyPaidCents" <> 0)
                  THEN 1
                  ELSE 0
                END) AS defects
-    FROM Claim
-    WHERE STRFTIME('%Y', dateOfService / 1000, 'unixepoch') = ${String(PLAN_YEAR)}
+    FROM "Claim"
+    WHERE EXTRACT(YEAR FROM "dateOfService")::int = ${PLAN_YEAR}
     GROUP BY month
   `;
   return rows.map((r) => ({

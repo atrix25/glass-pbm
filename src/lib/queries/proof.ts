@@ -5,10 +5,9 @@ import { prisma } from "@/lib/db";
 /**
  * The proof page reports what the harness actually found on its last run.
  *
- * It reads the committed vitest artifact rather than running tests inside a
- * request, so the page can never be greener than the suite. If the file is
- * missing or stale the page says so; a correctness claim with no evidence
- * behind it is worse than no claim.
+ * Preference order: latest HarnessResult row (published by CI) → committed
+ * tests/results.json baked into the image as a fallback. The page never runs
+ * the suite inside a request.
  */
 
 export interface SuiteResult {
@@ -116,24 +115,41 @@ export async function getHarnessResults(): Promise<{
   failed: number;
   suites: SuiteResult[];
 }> {
-  let raw: string;
+  let raw: string | null = null;
+  let ranAt: Date | null = null;
+
   try {
-    raw = await readFile(
-      path.join(process.cwd(), "tests", "results.json"),
-      "utf8",
-    );
+    const latest = await prisma.harnessResult.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+    if (latest?.payload) {
+      raw = latest.payload;
+      ranAt = latest.createdAt;
+    }
   } catch {
-    return {
-      available: false,
-      ranAt: null,
-      total: 0,
-      passed: 0,
-      failed: 0,
-      suites: [],
-    };
+    // Table missing during bootstrap — fall through to file.
+  }
+
+  if (!raw) {
+    try {
+      raw = await readFile(
+        path.join(process.cwd(), "tests", "results.json"),
+        "utf8",
+      );
+    } catch {
+      return {
+        available: false,
+        ranAt: null,
+        total: 0,
+        passed: 0,
+        failed: 0,
+        suites: [],
+      };
+    }
   }
 
   const json = JSON.parse(raw) as VitestJson;
+  if (!ranAt) ranAt = new Date(json.startTime);
 
   const suites: SuiteResult[] = json.testResults.map((r) => {
     const file = path.basename(r.name);
@@ -156,7 +172,7 @@ export async function getHarnessResults(): Promise<{
 
   return {
     available: true,
-    ranAt: new Date(json.startTime),
+    ranAt,
     total: json.numTotalTests,
     passed: json.numPassedTests,
     failed: json.numFailedTests,

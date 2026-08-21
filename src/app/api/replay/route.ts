@@ -1,42 +1,65 @@
 import { NextResponse } from "next/server";
+import { enqueueJob, getJob } from "@/lib/jobs";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
+import { recordAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 interface ReplayBody {
   override: ConfigOverride;
-  /**
-   * Between 0 and 1 to project from a sample instead of measuring the book.
-   *
-   * A full run walks 1.7 million claims and takes half a minute, which is the
-   * right cost for a decision and the wrong one for a slider somebody is still
-   * moving. The projection runs the identical engine over a fixed fraction of
-   * members so the console can answer immediately, then be corrected.
-   */
   sampleRate?: number;
+  /** When true (default for full-book runs), enqueue a worker job instead. */
+  async?: boolean;
 }
 
 export async function POST(request: Request) {
   const body = (await request.json()) as ReplayBody | ConfigOverride;
-
-  // Older callers posted the override at the top level. Accepting both keeps a
-  // saved request or a copied fetch working.
   const isWrapped = typeof body === "object" && body !== null && "override" in body;
   const override = (isWrapped ? (body as ReplayBody).override : body) ?? {};
   const sampleRate = isWrapped ? (body as ReplayBody).sampleRate : undefined;
   const projecting = sampleRate !== undefined && sampleRate < 1;
+  const wantAsync =
+    isWrapped && (body as ReplayBody).async === true
+      ? true
+      : isWrapped && (body as ReplayBody).async === false
+        ? false
+        : !projecting;
+
+  if (wantAsync) {
+    const job = await enqueueJob({
+      type: "replay",
+      payload: { override, sampleRate, nps: true, maxDiffs: projecting ? 0 : 200 },
+    });
+    await recordAudit({
+      action: "job.enqueue",
+      entity: "Job",
+      entityId: job.id,
+      detail: { type: "replay" },
+    });
+    return NextResponse.json({ jobId: job.id, status: job.status }, { status: 202 });
+  }
 
   const result = await replay(override, {
-    // Diffs are per-claim examples, and examples drawn from a twelfth of the
-    // book invite a reader to check one against a page that will not have it.
     maxDiffs: projecting ? 0 : 200,
-    // Scored on every run rather than behind a second button. A change's effect
-    // on members is not supplementary information to be fetched if somebody
-    // thinks to ask for it; it is half of what the change is.
     nps: true,
     sampleRate,
   });
-
   return NextResponse.json(result);
+}
+
+export async function GET(request: Request) {
+  const id = new URL(request.url).searchParams.get("jobId");
+  if (!id) {
+    return NextResponse.json({ error: "jobId required" }, { status: 400 });
+  }
+  const job = await getJob(id);
+  if (!job) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return NextResponse.json({
+    id: job.id,
+    status: job.status,
+    progress: job.progress,
+    error: job.error,
+    result: job.result ? JSON.parse(job.result) : null,
+  });
 }
