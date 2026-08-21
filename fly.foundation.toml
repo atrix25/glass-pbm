@@ -22,7 +22,7 @@ primary_region = "ord"
     timeout = "30s"
     grace_period = "180s"
     method = "GET"
-    path = "/api/health/live"
+    path = "/api/health"
 
 [[vm]]
   size = "shared-cpu-2x"
