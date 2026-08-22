@@ -3,11 +3,15 @@ import { enqueueJob } from "@/lib/jobs";
 import { getClock } from "@/lib/session";
 import { getCurrentReading, saveSnapshot } from "@/lib/queries/nps";
 import { recordAudit } from "@/lib/audit";
+import { requireApiIdentity } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const body = (await request.json()) as {
     label?: string;
     note?: string;

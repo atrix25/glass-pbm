@@ -15,6 +15,7 @@ import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { canDecidePa } from "@/lib/auth";
 import { demoFeaturesEnabled } from "@/lib/config";
+import { apiUserRole, requireApiIdentity } from "@/lib/require-auth";
 
 interface Body {
   paId: string;
@@ -24,6 +25,9 @@ interface Body {
 }
 
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const body = (await request.json()) as Body;
 
   if (!body?.paId || !body?.reviewer || !body?.action) {
@@ -42,8 +46,8 @@ export async function POST(request: Request) {
   }
 
   if (!demoFeaturesEnabled()) {
-    const user = await getSessionUser();
-    if (!user || !canDecidePa(user.role)) {
+    const role = apiUserRole(identity);
+    if (!role || !canDecidePa(role)) {
       return NextResponse.json({ error: "Insufficient role." }, { status: 403 });
     }
   }
