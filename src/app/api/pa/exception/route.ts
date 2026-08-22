@@ -18,6 +18,7 @@ import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
 import { exceptionKind, mayAppeal, type ExceptionKind } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
+import { requireApiIdentity } from "@/lib/require-auth";
 
 interface Body {
   /** The request being contested, for an appeal; the drug's own PA otherwise. */
@@ -32,6 +33,9 @@ interface Body {
 }
 
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const body = (await request.json()) as Body;
   const info = exceptionKind(body?.kind);
   if (!info) {

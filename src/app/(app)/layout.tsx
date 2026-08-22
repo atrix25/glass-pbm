@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getClock, getRole } from "@/lib/session";
+import { requirePageSession } from "@/lib/require-auth";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { SideNav, type NavGroup } from "@/components/nav";
 import { DemoRail } from "@/components/demo-rail";
@@ -78,6 +79,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await requirePageSession();
   const [role, clock, copy, copyPersistable] = await Promise.all([
     getRole(),
     getClock(),

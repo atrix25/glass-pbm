@@ -5,6 +5,7 @@ import { ROLES } from "@/lib/roles";
 import { signIn } from "@/app/actions/session";
 import { formatCentsCompact } from "@/lib/money";
 import { formatNumber } from "@/lib/utils";
+import { requirePageSession } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ async function bookStats() {
 }
 
 export default async function LoginPage() {
+  await requirePageSession();
   const stats = await bookStats();
 
   return (

@@ -8,6 +8,7 @@ import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { canMutate } from "@/lib/auth";
 import { demoFeaturesEnabled } from "@/lib/config";
+import { apiUserRole, requireApiIdentity } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 
@@ -30,9 +31,12 @@ interface CommitBody {
 }
 
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   if (!demoFeaturesEnabled()) {
-    const user = await getSessionUser();
-    if (!user || !canMutate(user.role)) {
+    const role = apiUserRole(identity);
+    if (!role || !canMutate(role)) {
       return NextResponse.json({ error: "Insufficient role." }, { status: 403 });
     }
   }
