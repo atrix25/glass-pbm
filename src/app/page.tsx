@@ -1,27 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, ExternalLink } from "lucide-react";
-import { prisma } from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 import { signIn } from "@/app/actions/session";
 import { formatCentsCompact } from "@/lib/money";
+import { getLandingStats } from "@/lib/queries/sponsor";
+import { getClock } from "@/lib/session";
 import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 async function bookStats() {
-  const [members, claims, paid] = await Promise.all([
-    prisma.member.count(),
-    prisma.claim.count(),
-    prisma.claim.aggregate({
-      where: { responseStatus: "P" },
-      _sum: { totalBilledCents: true },
-    }),
-  ]);
-  return {
-    members,
-    claims,
-    totalBilledCents: paid._sum.totalBilledCents ?? 0,
-  };
+  const clock = await getClock();
+  return getLandingStats(clock);
 }
 
 export default async function LoginPage() {

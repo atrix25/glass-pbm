@@ -80,10 +80,11 @@ function toSummary(row: {
 export async function getThroughput(
   clock: SimulationClock,
 ): Promise<ThroughputOverview> {
-  const [runs, claimsThisYear, busiest, members] = await Promise.all([
+  const [runs, claimAgg, busiest, members] = await Promise.all([
     prisma.throughputRun.findMany({ orderBy: { ranAt: "desc" } }),
-    prisma.claim.count({
-      where: { transactionCode: "B1", dateOfService: { lte: clock.now } },
+    prisma.bookDay.aggregate({
+      where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
+      _sum: { claimsPaid: true, claimsRejected: true },
     }),
     prisma.bookDay.findFirst({
       where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
@@ -92,6 +93,9 @@ export async function getThroughput(
     }),
     prisma.member.count(),
   ]);
+
+  const claimsThisYear =
+    (claimAgg._sum.claimsPaid ?? 0) + (claimAgg._sum.claimsRejected ?? 0);
 
   const adjudication = runs.find((r) => r.kind === "Adjudication") ?? null;
   const pointOfSale = runs.find((r) => r.kind === "PointOfSale") ?? null;
