@@ -12,6 +12,7 @@
  * is seeded through December and most of it has not happened yet.
  */
 
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
 
@@ -38,6 +39,31 @@ export interface BookTotals {
 
 function window(clock: SimulationClock) {
   return { gte: PLAN_YEAR_START, lte: clock.today };
+}
+
+/**
+ * The three headline figures on the public landing page.
+ *
+ * These used to come from full-table counts on Claim, which made the first
+ * screen the slowest query in the app once the book moved to Postgres. The
+ * daily rollup already holds the same sums; this reads them.
+ */
+export async function getLandingStats(clock: SimulationClock) {
+  const [agg, members] = await Promise.all([
+    prisma.bookDay.aggregate({
+      where: { date: window(clock) },
+      _sum: {
+        claimsSubmitted: true,
+        totalBilledCents: true,
+      },
+    }),
+    prisma.member.count(),
+  ]);
+  return {
+    members,
+    claims: agg._sum.claimsSubmitted ?? 0,
+    totalBilledCents: agg._sum.totalBilledCents ?? 0,
+  };
 }
 
 export async function getBookTotals(
@@ -102,44 +128,77 @@ export async function getBookTotals(
 }
 
 /** Roll one dimension of the daily cube up to the clock. */
+type RollupRow = {
+  key: string;
+  claims: number;
+  billedCents: number;
+  planPaidCents: number;
+  memberPaidCents: number;
+  rebateCents: number;
+  nadacCents: number;
+  dispensingFeeCents: number;
+};
+
+const SPONSOR_DIMENSIONS = [
+  "channel",
+  "level",
+  "reject",
+  "drug",
+  "basis",
+  "class",
+] as const;
+
+/**
+ * Every sponsor-dashboard dimension in one grouped pass.
+ *
+ * The page asks for five mixes in parallel; behind PgBouncer that used to
+ * mean five round trips contending for two connections. React cache() keeps
+ * the work to one query per request.
+ */
+const dimensionRollups = cache(
+  async (clock: SimulationClock): Promise<Map<string, RollupRow[]>> => {
+    const rows = await prisma.bookDayDimension.groupBy({
+      by: ["dimension", "key"],
+      where: {
+        dimension: { in: [...SPONSOR_DIMENSIONS] },
+        date: window(clock),
+      },
+      _sum: {
+        claims: true,
+        billedCents: true,
+        planPaidCents: true,
+        memberPaidCents: true,
+        rebateCents: true,
+        nadacCents: true,
+        dispensingFeeCents: true,
+      },
+    });
+
+    const map = new Map<string, RollupRow[]>();
+    for (const dim of SPONSOR_DIMENSIONS) map.set(dim, []);
+    for (const r of rows) {
+      const list = map.get(r.dimension) ?? [];
+      list.push({
+        key: r.key,
+        claims: r._sum.claims ?? 0,
+        billedCents: r._sum.billedCents ?? 0,
+        planPaidCents: r._sum.planPaidCents ?? 0,
+        memberPaidCents: r._sum.memberPaidCents ?? 0,
+        rebateCents: r._sum.rebateCents ?? 0,
+        nadacCents: r._sum.nadacCents ?? 0,
+        dispensingFeeCents: r._sum.dispensingFeeCents ?? 0,
+      });
+      map.set(r.dimension, list);
+    }
+    return map;
+  },
+);
+
 async function rollup(
   clock: SimulationClock,
   dimension: string,
-): Promise<
-  Array<{
-    key: string;
-    claims: number;
-    billedCents: number;
-    planPaidCents: number;
-    memberPaidCents: number;
-    rebateCents: number;
-    nadacCents: number;
-    dispensingFeeCents: number;
-  }>
-> {
-  const rows = await prisma.bookDayDimension.groupBy({
-    by: ["key"],
-    where: { dimension, date: window(clock) },
-    _sum: {
-      claims: true,
-      billedCents: true,
-      planPaidCents: true,
-      memberPaidCents: true,
-      rebateCents: true,
-      nadacCents: true,
-      dispensingFeeCents: true,
-    },
-  });
-  return rows.map((r) => ({
-    key: r.key,
-    claims: r._sum.claims ?? 0,
-    billedCents: r._sum.billedCents ?? 0,
-    planPaidCents: r._sum.planPaidCents ?? 0,
-    memberPaidCents: r._sum.memberPaidCents ?? 0,
-    rebateCents: r._sum.rebateCents ?? 0,
-    nadacCents: r._sum.nadacCents ?? 0,
-    dispensingFeeCents: r._sum.dispensingFeeCents ?? 0,
-  }));
+): Promise<RollupRow[]> {
+  return dimensionRollups(clock).then((m) => m.get(dimension) ?? []);
 }
 
 export interface ChannelRow {
