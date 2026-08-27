@@ -109,6 +109,43 @@ export const IN_FLIGHT_STATUSES: PaLiveStatus[] = [
   "InReview",
 ];
 
+/**
+ * Seeded rows often carry their eventual outcome with a future `decidedAt`.
+ * Anything that surfaces the stored determination must wait until that
+ * instant, or a mid-year pin leaks the final step and outcome while the
+ * queue still shows the request in flight.
+ */
+export function paDecisionRevealedAsOf(
+  decidedAt: Date | null | undefined,
+  now: Date,
+): boolean {
+  return decidedAt != null && decidedAt.getTime() <= now.getTime();
+}
+
+/** What the intake demo may show as "on file" at `now`. */
+export function intakeOnFileAsOf(
+  pa: {
+    determination: string | null;
+    decidingStepNumber: number | null;
+    decidedBy: string | null;
+    decidedAt: Date | null;
+  },
+  now: Date,
+): {
+  determination: string | null;
+  decidingStep: number | null;
+  decidedBy: string | null;
+} {
+  if (!paDecisionRevealedAsOf(pa.decidedAt, now)) {
+    return { determination: null, decidingStep: null, decidedBy: null };
+  }
+  return {
+    determination: pa.determination,
+    decidingStep: pa.decidingStepNumber,
+    decidedBy: pa.decidedBy,
+  };
+}
+
 /** "4h 20m", "2d 3h", "18m" — short enough to sit in a table cell. */
 export function formatDuration(ms: number): string {
   const abs = Math.abs(ms);
