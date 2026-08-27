@@ -449,6 +449,43 @@ export async function getIntakeOptions(clock: SimulationClock) {
   }));
 }
 
+/**
+ * Clinical notes the PA-intake demo may run against at the current pin.
+ *
+ * Notes are seeded across the plan year with the requests they belong to.
+ * Offering a December note on a January pin lets the demo read a chart that
+ * has not arrived yet, and pairs it with a stored future determination.
+ */
+export async function listIntakeDemoNotes(clock: SimulationClock) {
+  const notes = await prisma.clinicalNote.findMany({
+    where: { receivedAt: { lte: clock.now } },
+    select: { paId: true, channel: true, author: true, receivedAt: true },
+    orderBy: { receivedAt: "desc" },
+    take: 12,
+  });
+  if (notes.length === 0) return [];
+
+  const labels = await prisma.priorAuthorization.findMany({
+    where: {
+      id: { in: notes.map((n) => n.paId) },
+      receivedAt: { lte: clock.now },
+    },
+    select: { id: true, paNumber: true, drug: { select: { name: true } } },
+  });
+  const byId = new Map(labels.map((p) => [p.id, p]));
+
+  return notes
+    .filter((n) => byId.has(n.paId))
+    .map((n) => {
+      const pa = byId.get(n.paId)!;
+      return {
+        paId: n.paId,
+        label: `${pa.paNumber} · ${pa.drug.name}`,
+        channel: n.channel,
+      };
+    });
+}
+
 /** Claims that this authorization let through, so the PA ties to money. */
 export async function getPaClaims(memberId: string, drugId: string) {
   return prisma.claim.findMany({

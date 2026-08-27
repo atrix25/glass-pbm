@@ -16,12 +16,12 @@ import {
   getLatestPlanDesign,
   type RunRow,
 } from "@/lib/queries/agents";
+import { listIntakeDemoNotes } from "@/lib/queries/pa";
 import { AUTONOMY_MEANING, type Autonomy } from "@/lib/agents/registry";
 import { getClock } from "@/lib/session";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { formatCents } from "@/lib/money";
 import { IntakeDemo } from "@/components/intake-demo";
-import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -56,21 +56,8 @@ export default async function AgentDetailPage({
   const planDesign =
     agentId === "plan-design" ? await getLatestPlanDesign(clock) : null;
 
-  const intakeSample =
-    agentId === "pa-intake"
-      ? await prisma.clinicalNote.findMany({
-          select: { paId: true, channel: true, author: true },
-          orderBy: { receivedAt: "desc" },
-          take: 12,
-        })
-      : [];
-  const intakeLabels =
-    intakeSample.length > 0
-      ? await prisma.priorAuthorization.findMany({
-          where: { id: { in: intakeSample.map((n) => n.paId) } },
-          select: { id: true, paNumber: true, drug: { select: { name: true } } },
-        })
-      : [];
+  const intakeOptions =
+    agentId === "pa-intake" ? await listIntakeDemoNotes(clock) : [];
 
   return (
     <div className="space-y-6">
@@ -193,18 +180,7 @@ export default async function AgentDetailPage({
         ) : null}
       </Card>
 
-      {agentId === "pa-intake" ? (
-        <IntakeDemo
-          options={intakeSample.map((n) => {
-            const pa = intakeLabels.find((p) => p.id === n.paId);
-            return {
-              paId: n.paId,
-              label: `${pa?.paNumber ?? n.paId} · ${pa?.drug.name ?? "unknown product"}`,
-              channel: n.channel,
-            };
-          })}
-        />
-      ) : null}
+      {agentId === "pa-intake" ? <IntakeDemo options={intakeOptions} /> : null}
 
       {planDesign ? (
         <Card>
