@@ -15,6 +15,22 @@ import { getWalkthroughFacts } from "@/lib/queries/walkthrough";
 import { getBookTotals } from "@/lib/queries/sponsor";
 import { getSpreadComparison, getRebateWaterfall } from "@/lib/queries/reports";
 
+/**
+ * Seeded PAs carry their eventual determination with a future `decidedAt`.
+ * The pitch already cuts on `receivedAt`, but must also hide the outcome
+ * until that instant — otherwise a pin during the review window narrates
+ * "approved" / "denied" while the live queue still shows in review.
+ */
+export function pitchPaOutcomeAsOf(
+  pa: { determination: string | null; decidedAt: Date | null },
+  now: Date,
+): { determination: string | null; decidedAt: Date | null } {
+  if (pa.decidedAt != null && pa.decidedAt.getTime() <= now.getTime()) {
+    return { determination: pa.determination, decidedAt: pa.decidedAt };
+  }
+  return { determination: null, decidedAt: null };
+}
+
 export interface ExperienceBeat {
   when: string;
   what: string;
@@ -153,13 +169,16 @@ async function memberExperience(
       scenarioTag: c.scenarioTag,
       drugName: c.drug.name,
     })),
-    pas: pas.map((p) => ({
-      id: p.id,
-      paNumber: p.paNumber,
-      determination: p.determination,
-      decidedAt: p.decidedAt,
-      drugName: p.drug.name,
-    })),
+    pas: pas.map((p) => {
+      const outcome = pitchPaOutcomeAsOf(p, clock.now);
+      return {
+        id: p.id,
+        paNumber: p.paNumber,
+        determination: outcome.determination,
+        decidedAt: outcome.decidedAt,
+        drugName: p.drug.name,
+      };
+    }),
   };
 }
 
