@@ -16,6 +16,7 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { getClock } from "@/lib/session";
 
 export interface Citation {
   sourceId: string;
@@ -246,8 +247,15 @@ export const explainClaimSchema = z.object({
 export async function explainClaim(
   args: z.infer<typeof explainClaimSchema>,
 ): Promise<ToolResult> {
+  // Same cut as the claim ledger and getClaimDetail: a fill dated after the
+  // simulation clock has not been submitted yet, so the member agent must not
+  // narrate its dollars or reject reason.
+  const clock = await getClock();
   const c = await prisma.claim.findFirst({
-    where: { OR: [{ id: args.claimId }, { claimNumber: args.claimId }] },
+    where: {
+      dateOfService: { lte: clock.today },
+      OR: [{ id: args.claimId }, { claimNumber: args.claimId }],
+    },
     include: { drug: true, pharmacy: true },
   });
   if (!c) {
