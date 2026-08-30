@@ -16,6 +16,11 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import {
+  countsTowardRxOop,
+  parseRxOopEligibleLevels,
+} from "@/lib/rx-oop";
+import { sumRxOopCents } from "@/lib/queries/members";
 
 export interface Citation {
   sourceId: string;
@@ -109,6 +114,7 @@ export async function getMemberProfile(
   }
   const span = m.eligibilitySpans[0];
   const plan = span?.benefitPlan;
+  const rxOopLevels = parseRxOopEligibleLevels(plan?.rxOopEligibleLevels);
   return {
     data: {
       name: `${m.firstName} ${m.lastName}`,
@@ -126,7 +132,7 @@ export async function getMemberProfile(
       federalOutOfPocketLimit: plan
         ? formatCents(plan.federalOopLimitIndividual)
         : null,
-      levelsThatCountTowardPrescriptionLimit: ["1", "2"],
+      levelsThatCountTowardPrescriptionLimit: rxOopLevels,
     },
     citations: [cite("etf-uniform-pharmacy-coc-2026")],
     summary: `${m.firstName} ${m.lastName} is covered under the ${plan?.name} for ${plan?.planYear}.`,
@@ -153,13 +159,12 @@ export async function getAccumulators(
     include: { benefitPlan: true },
   });
   const plan = span?.benefitPlan;
+  const rxOopLevels = parseRxOopEligibleLevels(plan?.rxOopEligibleLevels);
 
   const total = claims.reduce((s, c) => s + c.patientPayCents, 0);
-  const counted = claims
-    .filter((c) => ["1", "2"].includes(c.formularyLevel ?? ""))
-    .reduce((s, c) => s + c.patientPayCents, 0);
-  // Preventive fills sit outside Level 1 and 2 but cost the member nothing, so
-  // they contribute no non-qualifying spend and should not be named as a cause.
+  const counted = sumRxOopCents(claims, rxOopLevels);
+  // Fills at levels that do not credit the Rx limit (IYC Level 3/4), plus any
+  // zero-pay preventive rows, are the gap between total and counted.
   const notCounted = total - counted;
   const limit = plan?.rxOopLimitIndividual ?? 60000;
 
@@ -170,19 +175,24 @@ export async function getAccumulators(
       prescriptionLimit: formatCents(limit),
       prescriptionLimitRemaining: formatCents(Math.max(0, limit - counted)),
       prescriptionLimitReached: counted >= limit,
-      paidOnLevel3And4ThatDoesNotCount: formatCents(notCounted),
+      paidOutsidePrescriptionLimit: formatCents(notCounted),
+      levelsThatCountTowardPrescriptionLimit: rxOopLevels,
       federalLimit: formatCents(plan?.federalOopLimitIndividual ?? 1060000),
       federalApplied: formatCents(total),
     },
     citations: [
       cite(
         "etf-uniform-pharmacy-coc-2026",
-        "Level 1 and 2 out-of-pocket limit, $600 individual and $1,200 family. Level 3 and 4 cost share applies only to the federal maximum out-of-pocket limit.",
+        "Prescription out-of-pocket limit eligibility by formulary level, Certificate of Coverage 2026.",
       ),
     ],
     summary:
       counted >= limit
-        ? `This member has reached the ${formatCents(limit)} prescription out-of-pocket limit. ${formatCents(notCounted)} of what they paid came from Level 3 and 4 fills, which never counted toward it.`
+        ? `This member has reached the ${formatCents(limit)} prescription out-of-pocket limit.${
+            notCounted > 0
+              ? ` ${formatCents(notCounted)} of what they paid came from fills that do not count toward it.`
+              : ""
+          }`
         : `${formatCents(Math.max(0, limit - counted))} remains before the ${formatCents(limit)} prescription out-of-pocket limit.`,
   };
 }
@@ -201,18 +211,27 @@ export const getClaimsSchema = z.object({
 export async function getClaims(
   args: z.infer<typeof getClaimsSchema>,
 ): Promise<ToolResult> {
-  const claims = await prisma.claim.findMany({
-    where: {
-      memberId: args.memberId,
-      ...(args.onlyRejected ? { responseStatus: "R" } : {}),
-      ...(args.drugName
-        ? { drug: { name: { contains: args.drugName } } }
-        : {}),
-    },
-    include: { drug: true, pharmacy: true },
-    orderBy: { dateOfService: "desc" },
-    take: args.limit ?? 10,
-  });
+  const [claims, span] = await Promise.all([
+    prisma.claim.findMany({
+      where: {
+        memberId: args.memberId,
+        ...(args.onlyRejected ? { responseStatus: "R" } : {}),
+        ...(args.drugName
+          ? { drug: { name: { contains: args.drugName } } }
+          : {}),
+      },
+      include: { drug: true, pharmacy: true },
+      orderBy: { dateOfService: "desc" },
+      take: args.limit ?? 10,
+    }),
+    prisma.eligibilitySpan.findFirst({
+      where: { memberId: args.memberId },
+      include: { benefitPlan: true },
+    }),
+  ]);
+  const rxOopLevels = parseRxOopEligibleLevels(
+    span?.benefitPlan?.rxOopEligibleLevels,
+  );
 
   return {
     data: claims.map((c) => ({
@@ -228,7 +247,10 @@ export async function getClaims(
       totalCost: formatCents(c.totalBilledCents),
       benefitLevel: c.formularyLevel,
       daysSupply: c.daysSupply,
-      countsTowardPrescriptionLimit: ["1", "2"].includes(c.formularyLevel ?? ""),
+      countsTowardPrescriptionLimit: countsTowardRxOop(
+        c.formularyLevel,
+        rxOopLevels,
+      ),
     })),
     citations: [],
     summary: `${claims.length} claims found.`,
@@ -348,7 +370,12 @@ export async function checkCoverage(
       onFormulary: !entry.notCovered && !entry.planExclusion,
       benefitLevel: entry.level,
       costShare: levelCostShare[entry.level] ?? "see the Certificate of Coverage",
-      countsTowardPrescriptionLimit: ["1", "2"].includes(entry.level),
+      // Without a member context this defaults to the IYC rule (Levels 1–2).
+      // Member-scoped tools (getAccumulators, estimateCost) use the enrolled plan.
+      countsTowardPrescriptionLimit: countsTowardRxOop(
+        entry.level,
+        parseRxOopEligibleLevels(undefined),
+      ),
       priorAuthorizationRequired: entry.requiresPA,
       stepTherapyRequired: entry.requiresStep,
       quantityLimit: entry.hasQuantityLimit ? entry.qlRawText : null,
@@ -535,7 +562,10 @@ export async function estimateCost(
       totalCostOfFill: formatCents(out.totalBilledCents),
       memberPays: formatCents(out.patientPayCents),
       planPays: formatCents(out.planPaidCents),
-      countsTowardPrescriptionLimit: ["1", "2"].includes(out.formularyLevel ?? ""),
+      countsTowardPrescriptionLimit:
+        out.costShare?.accumulatorDeltas.some(
+          (d) => d.accumulatorType === "RxOopIndividual",
+        ) ?? false,
       note: "Quoted by running the same adjudication engine that processes real claims, against today's date and a zero accumulator balance.",
     },
     citations,

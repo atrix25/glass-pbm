@@ -16,9 +16,14 @@ import {
   buildOopCurve,
   getMemberClaims,
   getMemberDetail,
+  sumRxOopCents,
 } from "@/lib/queries/members";
 import { DEMO_MEMBER_BY_ID } from "@/lib/demo-members";
 import { formatCents } from "@/lib/money";
+import {
+  formatRxOopEligibleLevels,
+  parseRxOopEligibleLevels,
+} from "@/lib/rx-oop";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -33,18 +38,17 @@ export default async function MemberPage({
   if (!member) notFound();
 
   const claims = await getMemberClaims(id);
-  const curve = buildOopCurve(claims);
   const story = DEMO_MEMBER_BY_ID[id];
   const span = member.eligibilitySpans[0];
   const plan = span?.benefitPlan;
+  const rxOopLevels = parseRxOopEligibleLevels(plan?.rxOopEligibleLevels);
+  const curve = buildOopCurve(claims, rxOopLevels);
 
   const paid = claims.filter((c) => c.responseStatus === "P");
   const rejected = claims.filter((c) => c.responseStatus === "R");
   const billed = paid.reduce((s, c) => s + c.totalBilledCents, 0);
   const memberPaid = paid.reduce((s, c) => s + c.patientPayCents, 0);
-  const rxOop = paid
-    .filter((c) => ["1", "2"].includes(c.formularyLevel ?? ""))
-    .reduce((s, c) => s + c.patientPayCents, 0);
+  const rxOop = sumRxOopCents(paid, rxOopLevels);
   const nonQualifying = memberPaid - rxOop;
 
   const diagnoses: string[] = JSON.parse(member.diagnosisCodes);
@@ -131,7 +135,7 @@ export default async function MemberPage({
             <div className="space-y-5 px-5 py-4">
               <Gauge
                 label="Prescription out-of-pocket limit"
-                sub="Level 1 and Level 2 cost share only"
+                sub={`${formatRxOopEligibleLevels(rxOopLevels)} cost share`}
                 current={Math.min(rxOop, plan.rxOopLimitIndividual)}
                 limit={plan.rxOopLimitIndividual}
                 tone="glass"
@@ -149,12 +153,12 @@ export default async function MemberPage({
                     <strong className="font-semibold">
                       {formatCents(nonQualifying)}
                     </strong>{" "}
-                    of this member&apos;s spending came from Level 3 and Level 4
-                    fills, which never count toward the{" "}
-                    {formatCents(plan.rxOopLimitIndividual)} prescription limit.
-                    That is the rule most likely to generate a call, and the
-                    agent is built to explain it with the Certificate of
-                    Coverage cited.
+                    of this member&apos;s spending came from fills at levels that
+                    do not count toward the{" "}
+                    {formatCents(plan.rxOopLimitIndividual)} prescription limit
+                    ({formatRxOopEligibleLevels(rxOopLevels)} do). That is the
+                    rule most likely to generate a call, and the agent is built
+                    to explain it with the Certificate of Coverage cited.
                   </p>
                 </div>
               ) : null}

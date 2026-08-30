@@ -17,6 +17,10 @@ import { getClaimDetail, getRelatedFills } from "@/lib/queries/claims";
 import { reproduceClaim } from "@/lib/engine/reproduce";
 import { SOURCES } from "@/lib/sources";
 import { formatCents, formatUnitPrice } from "@/lib/money";
+import {
+  countsTowardRxOop,
+  parseRxOopEligibleLevels,
+} from "@/lib/rx-oop";
 import { formatDate, formatPercent, levelMeta } from "@/lib/utils";
 import { REJECT_MEMBER_EXPLANATION, type TraceStepInput } from "@/lib/engine/types";
 
@@ -491,7 +495,10 @@ function CostSharePanel({ claim }: { claim: ClaimDetail }) {
         />
       </dl>
       <div className="border-t border-ink-100 px-5 py-3 text-[12.5px] leading-relaxed text-ink-600">
-        {["1", "2"].includes(claim.formularyLevel ?? "") ? (
+        {countsTowardRxOop(
+          claim.formularyLevel,
+          parseRxOopEligibleLevels(plan.rxOopEligibleLevels),
+        ) ? (
           <>
             Level {claim.formularyLevel} cost share counts toward the{" "}
             {formatCents(plan.rxOopLimitIndividual)} prescription out-of-pocket
