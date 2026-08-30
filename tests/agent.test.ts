@@ -96,14 +96,19 @@ describe("the numbers in the answer match the database", () => {
     const data = (acc!.result as ToolResult).data as {
       prescriptionLimit: string;
       totalPaidThisYear: string;
-      paidOnLevel3And4ThatDoesNotCount: string;
+      paidOutsidePrescriptionLimit?: string;
+      paidOnLevel3And4ThatDoesNotCount?: string;
     };
 
     // Whatever the tool returned must appear verbatim in the prose. If the
     // composer ever computes its own figure, these stop matching.
     expect(r.text).toContain(data.prescriptionLimit);
     expect(r.text).toContain(data.totalPaidThisYear);
-    expect(r.text).toContain(data.paidOnLevel3And4ThatDoesNotCount);
+    const outside =
+      data.paidOutsidePrescriptionLimit ??
+      data.paidOnLevel3And4ThatDoesNotCount;
+    expect(outside).toBeDefined();
+    expect(r.text).toContain(outside!);
   });
 
   it("quotes a cost that the engine itself produces", async () => {

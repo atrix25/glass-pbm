@@ -9,6 +9,7 @@
  */
 
 import type { Citation, ToolResult } from "./tools";
+import { formatRxOopEligibleLevels } from "@/lib/rx-oop";
 
 export interface ToolRun {
   tool: string;
@@ -191,19 +192,33 @@ function composeAccumulators(
     out.push(
       `You have reached the ${d.prescriptionLimit} prescription out-of-pocket limit, and you are right that you are still being charged. Those are both true at the same time, which is confusing, and it is worth being precise about why.`,
     );
+    const levels = Array.isArray(d.levelsThatCountTowardPrescriptionLimit)
+      ? formatRxOopEligibleLevels(
+          d.levelsThatCountTowardPrescriptionLimit as string[],
+        )
+      : "Level 1 and Level 2";
+    const outside = (d.paidOutsidePrescriptionLimit ??
+      d.paidOnLevel3And4ThatDoesNotCount) as string;
     out.push(
-      `Your plan has two separate limits. The ${d.prescriptionLimit} one only counts what you pay on Level 1 and Level 2 drugs. Level 3 and Level 4 cost share does not count toward it and never did. You have paid ${d.totalPaidThisYear} in total this year: ${d.appliedToPrescriptionLimit} of that reached the ${d.prescriptionLimit} limit, and ${d.paidOnLevel3And4ThatDoesNotCount} came from Level 3 and Level 4 fills that sit outside it.`,
+      `Your plan has two separate limits. The ${d.prescriptionLimit} one only counts what you pay on ${levels} drugs. Cost share at other levels does not count toward it. You have paid ${d.totalPaidThisYear} in total this year: ${d.appliedToPrescriptionLimit} of that reached the ${d.prescriptionLimit} limit, and ${outside} came from fills that sit outside it.`,
     );
     out.push(
       `What you are still paying on now runs against the second limit, the federal out-of-pocket maximum of ${d.federalLimit}. You are at ${d.federalApplied} against that one.`,
     );
   } else {
+    const levels = Array.isArray(d.levelsThatCountTowardPrescriptionLimit)
+      ? formatRxOopEligibleLevels(
+          d.levelsThatCountTowardPrescriptionLimit as string[],
+        )
+      : "Level 1 and Level 2";
     out.push(
-      `You have paid ${d.totalPaidThisYear} for prescriptions this year. Of that, ${d.appliedToPrescriptionLimit} counts toward your ${d.prescriptionLimit} prescription out-of-pocket limit, so you have ${d.prescriptionLimitRemaining} to go before Level 1 and Level 2 drugs become free for the rest of the year.`,
+      `You have paid ${d.totalPaidThisYear} for prescriptions this year. Of that, ${d.appliedToPrescriptionLimit} counts toward your ${d.prescriptionLimit} prescription out-of-pocket limit, so you have ${d.prescriptionLimitRemaining} to go before ${levels} drugs become free for the rest of the year.`,
     );
-    if ((d.paidOnLevel3And4ThatDoesNotCount as string) !== "$0.00") {
+    const outside = (d.paidOutsidePrescriptionLimit ??
+      d.paidOnLevel3And4ThatDoesNotCount) as string | undefined;
+    if (outside && outside !== "$0.00") {
       out.push(
-        `The gap between those two numbers is ${d.paidOnLevel3And4ThatDoesNotCount}, and it is not an error. Cost share on Level 3 and Level 4 drugs does not count toward the ${d.prescriptionLimit} limit under this plan. It counts toward the federal out-of-pocket maximum of ${d.federalLimit} instead.`,
+        `The gap between those two numbers is ${outside}, and it is not an error. Cost share on fills that sit outside the ${d.prescriptionLimit} limit under this plan counts toward the federal out-of-pocket maximum of ${d.federalLimit} instead.`,
       );
     }
   }

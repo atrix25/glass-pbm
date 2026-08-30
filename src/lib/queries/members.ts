@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
+import {
+  countsTowardRxOop,
+  parseRxOopEligibleLevels,
+} from "@/lib/rx-oop";
 
 export interface MemberListRow {
   id: string;
@@ -126,15 +130,29 @@ export async function getMemberClaims(memberId: string) {
 
 /** Running out-of-pocket by fill, so the cap is visible as a line that flattens. */
 export function buildOopCurve(
-  claims: { dateOfService: Date; patientPayCents: number; formularyLevel: string | null; responseStatus: string }[],
+  claims: {
+    dateOfService: Date;
+    patientPayCents: number;
+    formularyLevel: string | null;
+    responseStatus: string;
+  }[],
+  /**
+   * Levels that credit the prescription OOP limit for this member's plan.
+   * Pass the parsed BenefitPlan.rxOopEligibleLevels; defaults to IYC [1, 2].
+   */
+  rxOopEligibleLevels?: readonly string[],
 ) {
+  const eligible = rxOopEligibleLevels
+    ? [...rxOopEligibleLevels]
+    : parseRxOopEligibleLevels(undefined);
   let rx = 0;
   let federal = 0;
   return claims
     .filter((c) => c.responseStatus === "P")
     .map((c) => {
-      const countsToRx = ["1", "2"].includes(c.formularyLevel ?? "");
-      if (countsToRx) rx += c.patientPayCents;
+      if (countsTowardRxOop(c.formularyLevel, eligible)) {
+        rx += c.patientPayCents;
+      }
       federal += c.patientPayCents;
       return {
         date: c.dateOfService.toISOString().slice(0, 10),
@@ -142,4 +160,15 @@ export function buildOopCurve(
         federalOopCents: federal,
       };
     });
+}
+
+/** Sum of paid patient pay that credits the prescription OOP limit. */
+export function sumRxOopCents(
+  claims: { patientPayCents: number; formularyLevel: string | null; responseStatus?: string }[],
+  rxOopEligibleLevels: readonly string[],
+): number {
+  return claims
+    .filter((c) => c.responseStatus === undefined || c.responseStatus === "P")
+    .filter((c) => countsTowardRxOop(c.formularyLevel, rxOopEligibleLevels))
+    .reduce((s, c) => s + c.patientPayCents, 0);
 }
