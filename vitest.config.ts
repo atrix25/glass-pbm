@@ -16,6 +16,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Member-agent tools call getClock via session (server-only). Stub so
+      // vitest can collect the suite outside a Next request.
+      "server-only": fileURLToPath(
+        new URL("./tests/stubs/empty.ts", import.meta.url),
+      ),
     },
   },
 });

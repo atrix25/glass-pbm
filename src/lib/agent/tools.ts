@@ -16,6 +16,7 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { getClock } from "@/lib/session";
 
 export interface Citation {
   sourceId: string;
@@ -425,6 +426,12 @@ export const estimateCostSchema = z.object({
 export async function estimateCost(
   args: z.infer<typeof estimateCostSchema>,
 ): Promise<ToolResult> {
+  // Quotes must use the simulation clock. Wall-clock DOS treats year-end
+  // approvedEffectiveDate rows as already covering the fill, so a mid-January
+  // pin still prices a specialty drug that POS would reject 75 for.
+  const clock = await getClock();
+  const asOf = clock.today.toISOString().slice(0, 10);
+
   const drug = await resolveDrug(args.drugName);
   if (!drug) {
     return {
@@ -472,7 +479,7 @@ export async function estimateCost(
 
   const out = adjudicate({
     request: {
-      dateOfService: new Date(),
+      dateOfService: clock.today,
       cardholderId: "",
       personCode: "01",
       serviceProviderId: pharmacy.npi,
@@ -518,9 +525,10 @@ export async function estimateCost(
         rejectCode: out.rejectCodes[0],
         rejectReason: out.rejectMessage,
         memberExplanation: REJECT_MEMBER_EXPLANATION[out.rejectCodes[0]],
+        asOf,
       },
       citations,
-      summary: `A fill of ${tidyName(drug.name)} today would not pay: ${out.rejectMessage}.`,
+      summary: `A fill of ${tidyName(drug.name)} on ${asOf} would not pay: ${out.rejectMessage}.`,
     };
   }
 
@@ -536,10 +544,11 @@ export async function estimateCost(
       memberPays: formatCents(out.patientPayCents),
       planPays: formatCents(out.planPaidCents),
       countsTowardPrescriptionLimit: ["1", "2"].includes(out.formularyLevel ?? ""),
-      note: "Quoted by running the same adjudication engine that processes real claims, against today's date and a zero accumulator balance.",
+      asOf,
+      note: `Quoted by running the same adjudication engine that processes real claims, against ${asOf} and a zero accumulator balance.`,
     },
     citations,
-    summary: `A ${daysSupply}-day fill of ${tidyName(drug.name)} at ${pharmacy.name} would cost the member ${formatCents(out.patientPayCents)} of a ${formatCents(out.totalBilledCents)} total.`,
+    summary: `A ${daysSupply}-day fill of ${tidyName(drug.name)} at ${pharmacy.name} on ${asOf} would cost the member ${formatCents(out.patientPayCents)} of a ${formatCents(out.totalBilledCents)} total.`,
   };
 }
 
