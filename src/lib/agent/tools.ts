@@ -12,6 +12,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { adjudicate } from "@/lib/engine/adjudicate";
 import { loadWorld } from "@/lib/engine/replay";
+import { reversedFillIdsForMember } from "@/lib/engine/reversed-fills";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
@@ -798,12 +799,17 @@ export async function refillEligibility(
     };
   }
 
+  // A reversed fill is no longer on the counter. Answering from the unpaid
+  // original would invent a refill-too-soon hold the member does not have.
+  const asOf = rejectedAt ?? new Date();
+  const reversedIds = await reversedFillIdsForMember(args.memberId, asOf);
   const last = await prisma.claim.findFirst({
     where: {
       memberId: args.memberId,
       responseStatus: "P",
       drug: { name: { contains: drugName } },
       ...(rejectedAt ? { dateOfService: { lt: rejectedAt } } : {}),
+      ...(reversedIds.length > 0 ? { id: { notIn: reversedIds } } : {}),
     },
     include: { drug: true },
     orderBy: { dateOfService: "desc" },

@@ -31,6 +31,7 @@ import {
   medicalDeductibleAsOf,
   medicalEncountersFor,
 } from "@/lib/accumulators/medical-feed";
+import { reversedFillIdsForMember } from "./reversed-fills";
 
 export interface PosRequest {
   memberId: string;
@@ -102,6 +103,18 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
 
   const dateOfService = new Date(`${req.dateOfService}T00:00:00.000Z`);
 
+  /*
+   * Drop fills whose reversal has already posted. B2 rows leave the original
+   * B1 as `P`, so a plain paid-history scan would still count undone quantity
+   * toward refill-too-soon / QL and undone patient pay toward OOP.
+   */
+  const reversedIds = await reversedFillIdsForMember(
+    req.memberId,
+    dateOfService,
+  );
+  const notReversed =
+    reversedIds.length > 0 ? { id: { notIn: reversedIds } } : {};
+
   const [member, history, sameDay, opioids] = await Promise.all([
     prisma.member.findUnique({
       where: { id: req.memberId },
@@ -112,6 +125,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
         memberId: req.memberId,
         responseStatus: "P",
         dateOfService: { lt: dateOfService },
+        ...notReversed,
       },
       select: {
         claimNumber: true,
@@ -145,6 +159,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
         responseStatus: "P",
         dateOfService,
         drugId: { not: req.drugId },
+        ...notReversed,
       },
       select: {
         claimNumber: true,
