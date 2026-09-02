@@ -379,10 +379,14 @@ function composeCostQuote(
   ];
   if (cov) {
     const level = String(cov.data.benefitLevel);
+    const rxLimit =
+      typeof cov.data.prescriptionOutOfPocketLimit === "string"
+        ? cov.data.prescriptionOutOfPocketLimit
+        : "$600.00";
     out.push(
       level === "$0"
         ? `${d.drug} is on the plan's preventive list, which is covered in full with no cost share at all. There is no copay and no coinsurance on it.`
-        : `${d.drug} is a Level ${level} drug on your formulary, which means ${cov.data.costShare}. ${d.countsTowardPrescriptionLimit ? "What you pay counts toward your $600 prescription out-of-pocket limit." : "What you pay on this one does not count toward the $600 prescription limit, only toward the federal maximum."}`,
+        : `${d.drug} is a Level ${level} drug on your formulary, which means ${cov.data.costShare}. ${d.countsTowardPrescriptionLimit ? `What you pay counts toward your ${rxLimit} prescription out-of-pocket limit.` : `What you pay on this one does not count toward the ${rxLimit} prescription limit, only toward the federal maximum.`}`,
     );
     if (cov.data.priorAuthorizationRequired) {
       out.push(
@@ -458,8 +462,12 @@ function composeCoverage(runs: ToolRun[]): string[] | null {
     ];
   }
 
+  const rxLimit =
+    typeof d.prescriptionOutOfPocketLimit === "string"
+      ? d.prescriptionOutOfPocketLimit
+      : "$600.00";
   const out = [
-    `${d.drug} is covered at Level ${d.benefitLevel}, which means ${d.costShare}. ${d.countsTowardPrescriptionLimit ? "What you pay counts toward your $600 prescription out-of-pocket limit." : "What you pay does not count toward the $600 prescription limit, only the federal maximum."}`,
+    `${d.drug} is covered at Level ${d.benefitLevel}, which means ${d.costShare}. ${d.countsTowardPrescriptionLimit ? `What you pay counts toward your ${rxLimit} prescription out-of-pocket limit.` : `What you pay does not count toward the ${rxLimit} prescription limit, only the federal maximum.`}`,
   ];
   const conditions: string[] = [];
   if (d.priorAuthorizationRequired)
