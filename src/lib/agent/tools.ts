@@ -16,6 +16,11 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import {
+  describeLevelCostShare,
+  prescriptionLimitLabel,
+  type PlanCostShareContext,
+} from "@/lib/agent/cost-share-copy";
 
 export interface Citation {
   sourceId: string;
@@ -311,6 +316,22 @@ export const checkCoverageSchema = z.object({
   memberId: z.string().optional(),
 });
 
+async function planCostShareContext(
+  memberId: string | undefined,
+): Promise<PlanCostShareContext | null> {
+  if (!memberId) return null;
+  const span = await prisma.eligibilitySpan.findFirst({
+    where: { memberId },
+    include: { benefitPlan: true },
+  });
+  const plan = span?.benefitPlan;
+  if (!plan) return null;
+  return {
+    deductibleIndividualCents: plan.deductibleIndividual,
+    rxOopLimitIndividualCents: plan.rxOopLimitIndividual,
+  };
+}
+
 export async function checkCoverage(
   args: z.infer<typeof checkCoverageSchema>,
 ): Promise<ToolResult> {
@@ -333,13 +354,9 @@ export async function checkCoverage(
     };
   }
 
-  const levelCostShare: Record<string, string> = {
-    "1": "$5 copay",
-    "2": "20% coinsurance, $50 maximum per fill",
-    "3": "40% coinsurance, $150 maximum per fill",
-    "4": "$50 copay, and it must be filled at Lumicera or UW Health Specialty Pharmacy",
-    $0: "no cost share, covered in full",
-  };
+  const plan = await planCostShareContext(args.memberId);
+  const costShare = describeLevelCostShare(entry.level, plan);
+  const prescriptionOutOfPocketLimit = prescriptionLimitLabel(plan);
 
   return {
     data: {
@@ -347,7 +364,8 @@ export async function checkCoverage(
       ndc: drug.ndc11,
       onFormulary: !entry.notCovered && !entry.planExclusion,
       benefitLevel: entry.level,
-      costShare: levelCostShare[entry.level] ?? "see the Certificate of Coverage",
+      costShare,
+      prescriptionOutOfPocketLimit,
       countsTowardPrescriptionLimit: ["1", "2"].includes(entry.level),
       priorAuthorizationRequired: entry.requiresPA,
       stepTherapyRequired: entry.requiresStep,
@@ -368,7 +386,7 @@ export async function checkCoverage(
     ],
     summary: entry.planExclusion
       ? `${tidyName(drug.name)} is excluded from the pharmacy benefit entirely.`
-      : `${tidyName(drug.name)} is a Level ${entry.level} drug: ${levelCostShare[entry.level] ?? "see plan documents"}.${entry.requiresPA ? " It requires prior authorization." : ""}`,
+      : `${tidyName(drug.name)} is a Level ${entry.level} drug: ${costShare}.${entry.requiresPA ? " It requires prior authorization." : ""}`,
   };
 }
 
@@ -725,11 +743,7 @@ export async function findAlternatives(
     (c) => Number(c.level) === currentLevel,
   ).length;
 
-  const costShareByLevel: Record<string, string> = {
-    "1": "$5 copay",
-    "2": "20% coinsurance, $50 maximum per fill",
-    "3": "40% coinsurance, $150 maximum per fill",
-  };
+  const plan = await planCostShareContext(args.memberId);
 
   return {
     data: {
@@ -741,7 +755,7 @@ export async function findAlternatives(
       alternatives: alternatives.map((c) => ({
         drug: tidyName(c.drug.name),
         level: c.level,
-        costShare: costShareByLevel[c.level] ?? "see the Certificate of Coverage",
+        costShare: describeLevelCostShare(c.level, plan),
         priorAuthorizationRequired: c.requiresPA,
         note: "A prescriber has to agree the alternative is clinically appropriate. This is information, not medical advice.",
       })),
