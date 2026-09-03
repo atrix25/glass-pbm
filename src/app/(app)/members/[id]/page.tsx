@@ -19,6 +19,7 @@ import {
 } from "@/lib/queries/members";
 import { DEMO_MEMBER_BY_ID } from "@/lib/demo-members";
 import { formatCents } from "@/lib/money";
+import { getClock } from "@/lib/session";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,16 @@ export default async function MemberPage({
   const member = await getMemberDetail(id);
   if (!member) notFound();
 
-  const claims = await getMemberClaims(id);
+  const clock = await getClock();
+  const claims = await getMemberClaims(id, { asOf: clock.now });
   const curve = buildOopCurve(claims);
   const story = DEMO_MEMBER_BY_ID[id];
   const span = member.eligibilitySpans[0];
   const plan = span?.benefitPlan;
 
-  const paid = claims.filter((c) => c.responseStatus === "P");
+  // A B2 leaves the original B1 as paid; exclude those undone fills from the
+  // live OOP gauges so they match net money rather than gross paid history.
+  const paid = claims.filter((c) => c.responseStatus === "P" && !c.isReversed);
   const rejected = claims.filter((c) => c.responseStatus === "R");
   const billed = paid.reduce((s, c) => s + c.totalBilledCents, 0);
   const memberPaid = paid.reduce((s, c) => s + c.patientPayCents, 0);

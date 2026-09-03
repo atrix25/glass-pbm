@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
+import { reversedFillIdsForMember } from "@/lib/engine/reversed-fills";
 
 export interface MemberListRow {
   id: string;
@@ -97,41 +98,62 @@ export async function getMemberDetail(id: string) {
   });
 }
 
-export async function getMemberClaims(memberId: string) {
-  return prisma.claim.findMany({
-    where: { memberId },
-    select: {
-      id: true,
-      claimNumber: true,
-      dateOfService: true,
-      responseStatus: true,
-      rejectCodes: true,
-      rejectMessage: true,
-      channel: true,
-      formularyLevel: true,
-      totalBilledCents: true,
-      planPaidCents: true,
-      patientPayCents: true,
-      estimatedRebateCents: true,
-      nadacTotalCents: true,
-      daysSupply: true,
-      quantityDispensed: true,
-      basisOfReimbursement: true,
-      drug: { select: { id: true, name: true, isSpecialty: true } },
-      pharmacy: { select: { id: true, name: true } },
-    },
-    orderBy: { dateOfService: "asc" },
-  });
+export async function getMemberClaims(
+  memberId: string,
+  opts?: { asOf?: Date },
+) {
+  const [claims, reversedIds] = await Promise.all([
+    prisma.claim.findMany({
+      where: { memberId },
+      select: {
+        id: true,
+        claimNumber: true,
+        dateOfService: true,
+        responseStatus: true,
+        rejectCodes: true,
+        rejectMessage: true,
+        channel: true,
+        formularyLevel: true,
+        totalBilledCents: true,
+        planPaidCents: true,
+        patientPayCents: true,
+        estimatedRebateCents: true,
+        nadacTotalCents: true,
+        daysSupply: true,
+        quantityDispensed: true,
+        basisOfReimbursement: true,
+        drug: { select: { id: true, name: true, isSpecialty: true } },
+        pharmacy: { select: { id: true, name: true } },
+      },
+      orderBy: { dateOfService: "asc" },
+    }),
+    opts?.asOf
+      ? reversedFillIdsForMember(memberId, opts.asOf)
+      : Promise.resolve([] as string[]),
+  ]);
+
+  const reversed = new Set(reversedIds);
+  return claims.map((c) => ({
+    ...c,
+    /** True when a B2 for this B1 has already posted as of `asOf`. */
+    isReversed: reversed.has(c.id),
+  }));
 }
 
 /** Running out-of-pocket by fill, so the cap is visible as a line that flattens. */
 export function buildOopCurve(
-  claims: { dateOfService: Date; patientPayCents: number; formularyLevel: string | null; responseStatus: string }[],
+  claims: {
+    dateOfService: Date;
+    patientPayCents: number;
+    formularyLevel: string | null;
+    responseStatus: string;
+    isReversed?: boolean;
+  }[],
 ) {
   let rx = 0;
   let federal = 0;
   return claims
-    .filter((c) => c.responseStatus === "P")
+    .filter((c) => c.responseStatus === "P" && !c.isReversed)
     .map((c) => {
       const countsToRx = ["1", "2"].includes(c.formularyLevel ?? "");
       if (countsToRx) rx += c.patientPayCents;

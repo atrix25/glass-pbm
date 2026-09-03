@@ -12,10 +12,23 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { adjudicate } from "@/lib/engine/adjudicate";
 import { loadWorld } from "@/lib/engine/replay";
+import { reversedFillIdsForMember } from "@/lib/engine/reversed-fills";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { CLOCK_COOKIE, resolveClock } from "@/lib/clock";
+
+/** Simulation "now" for tool answers, without importing server-only session.ts. */
+async function toolAsOf(): Promise<Date> {
+  try {
+    const { cookies } = await import("next/headers");
+    const jar = await cookies();
+    return resolveClock(jar.get(CLOCK_COOKIE)?.value).now;
+  } catch {
+    return resolveClock(undefined).now;
+  }
+}
 
 export interface Citation {
   sourceId: string;
@@ -144,8 +157,14 @@ export const getAccumulatorsSchema = z.object({
 export async function getAccumulators(
   args: z.infer<typeof getAccumulatorsSchema>,
 ): Promise<ToolResult> {
+  const asOf = await toolAsOf();
+  const reversedIds = await reversedFillIdsForMember(args.memberId, asOf);
   const claims = await prisma.claim.findMany({
-    where: { memberId: args.memberId, responseStatus: "P" },
+    where: {
+      memberId: args.memberId,
+      responseStatus: "P",
+      ...(reversedIds.length > 0 ? { id: { notIn: reversedIds } } : {}),
+    },
     select: { patientPayCents: true, formularyLevel: true },
   });
   const span = await prisma.eligibilitySpan.findFirst({
@@ -201,6 +220,10 @@ export const getClaimsSchema = z.object({
 export async function getClaims(
   args: z.infer<typeof getClaimsSchema>,
 ): Promise<ToolResult> {
+  const asOf = await toolAsOf();
+  const reversedIds = new Set(
+    await reversedFillIdsForMember(args.memberId, asOf),
+  );
   const claims = await prisma.claim.findMany({
     where: {
       memberId: args.memberId,
@@ -221,7 +244,11 @@ export async function getClaims(
       date: c.dateOfService.toISOString().slice(0, 10),
       drug: tidyName(c.drug.name),
       pharmacy: c.pharmacy.name,
-      status: c.responseStatus === "P" ? "paid" : "rejected",
+      status: reversedIds.has(c.id)
+        ? "reversed"
+        : c.responseStatus === "P"
+          ? "paid"
+          : "rejected",
       rejectReason: c.rejectMessage,
       memberPaid: formatCents(c.patientPayCents),
       planPaid: formatCents(c.planPaidCents),
