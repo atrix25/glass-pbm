@@ -14,7 +14,7 @@ import {
   failJob,
   setJobProgress,
 } from "../src/lib/jobs";
-import { replay } from "../src/lib/engine/replay";
+import { replay, resolveReplayAsOf } from "../src/lib/engine/replay";
 import { getCurrentReading, saveSnapshot } from "../src/lib/queries/nps";
 import { resolveClock } from "../src/lib/clock";
 import { refreshBookDayRollups } from "../src/lib/rollups";
@@ -26,10 +26,14 @@ async function handleJob(type: string, payload: Record<string, unknown>, jobId: 
   switch (type) {
     case "replay": {
       await setJobProgress(jobId, 0.05);
+      const asOf = resolveReplayAsOf(
+        typeof payload.asOfIso === "string" ? payload.asOfIso : undefined,
+      );
       const result = await replay((payload.override as object) ?? {}, {
         maxDiffs: typeof payload.maxDiffs === "number" ? payload.maxDiffs : 200,
         nps: payload.nps !== false,
         sampleRate: typeof payload.sampleRate === "number" ? payload.sampleRate : undefined,
+        asOf,
       });
       await setJobProgress(jobId, 1);
       return result;
