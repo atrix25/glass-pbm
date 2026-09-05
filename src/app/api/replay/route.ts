@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { enqueueJob, getJob } from "@/lib/jobs";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
 import { recordAudit } from "@/lib/audit";
+import { getClock } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -26,10 +27,23 @@ export async function POST(request: Request) {
         ? false
         : !projecting;
 
+  // The change console models impact against the simulated present. Without
+  // this cut, a mid-year pin would reprice November and December fills that
+  // have not happened and invent plan/member deltas.
+  const clock = await getClock();
+  const asOf = clock.now;
+  const asOfIso = asOf.toISOString();
+
   if (wantAsync) {
     const job = await enqueueJob({
       type: "replay",
-      payload: { override, sampleRate, nps: true, maxDiffs: projecting ? 0 : 200 },
+      payload: {
+        override,
+        sampleRate,
+        nps: true,
+        maxDiffs: projecting ? 0 : 200,
+        asOfIso,
+      },
     });
     await recordAudit({
       action: "job.enqueue",
@@ -44,6 +58,7 @@ export async function POST(request: Request) {
     maxDiffs: projecting ? 0 : 200,
     nps: true,
     sampleRate,
+    asOf,
   });
   return NextResponse.json(result);
 }

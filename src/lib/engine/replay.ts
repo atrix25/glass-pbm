@@ -9,7 +9,7 @@
  */
 
 import { prisma } from "@/lib/db";
-import { PLAN_YEAR_END } from "@/lib/clock";
+import { clampToPlanYear, PLAN_YEAR_END } from "@/lib/clock";
 import { hashString } from "@/lib/hash";
 import {
   dayOfPlanYear,
@@ -694,6 +694,26 @@ async function loadFixedSignals(
   return map;
 }
 
+/**
+ * Cut line for change-console / worker replay jobs.
+ *
+ * Prefer an explicit `asOfIso` stamped when the job was enqueued (the
+ * simulation clock at click time). If that is missing — an older payload, or
+ * a direct script call — fall back to the clamped wall clock, never the plan
+ * year end. Year-end would invent dollars for fills that have not happened
+ * yet under a mid-year pin.
+ */
+export function resolveReplayAsOf(
+  asOfIso: string | null | undefined,
+  fallbackNow: Date = new Date(),
+): Date {
+  if (asOfIso) {
+    const parsed = new Date(asOfIso);
+    if (!Number.isNaN(parsed.getTime())) return clampToPlanYear(parsed);
+  }
+  return clampToPlanYear(fallbackNow);
+}
+
 export async function replay(
   override: ConfigOverride = {},
   opts: {
@@ -720,6 +740,10 @@ export async function replay(
    * A change is evaluated against the book that exists, not against fills
    * that have not happened. Re-pricing next November would be inventing an
    * impact rather than measuring one.
+   *
+   * Callers that sit behind the simulation clock (change console, plan-design
+   * agent, worker jobs) must pass `asOf`. The year-end default remains for
+   * offline harness scripts that intentionally reprice the whole seeded book.
    */
   const cutoff = opts.asOf ?? PLAN_YEAR_END;
 
