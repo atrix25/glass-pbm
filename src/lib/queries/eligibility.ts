@@ -341,6 +341,10 @@ export async function getAuditFindings(
      * reported. The spans carry the date the plan learned, which the feed sets
      * to the audit that found them, so the two join on that instant rather
      * than on a list of member identifiers.
+     *
+     * B2s leave the original B1 as paid (P). Once a reversal has posted as of
+     * the clock, the planPaid has already been clawed back — counting that
+     * fill as still recoverable double-counts money the network already returned.
      */
     const [exposure] = await prisma.$queryRaw<
       Array<{ n: number; cents: number | null }>
@@ -353,6 +357,12 @@ export async function getAuditFindings(
         AND e.retroReportedAt = ${audit.processedAt}
         AND e.reportedTerminationDate IS NOT NULL
         AND c.dateOfService > e.reportedTerminationDate
+        AND NOT EXISTS (
+          SELECT 1 FROM Claim r
+          WHERE r.reversalOfClaimId = c.id
+            AND r.transactionCode = 'B2'
+            AND r.adjudicatedAt <= ${now}
+        )
     `;
 
     findings.push({
