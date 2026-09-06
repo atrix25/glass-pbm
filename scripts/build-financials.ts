@@ -313,6 +313,11 @@ async function buildRetroTerminations() {
  * of it, but the extracted terms say nothing about when the money moves. The
  * two lags below are therefore modeling assumptions on customary practice, not
  * contract text, and the receivables page says so where it uses them.
+ *
+ * B2s leave the original B1 paid with a positive estimatedRebateCents and
+ * store the clawback as a negative on the reversal. Invoicing every paid B1
+ * without dropping reversed fills would bill manufacturers for rebates the
+ * plan never keeps (and overstate sponsor rebate credits that read this table).
  */
 const INVOICE_LAG_DAYS = 45;
 const PAYMENT_TERMS_DAYS = 60;
@@ -337,6 +342,10 @@ async function buildRebateInvoices() {
     FROM Claim c JOIN Drug d ON d.id = c.drugId
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
       AND c.estimatedRebateCents > 0 AND c.scenarioTag IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM Claim r
+        WHERE r.reversalOfClaimId = c.id AND r.transactionCode = 'B2'
+      )
     GROUP BY quarter, manufacturer
     HAVING amount > 0
   `);

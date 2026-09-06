@@ -203,6 +203,10 @@ export async function getRecoveryOverview(
    * termination the employer eventually reported, and the report has already
    * arrived as of the clock. Before the report lands nobody knows, which is
    * exactly the problem being demonstrated.
+   *
+   * B2s leave the original B1 marked paid. Once the reversal has posted as of
+   * the clock, remittance already clawed the planPaid back — those fills are
+   * not still sitting on a recovery worklist.
    */
   const rows = await prisma.$queryRaw<
     Array<{
@@ -232,6 +236,12 @@ export async function getRecoveryOverview(
       AND e.retroReportedAt <= ${clock.now}
       AND c.dateOfService > e.reportedTerminationDate
       AND c.dateOfService <= ${clock.now}
+      AND NOT EXISTS (
+        SELECT 1 FROM Claim r
+        WHERE r.reversalOfClaimId = c.id
+          AND r.transactionCode = 'B2'
+          AND r.adjudicatedAt <= ${clock.now}
+      )
     GROUP BY c.memberId
     ORDER BY SUM(c.planPaidCents) DESC
   `;
