@@ -660,6 +660,8 @@ async function loadFixedSignals(
       WHERE severity = 'Major' AND dateOfService <= ${cutoff}
       GROUP BY memberId
     `,
+    // Same B2 exclusion as clawbackMembers in experience.ts: a reversed post-term
+    // B1 is not a live eligibility clawback for the NPS schedule.
     prisma.$queryRaw<{ memberId: string }[]>`
       SELECT DISTINCT c.memberId AS memberId
       FROM Claim c
@@ -669,6 +671,12 @@ async function loadFixedSignals(
         AND e.retroReportedAt <= ${cutoff}
         AND c.dateOfService > e.reportedTerminationDate
         AND c.dateOfService <= ${cutoff}
+        AND NOT EXISTS (
+          SELECT 1 FROM Claim r
+          WHERE r.reversalOfClaimId = c.id
+            AND r.transactionCode = 'B2'
+            AND r.adjudicatedAt <= ${cutoff}
+        )
     `,
   ]);
 

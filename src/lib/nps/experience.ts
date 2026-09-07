@@ -163,6 +163,13 @@ async function durSignals(cutoff: Date): Promise<Map<string, number>> {
  * Members whose coverage was withdrawn backwards over fills they had already
  * collected. The same definition the reversals page uses, so the two pages
  * cannot disagree about who this happened to.
+ *
+ * B2s leave the original B1 marked paid. Once that reversal has posted as of
+ * the cutoff, remittance already took the money back — the member did not keep
+ * a finished post-term fill for the plan to claw via eligibility. Counting
+ * those rows would fire the schedule's heaviest deduction (−3.5) on people
+ * whose only post-term money had already been unwound, and the snapshot written
+ * on commit would record a clawback that never landed on them.
  */
 async function clawbackMembers(cutoff: Date): Promise<Set<string>> {
   const rows = await prisma.$queryRaw<{ memberId: string }[]>`
@@ -174,6 +181,12 @@ async function clawbackMembers(cutoff: Date): Promise<Set<string>> {
       AND e.retroReportedAt <= ${cutoff}
       AND c.dateOfService > e.reportedTerminationDate
       AND c.dateOfService <= ${cutoff}
+      AND NOT EXISTS (
+        SELECT 1 FROM Claim r
+        WHERE r.reversalOfClaimId = c.id
+          AND r.transactionCode = 'B2'
+          AND r.adjudicatedAt <= ${cutoff}
+      )
   `;
   return new Set(rows.map((r) => r.memberId));
 }
