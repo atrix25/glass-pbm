@@ -130,16 +130,55 @@ describe("what automation does with a traversal", () => {
 });
 
 describe("appeals", () => {
+  const asOf = new Date("2026-02-10T12:00:00.000Z");
+  const released = new Date("2026-02-10T10:00:00.000Z");
+  const unreleased = new Date("2026-02-10T14:00:00.000Z");
+
   it("has nothing to appeal when the request was approved", () => {
-    const verdict = mayAppeal({ determination: "Approved", decidedBy: "AI" });
+    const verdict = mayAppeal(
+      { determination: "Approved", decidedBy: "AI", decidedAt: released },
+      asOf,
+    );
+    expect(verdict.allowed).toBe(false);
+  });
+
+  it("refuses an appeal against a denial that has not been released yet", () => {
+    // Same shape as a seeded PA whose final Denied outcome is stored with a
+    // future decidedAt: the queue still shows In review, so inventing an
+    // Appeal row would contest a refusal that does not exist as of the clock.
+    const verdict = mayAppeal(
+      {
+        determination: "Denied",
+        decidedBy: "Rachel Imhoff, PharmD (WI-RPH-041882)",
+        decidedAt: unreleased,
+      },
+      asOf,
+    );
+    expect(verdict.allowed).toBe(false);
+    expect(verdict.reason).toMatch(/not been released/i);
+  });
+
+  it("refuses an appeal when the denial has no decidedAt", () => {
+    const verdict = mayAppeal(
+      {
+        determination: "Denied",
+        decidedBy: "Rachel Imhoff, PharmD (WI-RPH-041882)",
+        decidedAt: null,
+      },
+      asOf,
+    );
     expect(verdict.allowed).toBe(false);
   });
 
   it("names the reviewer the appeal may not be decided by", () => {
-    const verdict = mayAppeal({
-      determination: "Denied",
-      decidedBy: "Rachel Imhoff, PharmD (WI-RPH-041882)",
-    });
+    const verdict = mayAppeal(
+      {
+        determination: "Denied",
+        decidedBy: "Rachel Imhoff, PharmD (WI-RPH-041882)",
+        decidedAt: released,
+      },
+      asOf,
+    );
     expect(verdict.allowed).toBe(true);
     expect(verdict.mustDifferFrom).toBe(
       "Rachel Imhoff, PharmD (WI-RPH-041882)",

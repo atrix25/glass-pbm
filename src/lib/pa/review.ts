@@ -205,18 +205,33 @@ export function exceptionKind(kind: string): ExceptionKindInfo | undefined {
 /**
  * Whether an appeal may be filed, and who may decide it.
  *
- * The constraint that matters is the reviewer, not the timing: an appeal decided
- * by the person who made the original refusal is not a review of it.
+ * Two constraints matter. Timing first: a stored denial with `decidedAt` still
+ * in the future is not a refusal yet — it is what the book says will happen if
+ * nobody intervenes — so there is nothing to contest as of `asOf`. Reviewer
+ * independence second: an appeal decided by the person who made the original
+ * refusal is not a review of it.
  */
-export function mayAppeal(pa: {
-  determination: string | null;
-  decidedBy: string | null;
-}): { allowed: boolean; reason: string; mustDifferFrom: string | null } {
+export function mayAppeal(
+  pa: {
+    determination: string | null;
+    decidedBy: string | null;
+    decidedAt: Date | null;
+  },
+  asOf: Date,
+): { allowed: boolean; reason: string; mustDifferFrom: string | null } {
   if (pa.determination !== "Denied") {
     return {
       allowed: false,
       reason:
         "There is nothing to appeal. An appeal contests a refusal, and this request was not refused.",
+      mustDifferFrom: null,
+    };
+  }
+  if (!pa.decidedAt || pa.decidedAt.getTime() > asOf.getTime()) {
+    return {
+      allowed: false,
+      reason:
+        "There is nothing to appeal yet. The determination has not been released as of the present.",
       mustDifferFrom: null,
     };
   }

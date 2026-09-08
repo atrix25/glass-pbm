@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     paNumber: string;
     determination: string | null;
     decidedBy: string | null;
+    decidedAt: Date | null;
     treeId: string | null;
   } | null = null;
 
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
         paNumber: true,
         determination: true,
         decidedBy: true,
+        decidedAt: true,
         treeId: true,
         memberId: true,
         drugId: true,
@@ -85,6 +87,12 @@ export async function POST(request: Request) {
     );
   }
 
+  // Filed against the simulated present, so a request filed on stage lands in
+  // the queue the rest of the application is looking at. The clock is also the
+  // appeal gate: a stored denial that has not been released yet is not a
+  // refusal as of now.
+  const { now } = await getClock();
+
   if (body.kind === "Appeal") {
     if (!against) {
       return NextResponse.json(
@@ -92,15 +100,11 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const verdict = mayAppeal(against);
+    const verdict = mayAppeal(against, now);
     if (!verdict.allowed) {
       return NextResponse.json({ error: verdict.reason }, { status: 409 });
     }
   }
-
-  // Filed against the simulated present, so a request filed on stage lands in
-  // the queue the rest of the application is looking at.
-  const { now } = await getClock();
   const urgency = body.urgency ?? "Standard";
   const supportingStatementAt =
     info.needsSupportingStatement && body.supportingStatement ? now : null;
