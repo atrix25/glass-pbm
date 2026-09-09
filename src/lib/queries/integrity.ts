@@ -51,9 +51,14 @@ export async function getIntegrityOverview(
              COUNT(DISTINCT memberId) AS members,
              COUNT(DISTINCT prescriberNpi) AS prescribers,
              COUNT(DISTINCT pharmacyId) AS pharmacies
-      FROM Claim
-      WHERE responseStatus = 'P' AND transactionCode = 'B1'
-        AND dateOfService <= ${clock.now}
+      FROM Claim c
+      WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+        AND NOT EXISTS (
+          SELECT 1 FROM Claim r
+          WHERE r.reversalOfClaimId = c.id
+            AND r.transactionCode = 'B2'
+        )
+        AND c.dateOfService <= ${clock.now}
     `,
   ]);
 

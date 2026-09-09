@@ -21,6 +21,7 @@ import { prisma } from "@/lib/db";
 import { judge } from "../brain";
 import { startRun, type Run } from "../runtime";
 import { formatCents } from "@/lib/money";
+import { claimIdsReversedBy } from "@/lib/integrity/still-paid";
 
 export interface TriageResult {
   runId: string;
@@ -99,11 +100,22 @@ export async function runTriage(opts: {
       "getMemberFills",
       "A count of prescribers is an argument. A timeline of fills is evidence, and it is where an overlap either exists or does not.",
       async () => {
+        const reversals = await prisma.claim.findMany({
+          where: {
+            memberId: signal.subjectId,
+            transactionCode: "B2",
+            reversalOfClaimId: { not: null },
+          },
+          select: { reversalOfClaimId: true },
+        });
+        const reversedIds = claimIdsReversedBy(reversals);
         const claims = await prisma.claim.findMany({
           where: {
             memberId: signal.subjectId,
             dateOfService: { gte: signal.windowStart, lte: signal.windowEnd },
             responseStatus: "P",
+            transactionCode: "B1",
+            ...(reversedIds.length > 0 ? { id: { notIn: reversedIds } } : {}),
           },
           select: {
             drugId: true,
@@ -215,6 +227,12 @@ export async function runTriage(opts: {
           LEFT JOIN OpioidProduct o ON o.drugId = c.drugId
           WHERE c.prescriberNpi = ${signal.subjectId}
             AND c.responseStatus = 'P'
+            AND c.transactionCode = 'B1'
+            AND NOT EXISTS (
+              SELECT 1 FROM Claim r
+              WHERE r.reversalOfClaimId = c.id
+                AND r.transactionCode = 'B2'
+            )
             AND c.dateOfService BETWEEN ${signal.windowStart} AND ${signal.windowEnd}
           GROUP BY 1, 2 ORDER BY n DESC LIMIT 12`;
         return rows.map((r) => ({
@@ -251,6 +269,12 @@ export async function runTriage(opts: {
           LEFT JOIN OpioidProduct o ON o.drugId = c.drugId
           WHERE c.pharmacyId = ${signal.subjectId}
             AND c.responseStatus = 'P'
+            AND c.transactionCode = 'B1'
+            AND NOT EXISTS (
+              SELECT 1 FROM Claim r
+              WHERE r.reversalOfClaimId = c.id
+                AND r.transactionCode = 'B2'
+            )
             AND c.dateOfService BETWEEN ${signal.windowStart} AND ${signal.windowEnd}
           GROUP BY 1, 2 ORDER BY n DESC LIMIT 12`;
         const pharmacy = await prisma.pharmacy.findUnique({

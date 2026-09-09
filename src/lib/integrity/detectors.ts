@@ -17,8 +17,12 @@
 import type { PrismaClient } from "@/generated/prisma";
 import { CONTROLLED_CLASSES } from "@/lib/clinical/interactions";
 import { MME_THRESHOLDS } from "@/lib/clinical/opioids";
+import { notReversedSql } from "@/lib/integrity/still-paid";
 
 const DAY_MS = 86_400_000;
+/** Paid B1 that remittance has not already unwound via a posted B2. */
+const STILL_PAID_B1 = `c.responseStatus = 'P' AND c.transactionCode = 'B1'
+      AND ${notReversedSql("c")}`;
 
 export type SubjectType = "member" | "prescriber" | "pharmacy";
 export type Severity = "High" | "Elevated" | "Watch";
@@ -216,7 +220,7 @@ async function detectOpioidOverutilisation(
                   ELSE c.quantityDispensed * o.strengthMg * o.mmeFactor / c.daysSupply
              END AS dmme
       FROM Claim c JOIN OpioidProduct o ON o.drugId = c.drugId
-      WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+      WHERE ${STILL_PAID_B1}
         AND o.convertible = 1 AND c.daysSupply > 0
     ),
     concurrent AS (
@@ -252,7 +256,8 @@ async function detectOpioidOverutilisation(
                   ELSE c.quantityDispensed * o.strengthMg * o.mmeFactor / c.daysSupply
              END AS dmme
       FROM Claim c JOIN OpioidProduct o ON o.drugId = c.drugId
-      WHERE c.responseStatus = 'P' AND o.convertible = 1 AND c.daysSupply > 0
+      WHERE ${STILL_PAID_B1}
+        AND o.convertible = 1 AND c.daysSupply > 0
     )
     SELECT CAST(MAX(dmme) AS REAL) AS v FROM op GROUP BY memberId
   `);
@@ -327,7 +332,7 @@ async function detectControlledShopping(
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
     JOIN Member m ON m.id = c.memberId
-    WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+    WHERE ${STILL_PAID_B1}
       AND d.therapeuticClass IN (${controlledList})
     GROUP BY c.memberId
     HAVING COUNT(*) >= 6
@@ -431,7 +436,7 @@ async function detectPrescriberConcentration(
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
     JOIN Prescriber p ON p.npi = c.prescriberNpi
-    WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+    WHERE ${STILL_PAID_B1}
     GROUP BY c.prescriberNpi
     HAVING COUNT(*) >= 200
   `);
@@ -523,7 +528,7 @@ async function detectPharmacyMix(
     FROM Claim c
     JOIN Drug d ON d.id = c.drugId
     JOIN Pharmacy ph ON ph.id = c.pharmacyId
-    WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
+    WHERE ${STILL_PAID_B1}
     GROUP BY c.pharmacyId
     HAVING COUNT(*) >= 1000
   `);
