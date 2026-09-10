@@ -89,7 +89,7 @@ export interface ConfigOverride {
 // World loading
 // ---------------------------------------------------------------------------
 
-interface ReplayWorld {
+export interface ReplayWorld {
   plans: Map<string, EngineBenefitPlan>;
   contract: EngineContract;
   drugs: Map<string, EngineDrug & { isBrandLabel: boolean; molecule: string | null }>;
@@ -108,6 +108,30 @@ interface ReplayWorld {
 
 let worldCache: { world: ReplayWorld; loadedAt: number } | null = null;
 const WORLD_TTL_MS = 60_000;
+
+/**
+ * Drop the in-process world cache.
+ *
+ * Required after any write that changes what `loadWorld` returns — most
+ * importantly a PA determination. POS and replay price against `approvedPAs`
+ * from this cache; leaving a refused approval in memory for up to `WORLD_TTL_MS`
+ * would keep paying specialty fills the reviewer just turned down.
+ */
+export function invalidateWorldCache(): void {
+  worldCache = null;
+}
+
+/** Test helper: whether a hot cache entry is currently held. */
+export function worldCacheIsHot(): boolean {
+  return (
+    worldCache != null && Date.now() - worldCache.loadedAt < WORLD_TTL_MS
+  );
+}
+
+/** Test helper: install a synthetic hot cache entry without hitting the database. */
+export function seedWorldCacheForTests(world: ReplayWorld): void {
+  worldCache = { world, loadedAt: Date.now() };
+}
 
 export async function loadWorld(force = false): Promise<ReplayWorld> {
   if (!force && worldCache && Date.now() - worldCache.loadedAt < WORLD_TTL_MS) {

@@ -15,6 +15,7 @@ import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { canDecidePa } from "@/lib/auth";
 import { demoFeaturesEnabled } from "@/lib/config";
+import { invalidateWorldCache } from "@/lib/engine/replay";
 
 interface Body {
   paId: string;
@@ -125,6 +126,13 @@ export async function POST(request: Request) {
       reviewerNote: body.note ?? null,
     },
   });
+
+  /*
+   * POS / replay price from loadWorld()'s approvedPAs map, which is cached for
+   * up to a minute. A refusal clears approvedEffectiveDate in Postgres; without
+   * this drop, simulateFill would keep granting coverage until the TTL expired.
+   */
+  invalidateWorldCache();
 
   const actor = await getSessionUser();
   await recordAudit({
