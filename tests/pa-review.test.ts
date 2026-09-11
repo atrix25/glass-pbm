@@ -13,6 +13,8 @@
  * no deadline at all on requests that have one.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   contractualSla,
@@ -25,8 +27,11 @@ import {
   EXCEPTION_KINDS,
   exceptionKind,
   mayAppeal,
+  mayDecideAppeal,
   mayRecord,
+  parseContestedPaNumber,
   reviewerLabel,
+  sameReviewer,
   type Reviewer,
 } from "@/lib/pa/review";
 
@@ -144,6 +149,60 @@ describe("appeals", () => {
     expect(verdict.mustDifferFrom).toBe(
       "Rachel Imhoff, PharmD (WI-RPH-041882)",
     );
+  });
+
+  it("reads the contested PA number out of the note the intake writes", () => {
+    expect(
+      parseContestedPaNumber(
+        "Contests EX2026000203. Member asks to overturn the quantity refusal.",
+      ),
+    ).toBe("EX2026000203");
+    expect(parseContestedPaNumber("Contests AP-0000042. ")).toBe("AP-0000042");
+    expect(parseContestedPaNumber("No linkage here")).toBeNull();
+  });
+
+  it("refuses to let the original decision maker decide the appeal", () => {
+    const original = "Rachel Imhoff, PharmD (WI-RPH-041882)";
+    const verdict = mayDecideAppeal({
+      mustDifferFrom: original,
+      decidedBy: original,
+    });
+    expect(verdict.allowed).toBe(false);
+    expect(verdict.reason).toMatch(/2560\.503-1\(h\)/);
+    expect(sameReviewer(original, original)).toBe(true);
+  });
+
+  it("lets a different pharmacist decide the appeal", () => {
+    const verdict = mayDecideAppeal({
+      mustDifferFrom: "Rachel Imhoff, PharmD (WI-RPH-041882)",
+      decidedBy: "Daniel Okafor, PharmD (WI-RPH-038204)",
+    });
+    expect(verdict.allowed).toBe(true);
+  });
+
+  it("treats missing original decision maker as uncheckable rather than blocking", () => {
+    expect(
+      mayDecideAppeal({
+        mustDifferFrom: null,
+        decidedBy: "Rachel Imhoff, PharmD (WI-RPH-041882)",
+      }).allowed,
+    ).toBe(true);
+  });
+
+  it("is enforced on the PA decide write path before a determination lands", () => {
+    const source = readFileSync(
+      resolve(__dirname, "../src/app/api/pa/decide/route.ts"),
+      "utf8",
+    );
+    expect(source).toContain("mayDecideAppeal");
+    expect(source).toContain("parseContestedPaNumber");
+    const appealGuard = source.indexOf('if (pa.requestType === "Appeal")');
+    const determinationWrite = source.indexOf(
+      "await prisma.priorAuthorization.update",
+      source.indexOf("await prisma.priorAuthorization.update") + 1,
+    );
+    expect(appealGuard).toBeGreaterThan(0);
+    expect(determinationWrite).toBeGreaterThan(appealGuard);
   });
 });
 

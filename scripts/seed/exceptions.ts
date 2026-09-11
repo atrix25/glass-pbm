@@ -26,6 +26,7 @@
 
 import type { PrismaClient } from "../../src/generated/prisma/index.js";
 import { paDeadlines } from "../../src/lib/pa/engine.js";
+import { sameReviewer } from "../../src/lib/pa/review.js";
 import { DEMO_MEMBERS } from "./scenarios.js";
 
 /** A second pharmacist, because an appeal cannot be decided by the first one. */
@@ -309,7 +310,3 @@ function needsStatement(kind: ExceptionCase["kind"]): boolean {
   );
 }
 
-/** Names are stored with the licence appended, so compare the licence. */
-function sameReviewer(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
-}

@@ -10,7 +10,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
-import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
+import {
+  mayDecideAppeal,
+  mayRecord,
+  parseContestedPaNumber,
+  type ReviewAction,
+  type Reviewer,
+} from "@/lib/pa/review";
 import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { canDecidePa } from "@/lib/auth";
@@ -58,6 +64,7 @@ export async function POST(request: Request) {
       urgency: true,
       requestType: true,
       prescriberStatementAt: true,
+      reviewerNote: true,
     },
   });
   if (!pa) {
@@ -93,9 +100,52 @@ export async function POST(request: Request) {
   if (action.record === "Escalated") {
     await prisma.priorAuthorization.update({
       where: { id: pa.id },
-      data: { escalated: true, status: "InReview", reviewerNote: body.note ?? null },
+      data: {
+        escalated: true,
+        status: "InReview",
+        reviewerNote: mergeAppealNote(pa.requestType, pa.reviewerNote, body.note),
+      },
     });
     return NextResponse.json({ ok: true, escalated: true });
+  }
+
+  /*
+   * Appeal independence is enforced on the determination write, not only on
+   * filing. `mayAppeal` already returns `mustDifferFrom`, but a caller that
+   * skips the intake UI (or files correctly and then signs with the original
+   * pharmacist) would otherwise grant coverage without the independent review
+   * 29 CFR 2560.503-1(h) requires — and that the seed already refuses to write.
+   */
+  if (pa.requestType === "Appeal") {
+    const contestedNumber = parseContestedPaNumber(pa.reviewerNote);
+    if (!contestedNumber) {
+      return NextResponse.json(
+        {
+          error:
+            "This appeal does not name the determination it contests, so reviewer independence cannot be checked. Re-file the appeal against the refusal.",
+        },
+        { status: 409 },
+      );
+    }
+    const contested = await prisma.priorAuthorization.findUnique({
+      where: { paNumber: contestedNumber },
+      select: { decidedBy: true },
+    });
+    if (!contested) {
+      return NextResponse.json(
+        {
+          error: `This appeal contests ${contestedNumber}, which is not on file.`,
+        },
+        { status: 409 },
+      );
+    }
+    const independence = mayDecideAppeal({
+      mustDifferFrom: contested.decidedBy,
+      decidedBy: verdict.decidedBy ?? null,
+    });
+    if (!independence.allowed) {
+      return NextResponse.json({ error: independence.reason }, { status: 403 });
+    }
   }
 
   const deadlines = paDeadlines(
@@ -122,7 +172,7 @@ export async function POST(request: Request) {
       decidedAt: now,
       decidedBy: verdict.decidedBy ?? null,
       decisionDueAt: sla.dueAt,
-      reviewerNote: body.note ?? null,
+      reviewerNote: mergeAppealNote(pa.requestType, pa.reviewerNote, body.note),
     },
   });
 
@@ -145,4 +195,24 @@ export async function POST(request: Request) {
     regulatoryDueAt: deadlines.regulatory.dueAt,
     contractualDueAt: deadlines.contractual.dueAt,
   });
+}
+
+/**
+ * Keep the `Contests {paNumber}.` prefix on appeal notes. The decide path reads
+ * that linkage to enforce reviewer independence; replacing the whole note with
+ * a free-text pharmacist comment would erase the only pointer to the original
+ * refusal.
+ */
+function mergeAppealNote(
+  requestType: string,
+  existing: string | null,
+  next: string | null | undefined,
+): string | null {
+  if (requestType !== "Appeal") return next ?? null;
+  const contested = parseContestedPaNumber(existing);
+  if (!contested) return next ?? existing;
+  const prefix = `Contests ${contested}.`;
+  if (!next) return existing;
+  if (parseContestedPaNumber(next)) return next;
+  return `${prefix} ${next}`;
 }

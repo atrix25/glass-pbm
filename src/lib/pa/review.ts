@@ -227,3 +227,57 @@ export function mayAppeal(pa: {
     mustDifferFrom: pa.decidedBy,
   };
 }
+
+/**
+ * Names are stored with the licence appended. Compare the full string so a
+ * reused display name with a different licence still counts as a different
+ * reviewer.
+ */
+export function sameReviewer(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/**
+ * The exception intake and seed write `Contests {paNumber}.` into reviewerNote
+ * so the appeal keeps a durable pointer to what it contests without mutating
+ * the original row. That text is the linkage the decide path has to read.
+ */
+export function parseContestedPaNumber(
+  reviewerNote: string | null | undefined,
+): string | null {
+  if (!reviewerNote) return null;
+  const match = reviewerNote.match(/\bContests\s+([A-Z]{2}\d{7,}|[A-Z]{2}-\d+)\b/i);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Whether this reviewer may record a determination on an appeal.
+ *
+ * Separated from `mayAppeal` because filing and deciding are different writes:
+ * filing only needs a refusal on the contested request, and deciding needs a
+ * reviewer who is not that refusal's decision maker. Escalation is not a
+ * determination, so callers should not ask this for `Escalated`.
+ */
+export function mayDecideAppeal(args: {
+  mustDifferFrom: string | null;
+  decidedBy: string | null;
+}): { allowed: boolean; reason: string } {
+  if (!args.mustDifferFrom) {
+    return {
+      allowed: true,
+      reason:
+        "The contested refusal has no named decision maker on file, so reviewer independence cannot be checked against one.",
+    };
+  }
+  if (!args.decidedBy || sameReviewer(args.mustDifferFrom, args.decidedBy)) {
+    return {
+      allowed: false,
+      reason: `An appeal may not be decided by the reviewer who made the original determination (${args.mustDifferFrom}). 29 CFR 2560.503-1(h) requires a full and fair review by someone else.`,
+    };
+  }
+  return {
+    allowed: true,
+    reason:
+      "The appeal reviewer differs from the original decision maker, so the determination may be recorded.",
+  };
+}

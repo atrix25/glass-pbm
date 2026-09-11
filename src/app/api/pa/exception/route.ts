@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     );
   }
 
+  let mustDifferFrom: string | null = null;
   if (body.kind === "Appeal") {
     if (!against) {
       return NextResponse.json(
@@ -96,6 +97,9 @@ export async function POST(request: Request) {
     if (!verdict.allowed) {
       return NextResponse.json({ error: verdict.reason }, { status: 409 });
     }
+    // Surfaced so the intake UI can refuse to offer the original reviewer, and
+    // so `/api/pa/decide` is not the first place the independence rule appears.
+    mustDifferFrom = verdict.mustDifferFrom;
   }
 
   // Filed against the simulated present, so a request filed on stage lands in
@@ -150,6 +154,7 @@ export async function POST(request: Request) {
     clockStarted: !sla.awaitingSupportingStatement,
     dueAt: body.kind === "Grievance" ? null : sla.dueAt,
     citation: info.citation,
+    mustDifferFrom,
     note: sla.awaitingSupportingStatement
       ? "Filed. The regulatory clock has not started, because an exception request needs the prescriber's supporting statement before the plan can decide it."
       : "Filed, and the clock is running.",
