@@ -19,7 +19,7 @@
 
 import { prisma } from "@/lib/db";
 import { adjudicate, type AdjudicationContext, type PriorFill } from "./adjudicate";
-import { loadWorld } from "./replay";
+import { approvedPAsAsOf, loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
   dayOfPlanYear,
@@ -232,7 +232,10 @@ async function adjudicateStored(
       federalOopAccumulatedCents: rxOop,
       deductibleAccumulatedCents: deductible,
     },
-    approvedPAs: world.approvedPAs.get(claim.memberId) ?? [],
+    approvedPAs: approvedPAsAsOf(
+      world.approvedPAs.get(claim.memberId),
+      claim.dateOfService,
+    ),
   };
 
   return adjudicate(ctx);
