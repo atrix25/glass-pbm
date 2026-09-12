@@ -18,7 +18,7 @@ import {
   type AdjudicationContext,
   type PriorFill,
 } from "./adjudicate";
-import { loadWorld } from "./replay";
+import { approvedPAsAsOf, loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
   screenFill,
@@ -101,6 +101,16 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
   if (!plan) throw new Error("Member is not attached to a benefit plan");
 
   const dateOfService = new Date(`${req.dateOfService}T00:00:00.000Z`);
+  /*
+   * Only authorizations whose decision has been released by the fill date
+   * may waive a PA edit. Matching on approvedEffectiveDate alone would let
+   * the June incident's delayed decidedAt still cover a pin between the
+   * two timestamps — the queue would still say In review and POS would pay.
+   */
+  const releasedApprovals = approvedPAsAsOf(
+    world.approvedPAs.get(req.memberId),
+    dateOfService,
+  );
 
   const [member, history, sameDay, opioids] = await Promise.all([
     prisma.member.findUnique({
@@ -261,7 +271,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
       federalOopAccumulatedCents: rxOop,
       deductibleAccumulatedCents: deductible,
     },
-    approvedPAs: world.approvedPAs.get(req.memberId) ?? [],
+    approvedPAs: releasedApprovals,
   };
 
   const outcome = adjudicate(ctx);
@@ -337,7 +347,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
       rxOopLimitCents: plan.rxOopLimitIndividual,
       deductibleAccumulatedCents: deductible,
       deductibleCents: plan.deductibleIndividual,
-      approvedPAs: (world.approvedPAs.get(req.memberId) ?? []).map((pa) => ({
+      approvedPAs: releasedApprovals.map((pa) => ({
         drugName: world.drugs.get(pa.drugId)?.name ?? pa.drugId,
         through: pa.terminationDate?.toISOString().slice(0, 10) ?? null,
       })),

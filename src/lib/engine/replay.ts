@@ -100,10 +100,47 @@ interface ReplayWorld {
     string,
     { id: string; effectiveDate: Date; terminationDate: Date | null; benefitPlanId: string }
   >;
-  approvedPAs: Map<
-    string,
-    { drugId: string; effectiveDate: Date; terminationDate: Date | null }[]
-  >;
+  approvedPAs: Map<string, WorldApprovedPA[]>;
+}
+
+/**
+ * An approved prior authorization as loaded for adjudication.
+ *
+ * `decidedAt` is carried even though the engine matches on the effective
+ * window, because the simulation clock can sit between those two timestamps.
+ * The June clinical-queue incident delays `decidedAt` without moving
+ * `approvedEffectiveDate`, so a pin inside that gap would otherwise treat an
+ * unreleased determination as coverage already on file.
+ */
+export interface WorldApprovedPA {
+  drugId: string;
+  effectiveDate: Date;
+  terminationDate: Date | null;
+  decidedAt: Date;
+}
+
+/**
+ * Approvals whose determination has been released as of a moment.
+ *
+ * Matches the queue's rule (`paLiveState`): a stored Approved row with a
+ * future `decidedAt` is still In review, and must not waive a 75 at POS.
+ */
+export function approvedPAsAsOf(
+  pas: WorldApprovedPA[] | undefined,
+  asOf: Date,
+): Array<{
+  drugId: string;
+  effectiveDate: Date;
+  terminationDate: Date | null;
+}> {
+  if (!pas || pas.length === 0) return [];
+  return pas
+    .filter((pa) => pa.decidedAt <= asOf)
+    .map(({ drugId, effectiveDate, terminationDate }) => ({
+      drugId,
+      effectiveDate,
+      terminationDate,
+    }));
 }
 
 let worldCache: { world: ReplayWorld; loadedAt: number } | null = null;
@@ -152,6 +189,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
           drugId: true,
           approvedEffectiveDate: true,
           approvedTerminationDate: true,
+          decidedAt: true,
         },
       }),
       prisma.networkPharmacy.findMany({ where: { networkId: "navicare-limited" } }),
@@ -290,17 +328,17 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
     ]),
   );
 
-  const approvedPAs = new Map<
-    string,
-    { drugId: string; effectiveDate: Date; terminationDate: Date | null }[]
-  >();
+  const approvedPAs = new Map<string, WorldApprovedPA[]>();
   for (const pa of paRows) {
-    if (!pa.approvedEffectiveDate) continue;
+    // An approval without a decision time is not on file yet — the effective
+    // window alone must not waive utilization management.
+    if (!pa.approvedEffectiveDate || !pa.decidedAt) continue;
     const list = approvedPAs.get(pa.memberId) ?? [];
     list.push({
       drugId: pa.drugId,
       effectiveDate: pa.approvedEffectiveDate,
       terminationDate: pa.approvedTerminationDate,
+      decidedAt: pa.decidedAt,
     });
     approvedPAs.set(pa.memberId, list);
   }
@@ -935,7 +973,10 @@ export async function replay(
       contract,
       priorFills,
       accumulators: { ...acc },
-      approvedPAs: world.approvedPAs.get(row.memberId) ?? [],
+      approvedPAs: approvedPAsAsOf(
+        world.approvedPAs.get(row.memberId),
+        cutoff,
+      ),
       assumptions,
       refillThreshold: override.refillThreshold,
     };

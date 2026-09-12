@@ -11,7 +11,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { adjudicate } from "@/lib/engine/adjudicate";
-import { loadWorld } from "@/lib/engine/replay";
+import { approvedPAsAsOf, loadWorld } from "@/lib/engine/replay";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
@@ -469,10 +469,11 @@ export async function estimateCost(
     (await typicalQuantity(drug.id, daysSupply)) ??
     daysSupply;
   const nadacTotalCents = Math.round(engineDrug.nadacPerUnit * quantity * 100);
+  const dateOfService = new Date();
 
   const out = adjudicate({
     request: {
-      dateOfService: new Date(),
+      dateOfService,
       cardholderId: "",
       personCode: "01",
       serviceProviderId: pharmacy.npi,
@@ -499,7 +500,10 @@ export async function estimateCost(
       federalOopAccumulatedCents: 0,
       deductibleAccumulatedCents: 0,
     },
-    approvedPAs: world.approvedPAs.get(args.memberId) ?? [],
+    approvedPAs: approvedPAsAsOf(
+      world.approvedPAs.get(args.memberId),
+      dateOfService,
+    ),
   });
 
   const citations = Array.from(
