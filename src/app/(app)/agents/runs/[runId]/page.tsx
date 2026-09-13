@@ -7,6 +7,7 @@ import {
   SectionTitle,
   Stat,
 } from "@/components/ui";
+import { ProposalReview } from "@/components/proposal-review";
 import { getRun, type StepRow } from "@/lib/queries/agents";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 
@@ -148,6 +149,15 @@ export default async function RunPage({
                 </p>
               </div>
             ) : null}
+            {p.executionStatus ? (
+              <div className="mt-3 rounded-lg border border-ink-200 bg-white px-4 py-3 text-[12.5px] text-ink-700">
+                <span className="font-semibold">Execution receipt:</span>{" "}
+                {p.executionStatus}
+                {p.executionError ? ` — ${p.executionError}` : ""}
+                {p.executionResult ? <Payload json={p.executionResult} /> : null}
+              </div>
+            ) : null}
+            <ProposalReview proposalId={p.id} status={p.status} />
             <Payload json={p.payload} />
           </div>
         </Card>

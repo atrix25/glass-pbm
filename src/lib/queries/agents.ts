@@ -67,6 +67,9 @@ const MINUTES_PER_RUN: Record<string, number> = {
   "appeal-drafter": 35,
   "member-service": 7,
   "data-agent": 12,
+  "rebate-collections": 25,
+  "guarantee-credit": 20,
+  "service-escalation-triage": 8,
 };
 
 function percentile(sorted: number[], p: number): number {
@@ -348,6 +351,9 @@ export interface RunDetail {
     status: string;
     autoApplied: boolean;
     overrideNote: string | null;
+    executionStatus: string | null;
+    executionResult: string | null;
+    executionError: string | null;
   }[];
 }
 
@@ -356,7 +362,7 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
     where: { id: runId },
     include: {
       steps: { orderBy: { ordinal: "asc" } },
-      proposals: true,
+      proposals: { include: { execution: true } },
     },
   });
   if (!run) return null;
@@ -400,6 +406,9 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
       status: p.status,
       autoApplied: p.autoApplied,
       overrideNote: p.overrideNote,
+      executionStatus: p.execution?.status ?? null,
+      executionResult: p.execution?.result ?? null,
+      executionError: p.execution?.error ?? null,
     })),
   };
 }

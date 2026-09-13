@@ -21,6 +21,7 @@
 
 import { PrismaClient } from "../../src/generated/prisma/index.js";
 import { Rng } from "../seed/population.js";
+import { reviewProposal } from "../../src/lib/agents/actions/execute.js";
 
 const REVIEWERS: Record<string, string> = {
   "pa-intake": "K. Osei, PharmD",
@@ -29,6 +30,16 @@ const REVIEWERS: Record<string, string> = {
   "eligibility-resolver": "M. Whitfield, eligibility operations",
   "appeal-drafter": "T. Nakamura, PharmD",
   "member-service": "L. Brennan, member services supervisor",
+};
+
+const REVIEWER_ROLES: Record<string, string> = {
+  "pa-intake": "pharmacist",
+  "plan-design": "plan_sponsor",
+  "integrity-triage": "pharmacist",
+  "eligibility-resolver": "ops",
+  "appeal-drafter": "pharmacist",
+  "rebate-collections": "ops",
+  "guarantee-credit": "plan_sponsor",
 };
 
 /** How often a reviewer disagrees, where it is not computed from the data. */
@@ -72,6 +83,13 @@ export async function reviewProposals(prisma: PrismaClient) {
   })) {
     notes.set(n.paId, n.groundTruth);
   }
+  const paDeterminations = new Map(
+    (
+      await prisma.priorAuthorization.findMany({
+        select: { id: true, determination: true },
+      })
+    ).map((pa) => [pa.id, pa.determination]),
+  );
 
   /*
    * The committee took the first recommendation it was given and has held the
@@ -88,19 +106,26 @@ export async function reviewProposals(prisma: PrismaClient) {
   let approvals = 0;
 
   for (const [i, p] of proposals.entries()) {
+    // Reversible actions have already passed through the effect executor under
+    // policy. This batch simulates the human decision for proposals that were
+    // deliberately held; it must not manufacture a second review record.
+    if (p.status !== "Proposed") continue;
     const rng = new Rng(0x5eed + i * 2654435761);
     const reviewer = REVIEWERS[p.agentId] ?? "Operations";
-    // A person looks at it the same day for anything held, and within a couple
-    // of days for anything that applied itself.
-    const reviewedAt = new Date(
-      p.run.endedAt.getTime() +
-        (p.consequential ? rng.int(1, 8) : rng.int(4, 60)) * 3_600_000,
-    );
-
     let override: string | null = null;
 
     if (p.agentId === "pa-intake") {
-      override = intakeOverride(p, notes.get(p.subjectId ?? "") ?? null);
+      const expected =
+        p.action === "record-denial"
+          ? "Denied"
+          : p.action === "record-answer-set"
+            ? "Approved"
+            : null;
+      const recorded = paDeterminations.get(p.subjectId ?? "");
+      override =
+        expected && recorded && expected !== recorded
+          ? `The recorded pharmacist determination is ${recorded}; the agent proposed ${expected}. The existing decision stands.`
+          : intakeOverride(p, notes.get(p.subjectId ?? "") ?? null);
     } else if (p.agentId === "plan-design") {
       override =
         p.id === takenByCommittee
@@ -116,37 +141,29 @@ export async function reviewProposals(prisma: PrismaClient) {
 
     if (override) {
       overrides++;
-      await prisma.agentProposal.update({
-        where: { id: p.id },
-        data: {
-          status: "Rejected",
-          reviewedBy: reviewer,
-          reviewedAt,
-          overrideNote: override,
-          appliedAt: null,
+      await reviewProposal({
+        proposalId: p.id,
+        decision: "Rejected",
+        reviewer: {
+          label: reviewer,
+          role: REVIEWER_ROLES[p.agentId] ?? "admin",
         },
+        note: override,
       });
     } else {
       approvals++;
-      await prisma.agentProposal.update({
-        where: { id: p.id },
-        data: {
-          status: "Applied",
-          reviewedBy: reviewer,
-          reviewedAt,
-          // An approval has to clear any note from a previous decision, or the
-          // override rate counts a proposal that was accepted. For the same
-          // reason the applied time is recomputed rather than carried over: a
-          // rejection nulls it, and a second pass over the same proposal would
-          // otherwise leave an applied action with no time on it.
-          overrideNote: null,
-          appliedAt: p.autoApplied ? p.run.endedAt : reviewedAt,
+      await reviewProposal({
+        proposalId: p.id,
+        decision: "Approved",
+        reviewer: {
+          label: reviewer,
+          role: REVIEWER_ROLES[p.agentId] ?? "admin",
         },
       });
     }
   }
 
-  return { reviewed: proposals.length, overrides, approvals };
+  return { reviewed: approvals + overrides, overrides, approvals };
 }
 
 /**

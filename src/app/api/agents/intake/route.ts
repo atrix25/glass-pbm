@@ -8,9 +8,8 @@ export const maxDuration = 60;
 /**
  * Runs the intake agent live against a request that is already in the book.
  *
- * The run is not persisted. The corpus already holds one recorded run per
- * request, and writing a second every time somebody clicks the button would
- * turn the operations page into a log of people pressing buttons.
+ * Live runs are persisted. A user-triggered run is operational work now that
+ * its proposal can flow through review, execution and a durable receipt.
  */
 export async function POST(request: Request) {
   const { paId } = (await request.json()) as { paId: string };
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No such request." }, { status: 404 });
   }
 
-  const { run, result } = await runIntake({ paId, persist: false });
+  const { run, result } = await runIntake({ paId, persist: true });
   const snapshot = run.snapshot(
     result.outcome === "Escalated" ? "Escalated" : "Completed",
     result.escalationReason ?? "Answer set filled from the note.",

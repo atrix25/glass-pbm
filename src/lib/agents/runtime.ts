@@ -14,8 +14,10 @@
 
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { agent, isConsequential, type Autonomy } from "./registry";
+import { agent, type Autonomy } from "./registry";
 import type { BrainKind, Thought } from "./brain";
+import { executeAutoAppliedProposal } from "./actions/execute";
+import { actionDefinition } from "./actions/registry";
 
 export interface ProposalInput {
   subjectType: string;
@@ -158,7 +160,8 @@ export class Run {
   }
 
   propose(input: ProposalInput) {
-    const consequential = isConsequential(this.agentId, input.action);
+    const definition = actionDefinition(input.action);
+    const consequential = definition.humanRequired;
     // The two conditions are deliberately separate. Autonomy is a policy
     // choice that can change; the consequential bar is not, and it wins.
     const autoApplied =
@@ -171,7 +174,7 @@ export class Run {
       id,
       consequential,
       autoApplied,
-      status: autoApplied ? "Applied" : "Proposed",
+      status: "Proposed",
     });
 
     this.push({
@@ -267,12 +270,20 @@ export class Run {
             consequential: p.consequential,
             status: p.status,
             autoApplied: p.autoApplied,
-            appliedAt: p.autoApplied ? endedAt : null,
+            appliedAt: null,
             createdAt: endedAt,
           })),
         },
       },
     });
+
+    // `autoApplied` means policy approved the action, not that setting a status
+    // changed the book. Every eligible proposal still passes through the same
+    // typed, idempotent effect executor and receives an execution receipt.
+    for (const proposal of this.proposals.filter((p) => p.autoApplied)) {
+      await executeAutoAppliedProposal(proposal.id);
+      proposal.status = "Applied";
+    }
     return { id: this.id, elapsedMs, outcome, summary };
   }
 

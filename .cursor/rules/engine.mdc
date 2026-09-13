@@ -1,0 +1,11 @@
+---
+description: Adjudication engine changes require proof tests
+globs: src/lib/engine/**/*.ts
+alwaysApply: false
+---
+
+# Engine
+
+- Keep adjudication deterministic for a given clock + config.
+- Add or update tests under `tests/` (golden / determinism / domain-specific) with engine changes.
+- Prefer extending existing modules (`adjudicate`, `pricing`, `quantity-limit`, `replay`) over new parallel paths.

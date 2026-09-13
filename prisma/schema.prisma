@@ -295,16 +295,16 @@ model AccumulatorTransfer {
 
 /// One accumulator file received from the medical carrier.
 model AccumulatorFile {
-  id           String   @id
+  id          String   @id
   /// Carrier that produced the file.
-  sender       String
-  receivedAt   DateTime
-  periodStart  DateTime
-  periodEnd    DateTime
-  recordCount  Int
-  totalCents   Int
+  sender      String
+  receivedAt  DateTime
+  periodStart DateTime
+  periodEnd   DateTime
+  recordCount Int
+  totalCents  Int
   /// SHA-256 of the file body, so the ledger is reproducible.
-  contentHash  String
+  contentHash String
 
   @@index([receivedAt])
 }
@@ -716,12 +716,11 @@ model Claim {
   // Answers "what did this pharmacy dispense of this drug", which is the shape
   // of every MAC appeal and every network question about one store.
   @@index([pharmacyId, drugId, dateOfService])
-  /*
+  /**
    * Answers "what happened to this drug across the book", which is the shape of
    * every question asked by manufacturer, molecule or therapeutic class:
    * rebate accrual by labeler, the most dispensed products, generic
    * substitution rates.
-   *
    * The pharmacy index above cannot serve those, because drugId is not its
    * leading column. Without this one, joining 1,518 drugs to the claim history
    * degenerated into a scan of every B1 claim per drug — two billion row visits
@@ -1063,8 +1062,8 @@ model ConfigVersion {
   createdAt     DateTime @default(now())
   isBaseline    Boolean  @default(false)
 
-  claims Claim[]
-  runs   ReadjudicationRun[]
+  claims       Claim[]
+  runs         ReadjudicationRun[]
   npsSnapshots NpsSnapshot[]
 }
 
@@ -1093,11 +1092,11 @@ model NpsSnapshot {
   configVersion   ConfigVersion? @relation(fields: [configVersionId], references: [id], onDelete: SetNull)
 
   /// Everybody who used the benefit.
-  scored      Int
-  promoters   Int
-  passives    Int
-  detractors  Int
-  npsCensus   Float
+  scored     Int
+  promoters  Int
+  passives   Int
+  detractors Int
+  npsCensus  Float
 
   /// What a real questionnaire would have reported.
   responded   Int
@@ -1391,8 +1390,9 @@ model RebateInvoice {
   claimCount     Int
   invoicedCents  Int
   /// What will be collected on collectedAt: the invoice less any dispute.
-  collectedCents Int @default(0)
-  disputedCents  Int @default(0)
+  collectedCents Int             @default(0)
+  disputedCents  Int             @default(0)
+  disputes       RebateDispute[]
 
   @@index([quarter])
   @@index([submittedAt])
@@ -1470,9 +1470,10 @@ model SponsorInvoice {
   /// The rebate administration fee Navitus retains, per Amendment 5A.
   rebateAdminFeeCents Int @default(0)
 
-  totalDueCents Int
+  totalDueCents    Int
   /// Scheduled settlement date. Payment is derived from the clock.
-  paidAt        DateTime
+  paidAt           DateTime
+  guaranteeCredits GuaranteeCredit[]
 
   @@index([periodStart])
 }
@@ -1505,10 +1506,10 @@ model AgentPolicy {
   agentId String
 
   /// "Propose" | "ActWithReview" | "Act" | "Suspended"
-  autonomy String
+  autonomy      String
   /// Why this level and not the next one up.
-  rationale String
-  setBy     String
+  rationale     String
+  setBy         String
   effectiveFrom DateTime
   effectiveTo   DateTime?
 
@@ -1520,10 +1521,10 @@ model AgentRun {
   id      String @id
   agentId String
 
-  startedAt DateTime
-  endedAt   DateTime
+  startedAt   DateTime
+  endedAt     DateTime
   /// What it was asked to do, in the words the caller used.
-  goal      String
+  goal        String
   /// The record the run is about, where there is one.
   subjectType String?
   subjectId   String?
@@ -1536,20 +1537,21 @@ model AgentRun {
   /// "model" when a language model did the reasoning, "deterministic" when the
   /// scripted planner did. Mixed runs report "mixed". Never inferred at read
   /// time: whichever ran is what gets written.
-  brain       String
-  modelName   String?
-  inputTokens  Int @default(0)
-  outputTokens Int @default(0)
+  brain          String
+  modelName      String?
+  inputTokens    Int     @default(0)
+  outputTokens   Int     @default(0)
   /// Cost of the run in tenths of a cent, because a run can cost less than one.
-  costMillicents Int @default(0)
-  elapsedMs      Int @default(0)
+  costMillicents Int     @default(0)
+  elapsedMs      Int     @default(0)
 
   /// Autonomy in force when it ran, copied so history cannot be rewritten by
   /// changing the policy afterwards.
   autonomy String
 
-  steps     AgentStep[]
-  proposals AgentProposal[]
+  steps        AgentStep[]
+  proposals    AgentProposal[]
+  serviceCases ServiceCase[]
 
   @@index([agentId, startedAt])
   @@index([subjectType, subjectId])
@@ -1573,11 +1575,11 @@ model AgentStep {
   /// One line of what came back.
   summary String
   /// Arguments and result, as JSON, so the step can be re-run by hand.
-  detail  String @default("{}")
+  detail  String  @default("{}")
 
   /// Which brain produced this particular step.
-  brain      String
-  elapsedMs  Int @default(0)
+  brain     String
+  elapsedMs Int    @default(0)
 
   @@unique([runId, ordinal])
   @@index([runId])
@@ -1601,12 +1603,12 @@ model AgentProposal {
   subjectId   String
 
   /// The action in a form the receiving system understands.
-  action  String
+  action    String
   /// The action in a form a person understands.
-  headline String
+  headline  String
   rationale String
   /// JSON payload the action needs if it is applied.
-  payload String @default("{}")
+  payload   String @default("{}")
 
   /// 0 to 10000. An agent that cannot say how sure it is has not finished
   /// thinking.
@@ -1617,21 +1619,121 @@ model AgentProposal {
   consequential Boolean @default(false)
 
   /// "Proposed" | "Approved" | "Rejected" | "Applied" | "Withdrawn"
-  status     String
-  reviewedBy String?
-  reviewedAt DateTime?
+  status       String
+  reviewedBy   String?
+  reviewedAt   DateTime?
   /// Set when a human disagreed, and what they did instead. This is the column
   /// that tells you whether the agent is any good.
   overrideNote String?
   appliedAt    DateTime?
   /// True when the policy allowed it to apply without a human.
-  autoApplied  Boolean @default(false)
+  autoApplied  Boolean   @default(false)
 
   createdAt DateTime
+
+  approval        AgentApproval?
+  execution       AgentActionExecution?
+  guaranteeCredit GuaranteeCredit?
 
   @@index([agentId, status])
   @@index([subjectType, subjectId])
   @@index([createdAt])
+}
+
+/// The human or policy decision over the exact proposal payload.
+model AgentApproval {
+  id                  String                @id @default(cuid())
+  proposalId          String                @unique
+  proposal            AgentProposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  decision            String
+  reviewerId          String?
+  reviewer            User?                 @relation(fields: [reviewerId], references: [id])
+  reviewerLabel       String
+  reviewerRole        String
+  note                String?
+  proposalPayloadHash String
+  createdAt           DateTime              @default(now())
+  execution           AgentActionExecution?
+
+  @@index([reviewerId, createdAt])
+}
+
+/// One idempotent attempt to turn an approved proposal into domain state.
+model AgentActionExecution {
+  id             String         @id @default(cuid())
+  proposalId     String         @unique
+  proposal       AgentProposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  approvalId     String?        @unique
+  approval       AgentApproval? @relation(fields: [approvalId], references: [id])
+  action         String
+  idempotencyKey String         @unique
+  payloadHash    String
+  status         String
+  result         String?
+  error          String?
+  attemptedAt    DateTime       @default(now())
+  completedAt    DateTime?
+
+  @@index([status, attemptedAt])
+}
+
+/// A shared operational queue entry created from any domain escalation.
+model ServiceCase {
+  id         String    @id @default(cuid())
+  caseNumber String    @unique
+  sourceType String
+  sourceId   String
+  agentRunId String?
+  agentRun   AgentRun? @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+  title      String
+  summary    String
+  priority   String    @default("Normal")
+  status     String    @default("Open")
+  queue      String
+  owner      String?
+  slaDueAt   DateTime?
+  resolution String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  @@unique([sourceType, sourceId])
+  @@index([status, priority, slaDueAt])
+  @@index([agentRunId])
+}
+
+/// A manufacturer rebate invoice exception worked to resolution.
+model RebateDispute {
+  id          String        @id @default(cuid())
+  invoiceId   String
+  invoice     RebateInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  reason      String
+  amountCents Int
+  status      String        @default("Open")
+  owner       String?
+  evidence    String        @default("{}")
+  createdAt   DateTime      @default(now())
+  resolvedAt  DateTime?
+
+  @@index([invoiceId, status])
+}
+
+/// An approved, deterministic performance-guarantee credit.
+model GuaranteeCredit {
+  id               String          @id @default(cuid())
+  proposalId       String          @unique
+  proposal         AgentProposal   @relation(fields: [proposalId], references: [id])
+  sponsorInvoiceId String?
+  sponsorInvoice   SponsorInvoice? @relation(fields: [sponsorInvoiceId], references: [id])
+  guaranteeId      String
+  period           String
+  amountCents      Int
+  status           String          @default("Posted")
+  rationale        String
+  postedAt         DateTime        @default(now())
+
+  @@unique([guaranteeId, period])
+  @@index([sponsorInvoiceId])
 }
 
 /// A synthetic clinical note attached to a prior authorisation request.
@@ -1643,14 +1745,14 @@ model AgentProposal {
 /// distractions of a chart note, so the intake agent has something real to
 /// read and can be marked against a known answer.
 model ClinicalNote {
-  id     String @id
-  paId   String @unique
+  id   String @id
+  paId String @unique
 
-  receivedAt DateTime
+  receivedAt  DateTime
   /// "Fax" | "Portal" | "ePA"
-  channel    String
-  author     String
-  body       String
+  channel     String
+  author      String
+  body        String
   /// The facts the note was generated from, as JSON. The agent never sees
   /// this; it is the answer key the operations page marks extraction against.
   groundTruth String
@@ -1671,10 +1773,10 @@ model ThroughputRun {
 
   /// "Adjudication" for the decision engine alone, "PointOfSale" for the whole
   /// round trip including the database reads a real claim needs.
-  kind  String
+  kind            String
   /// Claims processed in the run.
-  sample Int
-  elapsedMs Float
+  sample          Int
+  elapsedMs       Float
   claimsPerSecond Float
 
   p50Ms  Float
@@ -1710,13 +1812,13 @@ model ServiceIncident {
   /// When the sponsor was told, which is the number that gets remembered.
   notifiedAt DateTime
 
-  title    String
+  title       String
   /// "Degraded" | "Outage"
-  severity String
+  severity    String
   /// What broke, in a sentence a non-engineer can act on.
-  summary  String
-  cause    String
-  remedy   String
+  summary     String
+  cause       String
+  remedy      String
   /// The guarantee this incident put at risk, where there is one.
   guaranteeId String?
 
@@ -1937,6 +2039,9 @@ model MacAppeal {
   affectedClaims   Int       @default(0)
   /// The statute allows one day from determination to adjustment.
   adjustedAt       DateTime?
+  responseDraft    String?
+  responseSentAt   DateTime?
+  responseSentBy   String?
 
   @@index([submittedAt])
   @@index([pharmacyId])
@@ -1949,13 +2054,13 @@ model MacAppeal {
 
 /// Single-tenant deploy knobs. One row per deployment (id = "default").
 model TenantConfig {
-  id                 String   @id @default("default")
-  contractId         String   @default("etg0013")
-  sponsorId          String   @default("steel-potatoes")
-  defaultMemberId    String   @default("mbr-DEMO-0001-01")
-  displayName        String   @default("Glass")
-  demoFeatures       Boolean  @default(true)
-  updatedAt          DateTime @updatedAt
+  id              String   @id @default("default")
+  contractId      String   @default("etg0013")
+  sponsorId       String   @default("steel-potatoes")
+  defaultMemberId String   @default("mbr-DEMO-0001-01")
+  displayName     String   @default("Glass")
+  demoFeatures    Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
 }
 
 /// Async work claimed by workers with FOR UPDATE SKIP LOCKED.
@@ -2033,31 +2138,32 @@ model AuditEvent {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  name         String?
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
   /// plan_sponsor | ops | pharmacist | readonly | admin
-  role         String        @default("readonly")
-  passwordHash String?
+  role           String          @default("readonly")
+  passwordHash   String?
   /// External IdP subject when using OIDC.
-  oidcSub      String?       @unique
-  active       Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  sessions     Session[]
-  jobs         Job[]
-  copyEdits    CopyOverride[]
-  auditEvents  AuditEvent[]
-  apiKeys      ApiKey[]
+  oidcSub        String?         @unique
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       Session[]
+  jobs           Job[]
+  copyEdits      CopyOverride[]
+  auditEvents    AuditEvent[]
+  apiKeys        ApiKey[]
+  agentApprovals AgentApproval[]
 }
 
 model Session {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   /// Optional server-side as-of date when demo clock is disabled.
   asOfDate  DateTime?
 

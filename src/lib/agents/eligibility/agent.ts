@@ -12,7 +12,8 @@
  * There is one rule the agent cannot talk its way past. A correction that ends
  * somebody's coverage is held for a person, however obvious it looks, because
  * the cost of being wrong is a member who cannot fill a prescription and does
- * not know why. That is enforced in the runtime, not here.
+ * not know why. That is enforced by the typed action registry, not only by
+ * this agent's prompt.
  */
 
 import { z } from "zod";
@@ -162,33 +163,46 @@ export async function runResolver(opts: {
     thought.value,
   );
 
+  const proposalPayload = await run.tool(
+    "proposeCorrection",
+    "Normalize the diagnosed correction into the receiving eligibility system's patch contract.",
+    async () => ({ patch: resolution.patch, rejectCode: tx.rejectCode }),
+    (value) =>
+      `${Object.keys(value.patch).length} eligibility field${Object.keys(value.patch).length === 1 ? "" : "s"} prepared.`,
+  );
+  const action =
+    resolution.action === "apply-correction" &&
+    typeof proposalPayload.patch.terminationDate === "string"
+      ? "terminate-coverage"
+      : resolution.action;
+
   run.propose({
     subjectType: "EligibilityTransaction",
     subjectId: tx.id,
-    action: resolution.action,
-    headline: resolutionHeadline(resolution.action),
+    action,
+    headline: resolutionHeadline(action),
     rationale: [resolution.diagnosis, resolution.correction]
       .filter(Boolean)
       .join(" "),
-    payload: { patch: resolution.patch, rejectCode: tx.rejectCode },
+    payload: proposalPayload,
     confidence: resolution.confidence,
   });
 
-  const heldForPerson = resolution.action === "terminate-coverage";
+  const heldForPerson = action === "terminate-coverage";
   const result: ResolutionResult = {
     runId: run.id,
     diagnosis: resolution.diagnosis,
     correction: resolution.correction,
     patch: resolution.patch,
-    action: resolution.action,
+    action,
     heldForPerson,
     confidence: resolution.confidence,
   };
 
   if (opts.persist !== false) {
     await run.finish(
-      resolution.action === "escalate" ? "Escalated" : "Completed",
-      `${tx.rejectCode} on ${tx.memberName}: ${resolutionHeadline(resolution.action).toLowerCase()}`,
+      action === "escalate" ? "Escalated" : "Completed",
+      `${tx.rejectCode} on ${tx.memberName}: ${resolutionHeadline(action).toLowerCase()}`,
     );
   }
   return { run, result };

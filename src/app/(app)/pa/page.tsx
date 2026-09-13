@@ -20,6 +20,7 @@ import {
   type PaLiveState,
 } from "@/lib/pa/status";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -224,6 +225,10 @@ export default async function PriorAuthQueue({
           </div>
         ) : null}
       </Card>
+      <AgentWorkPanel
+        subjectTypes={["PriorAuthorization"]}
+        title="Prior authorization agent work"
+      />
     </div>
   );
 }

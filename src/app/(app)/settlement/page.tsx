@@ -10,6 +10,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 import {
   getInvoiceOverview,
   getRebateLedger,
@@ -488,6 +489,10 @@ export default async function SettlementPage() {
           actually collected.
         </div>
       </Card>
+      <AgentWorkPanel
+        subjectTypes={["RebateInvoice", "SponsorInvoice"]}
+        title="Settlement agent work"
+      />
     </div>
   );
 }

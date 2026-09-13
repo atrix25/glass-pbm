@@ -1447,6 +1447,51 @@ describe("the agents did only what they were allowed to do", () => {
     ).toEqual([]);
   });
 
+  it("gives every applied proposal exactly one successful effect receipt", async () => {
+    const missing = await prisma.agentProposal.findMany({
+      where: {
+        status: "Applied",
+        OR: [
+          { execution: null },
+          { execution: { is: { status: { not: "Succeeded" } } } },
+        ],
+      },
+      select: { id: true, agentId: true, action: true },
+      take: 5,
+    });
+    expect(missing, "applied proposals without a successful receipt").toEqual([]);
+  });
+
+  it("binds every approval and execution to the reviewed payload digest", async () => {
+    const approvals = await prisma.agentApproval.findMany({
+      include: { execution: true },
+    });
+    expect(approvals.length, "no governed approvals to inspect").toBeGreaterThan(0);
+    const bad = approvals
+      .filter(
+        (approval) =>
+          approval.proposalPayloadHash.length !== 64 ||
+          (approval.execution &&
+            approval.execution.payloadHash !== approval.proposalPayloadHash),
+      )
+      .slice(0, 5)
+      .map((approval) => approval.id);
+    expect(bad, "approval and execution payloads differ").toEqual([]);
+  });
+
+  it("requires a named person for every consequential execution", async () => {
+    const offenders = await prisma.agentApproval.findMany({
+      where: {
+        decision: "Approved",
+        reviewerRole: "system",
+        proposal: { consequential: true },
+      },
+      select: { id: true, proposalId: true, reviewerLabel: true },
+      take: 5,
+    });
+    expect(offenders, "a consequential effect used policy as its approver").toEqual([]);
+  });
+
   it("has consequential proposals to check, from more than one agent", async () => {
     const rows = await prisma.agentProposal.groupBy({
       by: ["agentId"],
@@ -1571,11 +1616,13 @@ describe("the agents did only what they were allowed to do", () => {
     const disagreements = await prisma.$queryRaw<
       { id: string; runBrain: string; kinds: string }[]
     >`
-      SELECT r.id AS id, r.brain AS runBrain, GROUP_CONCAT(DISTINCT s.brain) AS kinds
+      SELECT r.id AS id,
+             r.brain AS runBrain,
+             STRING_AGG(DISTINCT s.brain, ',' ORDER BY s.brain) AS kinds
       FROM AgentRun r JOIN AgentStep s ON s.runId = r.id
-      GROUP BY r.id
-      HAVING (kinds LIKE '%,%' AND runBrain <> 'mixed')
-          OR (kinds NOT LIKE '%,%' AND runBrain <> kinds)
+      GROUP BY r.id, r.brain
+      HAVING (COUNT(DISTINCT s.brain) > 1 AND r.brain <> 'mixed')
+          OR (COUNT(DISTINCT s.brain) = 1 AND r.brain <> MIN(s.brain))
       LIMIT 5
     `;
     expect(disagreements, "a run whose brain label contradicts its steps").toEqual([]);

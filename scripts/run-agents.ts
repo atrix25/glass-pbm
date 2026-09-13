@@ -14,7 +14,10 @@
 import { prisma } from "../src/lib/db.js";
 import { seedPolicies } from "./agents/policies.js";
 import { resolveClock, PLAN_YEAR } from "../src/lib/clock.js";
-
+import {
+  listRebateCollectionWork,
+  listServiceEscalationWork,
+} from "../src/lib/queries/agent-work.js";
 
 const only = process.argv[2];
 const wanted = (id: string) => !only || only === id;
@@ -95,7 +98,7 @@ async function eligibilityResolver() {
     "../src/lib/agents/eligibility/agent.js"
   );
   const rejects = await prisma.eligibilityTransaction.findMany({
-    where: { status: "Rejected" },
+    where: { status: "Rejected", resolvedAt: null },
     select: { id: true },
     orderBy: { id: "asc" },
   });
@@ -233,15 +236,79 @@ async function dataAgent() {
   console.log(`  ${completed}/${questions.length} answered from the ledger.`);
 }
 
+async function rebateCollections() {
+  const { runRebateCollections } = await import(
+    "../src/lib/agents/rebate-collections/agent.js"
+  );
+  const at = resolveClock(null).now;
+  const invoiceIds = await listRebateCollectionWork(at);
+  console.log(
+    `rebate-collections: ${invoiceIds.length} actionable invoice variances.`,
+  );
+  let proposed = 0;
+  for (const [i, invoiceId] of invoiceIds.entries()) {
+    const out = await runRebateCollections({ invoiceId, at });
+    if (out.result.proposed) proposed++;
+    progress(i + 1, invoiceIds.length, "rebate-collections");
+  }
+  console.log(`  ${proposed} new disputes proposed from deterministic facts.`);
+}
+
+async function guaranteeCredit() {
+  const { runGuaranteeCredit } = await import(
+    "../src/lib/agents/guarantee-credit/agent.js"
+  );
+  const { getScorecard } = await import(
+    "../src/lib/queries/reconciliation.js"
+  );
+  const clock = resolveClock(null);
+  const scorecard = await getScorecard(clock);
+  const missed = scorecard.rows.flatMap((row) =>
+    row.periods
+      .filter((period) => period.creditCents > 0)
+      .map((period) => ({
+        guaranteeId: row.guarantee.id,
+        month: period.month,
+      })),
+  );
+  console.log(`guarantee-credit: ${missed.length} missed guarantee periods.`);
+  let proposed = 0;
+  for (const [i, item] of missed.entries()) {
+    const out = await runGuaranteeCredit({ ...item, at: clock.now });
+    if (out.result.proposed) proposed++;
+    progress(i + 1, missed.length, "guarantee-credit");
+  }
+  console.log(`  ${proposed} exact scorecard credits proposed.`);
+}
+
+async function serviceEscalationTriage() {
+  const { runServiceEscalationTriage } = await import(
+    "../src/lib/agents/service-escalation/agent.js"
+  );
+  const at = resolveClock(null).now;
+  const sources = await listServiceEscalationWork(at);
+  console.log(
+    `service-escalation-triage: ${sources.length} unresolved sources.`,
+  );
+  let proposed = 0;
+  for (const [i, source] of sources.entries()) {
+    const out = await runServiceEscalationTriage({
+      sourceType: source.sourceType,
+      sourceId: source.sourceId,
+      at,
+    });
+    if (out.result.proposed) proposed++;
+    progress(i + 1, sources.length, "service-escalation-triage");
+  }
+  console.log(`  ${proposed} unified service cases proposed.`);
+}
+
 async function main() {
   const started = Date.now();
 
-  if (!only) {
-    const cleared = await prisma.agentRun.deleteMany();
-    console.log(`Cleared ${cleared.count} previous runs.`);
-  } else {
-    await prisma.agentRun.deleteMany({ where: { agentId: only } });
-  }
+  // Runs, approvals, receipts, and their domain effects are operational
+  // history. Re-running the fleet appends work and lets each agent's duplicate
+  // guard decide whether a source still needs action.
   // Always refresh policy history so a single-agent run still has a row in
   // force for the new agents (e.g. data-agent) and the invariant suite agrees.
   console.log(`Wrote ${await seedPolicies(prisma)} policy periods.`);
@@ -253,6 +320,9 @@ async function main() {
   if (wanted("appeal-drafter")) await appealDrafter();
   if (wanted("member-service")) await memberService();
   if (wanted("data-agent")) await dataAgent();
+  if (wanted("rebate-collections")) await rebateCollections();
+  if (wanted("guarantee-credit")) await guaranteeCredit();
+  if (wanted("service-escalation-triage")) await serviceEscalationTriage();
 
   // Always last: the reviews are about whatever proposals now exist.
   await review();
