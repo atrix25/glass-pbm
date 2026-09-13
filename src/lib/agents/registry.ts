@@ -1,3 +1,5 @@
+import { actionDefinition } from "./actions/registry";
+
 /**
  * What each agent is, what it may do, and who answers for it.
  *
@@ -9,9 +11,9 @@
  *                   AgentPolicy table can override with an effective date.
  *   `mayNot`        the things it is never allowed to do, in plain words,
  *                   because a scope that cannot be read cannot be audited.
- *   `consequential` the actions that move money or deny care. The runtime
- *                   refuses to auto-apply these at any autonomy level, and the
- *                   invariant suite checks no run ever has.
+ *   `consequential` the documented actions that move money or deny care. The
+ *                   typed action registry is the enforcement source of truth;
+ *                   this list keeps each agent's public charter readable.
  */
 
 export type Autonomy = "Propose" | "ActWithReview" | "Act" | "Suspended";
@@ -316,5 +318,7 @@ export function agent(id: string): AgentDef {
 }
 
 export function isConsequential(agentId: string, action: string): boolean {
-  return agent(agentId).consequential.includes(action);
+  const definition = agent(agentId);
+  if (!definition.tools.length) throw new Error(`Agent ${agentId} has no tool grant.`);
+  return actionDefinition(action).humanRequired;
 }

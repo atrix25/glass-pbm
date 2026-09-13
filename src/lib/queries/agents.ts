@@ -351,6 +351,9 @@ export interface RunDetail {
     status: string;
     autoApplied: boolean;
     overrideNote: string | null;
+    executionStatus: string | null;
+    executionResult: string | null;
+    executionError: string | null;
   }[];
 }
 
@@ -359,7 +362,7 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
     where: { id: runId },
     include: {
       steps: { orderBy: { ordinal: "asc" } },
-      proposals: true,
+      proposals: { include: { execution: true } },
     },
   });
   if (!run) return null;
@@ -403,6 +406,9 @@ export async function getRun(runId: string): Promise<RunDetail | null> {
       status: p.status,
       autoApplied: p.autoApplied,
       overrideNote: p.overrideNote,
+      executionStatus: p.execution?.status ?? null,
+      executionResult: p.execution?.result ?? null,
+      executionError: p.execution?.error ?? null,
     })),
   };
 }
