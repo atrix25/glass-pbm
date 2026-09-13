@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@/generated/prisma";
 import { prisma } from "@/lib/db";
-import { recordAudit } from "@/lib/audit";
+import { recordAudit } from "@/lib/audit-core";
 import { actionDefinition } from "./registry";
 
 export type ProposalDecision = "Approved" | "Rejected";
