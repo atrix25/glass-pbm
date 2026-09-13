@@ -237,11 +237,10 @@ export async function listServiceEscalationWork(
     }),
   ]);
 
-  const occupied = new Set(
-    [...cases, ...proposals].map(
-      (row) => `${row.sourceType}:${row.sourceId}`,
-    ),
-  );
+  const occupied = new Set([
+    ...cases.map((row) => `${row.sourceType}:${row.sourceId}`),
+    ...proposals.map((row) => `${row.subjectType}:${row.subjectId}`),
+  ]);
   const work = new Map<string, ServiceEscalationSource>();
 
   for (const pa of pas) {
