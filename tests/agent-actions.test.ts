@@ -104,4 +104,32 @@ describe("agent action registry", () => {
       }).success,
     ).toBe(true);
   });
+
+  it("cannot auto-apply a correction that sets a coverage end date", () => {
+    expect(
+      actionDefinition("apply-correction").schema.safeParse({
+        patch: { terminationDate: "2026-12-31" },
+      }).success,
+    ).toBe(false);
+    expect(
+      actionDefinition("terminate-coverage").schema.safeParse({
+        patch: { terminationDate: "2026-12-31" },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("only applies a benefit override that was actually replayed", () => {
+    expect(
+      actionDefinition("apply-benefit-change").schema.safeParse({
+        override: { specialtyCopayCents: 9_999 },
+        driverKey: "specialty",
+        scored: [
+          {
+            override: { specialtyCopayCents: 5_000 },
+            claimsEvaluated: 100,
+          },
+        ],
+      }).success,
+    ).toBe(false);
+  });
 });
