@@ -20,17 +20,48 @@ const eligibilityPayload = z.object({
   rejectCode: z.string().nullable().optional(),
 });
 
+const nonTerminatingEligibilityPayload = eligibilityPayload.superRefine(
+  (payload, context) => {
+    if (
+      "terminationDate" in payload.patch &&
+      payload.patch.terminationDate !== null
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["patch", "terminationDate"],
+        message:
+          "A correction that sets a coverage end date must use terminate-coverage.",
+      });
+    }
+  },
+);
+
 const macPayload = z.object({
   letter: z.string().min(1),
   citedNdc: z.string().nullable().optional(),
   revisedUnitPrice: z.number().positive().nullable().optional(),
 });
 
-const planPayload = z.object({
-  override: jsonRecord,
-  driverKey: z.string().min(1),
-  scored: z.array(jsonRecord).min(1),
-});
+const planPayload = z
+  .object({
+    override: jsonRecord,
+    driverKey: z.string().min(1),
+    scored: z.array(jsonRecord).min(1),
+  })
+  .superRefine((payload, context) => {
+    const selected = JSON.stringify(payload.override);
+    if (
+      !payload.scored.some(
+        (candidate) => JSON.stringify(candidate.override) === selected,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["override"],
+        message: "The selected override must be one of the replayed candidates.",
+      });
+    }
+  });
 
 const casePayload = z
   .object({
@@ -271,6 +302,17 @@ async function applyMac(
     where: { id: context.proposal.subjectId },
   });
   if (!appeal) throw new Error("MAC appeal no longer exists.");
+  const expectedOutcome = overturn ? "Overturned" : "Upheld";
+  if (appeal.outcome && appeal.decidedAt) {
+    if (appeal.outcome === expectedOutcome) {
+      return {
+        macAppealId: appeal.id,
+        outcome: expectedOutcome,
+        alreadyRecorded: true,
+      };
+    }
+    throw new Error("MAC appeal has already been determined differently.");
+  }
   const revised = overturn ? payload.revisedUnitPrice : null;
   if (overturn && !revised) {
     throw new Error("An overturned appeal requires a revised unit price.");
@@ -325,7 +367,7 @@ async function applyMac(
     });
   }
 
-  return { macAppealId: appeal.id, outcome: overturn ? "Overturned" : "Upheld" };
+  return { macAppealId: appeal.id, outcome: expectedOutcome };
 }
 
 async function applyPlanDesign(
@@ -338,7 +380,10 @@ async function applyPlanDesign(
   const selected =
     payload.scored.find(
       (candidate) => JSON.stringify(candidate.override) === serialized,
-    ) ?? payload.scored[0];
+    );
+  if (!selected) {
+    throw new Error("Selected benefit override was not replayed.");
+  }
   const version = await tx.configVersion.create({
     data: {
       label: context.proposal.headline,
@@ -400,7 +445,7 @@ const definitions: ActionDefinition[] = [
   {
     action: "apply-correction",
     description: "Apply a reversible eligibility correction.",
-    schema: eligibilityPayload,
+    schema: nonTerminatingEligibilityPayload,
     consequences: ["coverage"],
     humanRequired: false,
     approverRoles: ["system", "ops", "admin"],
@@ -445,6 +490,12 @@ const definitions: ActionDefinition[] = [
         where: { id: payload.invoiceId },
       });
       if (!invoice) throw new Error("Rebate invoice no longer exists.");
+      const existing = await tx.rebateDispute.findFirst({
+        where: { invoiceId: invoice.id, status: "Open", resolvedAt: null },
+      });
+      if (existing) {
+        throw new Error("An open dispute already represents this invoice.");
+      }
       const dispute = await tx.rebateDispute.create({
         data: {
           invoiceId: invoice.id,
@@ -453,6 +504,10 @@ const definitions: ActionDefinition[] = [
           owner: context.reviewer.label,
           evidence: JSON.stringify(payload.evidence ?? {}),
         },
+      });
+      await tx.rebateInvoice.update({
+        where: { id: invoice.id },
+        data: { disputedCents: { increment: payload.amountCents } },
       });
       return { rebateDisputeId: dispute.id, invoiceId: invoice.id };
     },
@@ -470,6 +525,9 @@ const definitions: ActionDefinition[] = [
           where: { id: payload.sponsorInvoiceId },
         });
         if (!invoice) throw new Error("Sponsor invoice no longer exists.");
+        if (invoice.totalDueCents < payload.amountCents) {
+          throw new Error("Guarantee credit exceeds the sponsor invoice balance.");
+        }
         await tx.sponsorInvoice.update({
           where: { id: invoice.id },
           data: { totalDueCents: { decrement: payload.amountCents } },

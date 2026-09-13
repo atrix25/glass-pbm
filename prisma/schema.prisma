@@ -1732,7 +1732,7 @@ model GuaranteeCredit {
   rationale        String
   postedAt         DateTime        @default(now())
 
-  @@index([guaranteeId, period])
+  @@unique([guaranteeId, period])
   @@index([sponsorInvoiceId])
 }
 

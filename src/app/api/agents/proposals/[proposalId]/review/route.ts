@@ -24,7 +24,13 @@ export async function POST(
   context: { params: Promise<{ proposalId: string }> },
 ) {
   const { proposalId } = await context.params;
-  const parsed = BodySchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+  const parsed = BodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid review request.", issues: parsed.error.issues },
