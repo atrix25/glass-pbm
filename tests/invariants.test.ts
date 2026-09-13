@@ -1447,6 +1447,51 @@ describe("the agents did only what they were allowed to do", () => {
     ).toEqual([]);
   });
 
+  it("gives every applied proposal exactly one successful effect receipt", async () => {
+    const missing = await prisma.agentProposal.findMany({
+      where: {
+        status: "Applied",
+        OR: [
+          { execution: null },
+          { execution: { is: { status: { not: "Succeeded" } } } },
+        ],
+      },
+      select: { id: true, agentId: true, action: true },
+      take: 5,
+    });
+    expect(missing, "applied proposals without a successful receipt").toEqual([]);
+  });
+
+  it("binds every approval and execution to the reviewed payload digest", async () => {
+    const approvals = await prisma.agentApproval.findMany({
+      include: { execution: true },
+    });
+    expect(approvals.length, "no governed approvals to inspect").toBeGreaterThan(0);
+    const bad = approvals
+      .filter(
+        (approval) =>
+          approval.proposalPayloadHash.length !== 64 ||
+          (approval.execution &&
+            approval.execution.payloadHash !== approval.proposalPayloadHash),
+      )
+      .slice(0, 5)
+      .map((approval) => approval.id);
+    expect(bad, "approval and execution payloads differ").toEqual([]);
+  });
+
+  it("requires a named person for every consequential execution", async () => {
+    const offenders = await prisma.agentApproval.findMany({
+      where: {
+        decision: "Approved",
+        reviewerRole: "system",
+        proposal: { consequential: true },
+      },
+      select: { id: true, proposalId: true, reviewerLabel: true },
+      take: 5,
+    });
+    expect(offenders, "a consequential effect used policy as its approver").toEqual([]);
+  });
+
   it("has consequential proposals to check, from more than one agent", async () => {
     const rows = await prisma.agentProposal.groupBy({
       by: ["agentId"],
