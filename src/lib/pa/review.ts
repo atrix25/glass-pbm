@@ -227,3 +227,44 @@ export function mayAppeal(pa: {
     mustDifferFrom: pa.decidedBy,
   };
 }
+
+/**
+ * Prisma write payload when a reviewer escalates an in-flight request.
+ *
+ * The book often stores a future `Approved`/`Denied` with a later `decidedAt` —
+ * what will happen if nobody intervenes. Escalation *is* the intervention: it
+ * must clear that latent determination, not merely flip `escalated` and
+ * `status`. Leaving `determination = Approved` and `approvedEffectiveDate` in
+ * place lets POS and replay keep paying once the clock reaches the old dates,
+ * while the queue briefly looked like a human had taken the case.
+ *
+ * Seed paths that create escalated rows already write `determination: null`
+ * and `decidedAt: null`; the decide API has to match that shape.
+ */
+export function escalationClearance(note?: string | null): {
+  escalated: true;
+  status: "InReview";
+  determination: null;
+  decidedAt: null;
+  decidedBy: null;
+  decidingStepNumber: null;
+  denyReason: null;
+  approvedDays: null;
+  approvedEffectiveDate: null;
+  approvedTerminationDate: null;
+  reviewerNote: string | null;
+} {
+  return {
+    escalated: true,
+    status: "InReview",
+    determination: null,
+    decidedAt: null,
+    decidedBy: null,
+    decidingStepNumber: null,
+    denyReason: null,
+    approvedDays: null,
+    approvedEffectiveDate: null,
+    approvedTerminationDate: null,
+    reviewerNote: note ?? null,
+  };
+}

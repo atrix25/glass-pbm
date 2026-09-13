@@ -9,8 +9,14 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { invalidateWorldCache } from "@/lib/engine/replay";
 import { paDeadlines } from "@/lib/pa/engine";
-import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
+import {
+  escalationClearance,
+  mayRecord,
+  type ReviewAction,
+  type Reviewer,
+} from "@/lib/pa/review";
 import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 import { canDecidePa } from "@/lib/auth";
@@ -93,7 +99,18 @@ export async function POST(request: Request) {
   if (action.record === "Escalated") {
     await prisma.priorAuthorization.update({
       where: { id: pa.id },
-      data: { escalated: true, status: "InReview", reviewerNote: body.note ?? null },
+      data: escalationClearance(body.note),
+    });
+    // Latent Approved rows live in the POS/replay world cache; drop it so an
+    // escalation cannot leave specialty coverage warm for up to a minute.
+    invalidateWorldCache();
+    const actor = await getSessionUser();
+    await recordAudit({
+      actorId: actor?.id,
+      action: "pa.escalate",
+      entity: "PriorAuthorization",
+      entityId: pa.id,
+      detail: { reviewer: body.reviewer },
     });
     return NextResponse.json({ ok: true, escalated: true });
   }

@@ -109,6 +109,11 @@ interface ReplayWorld {
 let worldCache: { world: ReplayWorld; loadedAt: number } | null = null;
 const WORLD_TTL_MS = 60_000;
 
+/** Drop the cached adjudication world after a PA determination write. */
+export function invalidateWorldCache(): void {
+  worldCache = null;
+}
+
 export async function loadWorld(force = false): Promise<ReplayWorld> {
   if (!force && worldCache && Date.now() - worldCache.loadedAt < WORLD_TTL_MS) {
     return worldCache.world;

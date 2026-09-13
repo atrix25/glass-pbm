@@ -23,12 +23,14 @@ import {
 import {
   dispositionFor,
   EXCEPTION_KINDS,
+  escalationClearance,
   exceptionKind,
   mayAppeal,
   mayRecord,
   reviewerLabel,
   type Reviewer,
 } from "@/lib/pa/review";
+import { paLiveState } from "@/lib/pa/status";
 
 const AUTOMATION: Reviewer = { kind: "automation", label: "Glass criteria engine" };
 const PHARMACIST: Reviewer = {
@@ -255,5 +257,64 @@ describe("the exception clock", () => {
     expect(computeSla(received, "Standard", "Commercial", opts).startedAt).toEqual(
       contractualSla(received, "Standard", opts).startedAt,
     );
+  });
+});
+
+describe("escalation clears a latent future determination", () => {
+  it("wipes determination and coverage dates, matching how seed writes Escalated rows", () => {
+    const write = escalationClearance("Needs a pharmacist — criteria unresolved.");
+    expect(write.escalated).toBe(true);
+    expect(write.status).toBe("InReview");
+    expect(write.determination).toBeNull();
+    expect(write.decidedAt).toBeNull();
+    expect(write.decidedBy).toBeNull();
+    expect(write.approvedEffectiveDate).toBeNull();
+    expect(write.approvedTerminationDate).toBeNull();
+    expect(write.approvedDays).toBeNull();
+    expect(write.decidingStepNumber).toBeNull();
+    expect(write.denyReason).toBeNull();
+    expect(write.reviewerNote).toBe(
+      "Needs a pharmacist — criteria unresolved.",
+    );
+  });
+
+  it("stops paLiveState from flipping to Approved when the old decidedAt arrives", () => {
+    /*
+     * Concrete money-adjacent trigger the old decide route left open:
+     * a seeded specialty PA carries determination=Approved with a future
+     * decidedAt. A reviewer escalates (intervenes). If only escalated/status
+     * flip, advancing the clock past the original decidedAt still shows
+     * Approved — and loadWorld still feeds POS coverage.
+     */
+    const receivedAt = new Date("2026-06-16T10:00:00Z");
+    const latentDecidedAt = new Date("2026-06-18T16:00:00Z");
+    const afterLatent = new Date("2026-06-19T12:00:00Z");
+
+    const uncleared = paLiveState(
+      {
+        receivedAt,
+        decisionDueAt: new Date("2026-06-19T10:00:00Z"),
+        decidedAt: latentDecidedAt,
+        prescriberStatementAt: null,
+        determination: "Approved",
+      },
+      afterLatent,
+    );
+    expect(uncleared.status).toBe("Approved");
+    expect(uncleared.inFlight).toBe(false);
+
+    const cleared = escalationClearance("Sent to pharmacist.");
+    const afterEscalate = paLiveState(
+      {
+        receivedAt,
+        decisionDueAt: new Date("2026-06-19T10:00:00Z"),
+        decidedAt: cleared.decidedAt,
+        prescriberStatementAt: null,
+        determination: cleared.determination,
+      },
+      afterLatent,
+    );
+    expect(afterEscalate.status).toBe("InReview");
+    expect(afterEscalate.inFlight).toBe(true);
   });
 });
