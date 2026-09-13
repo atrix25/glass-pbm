@@ -176,6 +176,20 @@ async function applyPa(
         alreadyRecorded: true,
       };
     }
+    if (!denied) {
+      await tx.priorAuthorization.update({
+        where: { id: pa.id },
+        data: {
+          questionResponses: JSON.stringify(payload.answers),
+        },
+      });
+      return {
+        priorAuthorizationId: pa.id,
+        determination: pa.determination,
+        proposedDetermination: expected,
+        decisionPreserved: true,
+      };
+    }
     throw new Error("Prior authorization has already been determined differently.");
   }
 
