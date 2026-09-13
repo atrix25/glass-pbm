@@ -7,29 +7,47 @@ vi.mock("server-only", () => ({}));
 
 const describeWithDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 const runIds: string[] = [];
+const rebateInvoiceIds: string[] = [];
 
 afterEach(async () => {
   if (!process.env.DATABASE_URL) return;
+  await prisma.guaranteeCredit.deleteMany({
+    where: { proposal: { runId: { in: runIds } } },
+  });
   await prisma.serviceCase.deleteMany({
     where: { agentRunId: { in: runIds } },
   });
   await prisma.agentRun.deleteMany({ where: { id: { in: runIds } } });
+  await prisma.rebateInvoice.deleteMany({
+    where: { id: { in: rebateInvoiceIds } },
+  });
   runIds.length = 0;
+  rebateInvoiceIds.length = 0;
 });
 
-async function createProposal(action = "open-service-case") {
+async function createProposal(
+  options: {
+    action?: string;
+    agentId?: string;
+    subjectType?: string;
+    subjectId?: string;
+    payload?: Record<string, unknown>;
+    consequential?: boolean;
+  } = {},
+) {
   const runId = randomUUID();
   const proposalId = randomUUID();
+  const subjectId = options.subjectId ?? runId;
   runIds.push(runId);
   await prisma.agentRun.create({
     data: {
       id: runId,
-      agentId: "service-escalation-triage",
+      agentId: options.agentId ?? "service-escalation-triage",
       startedAt: new Date(),
       endedAt: new Date(),
       goal: "Integration-test governed execution.",
-      subjectType: "AgentRun",
-      subjectId: runId,
+      subjectType: options.subjectType ?? "AgentRun",
+      subjectId,
       outcome: "Completed",
       summary: "Test proposal ready.",
       brain: "deterministic",
@@ -37,19 +55,21 @@ async function createProposal(action = "open-service-case") {
       proposals: {
         create: {
           id: proposalId,
-          agentId: "service-escalation-triage",
-          subjectType: "AgentRun",
-          subjectId: runId,
-          action,
+          agentId: options.agentId ?? "service-escalation-triage",
+          subjectType: options.subjectType ?? "AgentRun",
+          subjectId,
+          action: options.action ?? "open-service-case",
           headline: "Open an owned service case",
           rationale: "The source remains unresolved.",
-          payload: JSON.stringify({
-            title: "Integration test case",
-            priority: "High",
-            queue: "Agent operations",
-          }),
+          payload: JSON.stringify(
+            options.payload ?? {
+              title: "Integration test case",
+              priority: "High",
+              queue: "Agent operations",
+            },
+          ),
           confidenceBps: 10_000,
-          consequential: false,
+          consequential: options.consequential ?? false,
           status: "Proposed",
           createdAt: new Date(),
         },
@@ -116,7 +136,9 @@ describeWithDatabase("governed proposal execution", () => {
   });
 
   it("fails closed for an unregistered proposal action", async () => {
-    const { proposalId } = await createProposal("invented-action");
+    const { proposalId } = await createProposal({
+      action: "invented-action",
+    });
     await expect(
       reviewProposal({
         proposalId,
@@ -124,5 +146,76 @@ describeWithDatabase("governed proposal execution", () => {
         reviewer: { label: "Integration test operator", role: "admin" },
       }),
     ).rejects.toThrow("Unknown agent action");
+  });
+
+  it("opens a rebate dispute and updates the authoritative receivable", async () => {
+    const invoiceId = randomUUID();
+    rebateInvoiceIds.push(invoiceId);
+    await prisma.rebateInvoice.create({
+      data: {
+        id: invoiceId,
+        manufacturer: "Integration manufacturer",
+        quarter: "2026Q1",
+        periodStart: new Date("2026-01-01T00:00:00Z"),
+        periodEnd: new Date("2026-03-31T00:00:00Z"),
+        submittedAt: new Date("2026-04-01T00:00:00Z"),
+        dueAt: new Date("2026-05-01T00:00:00Z"),
+        claimCount: 10,
+        invoicedCents: 25_000,
+      },
+    });
+    const { proposalId } = await createProposal({
+      action: "open-rebate-dispute",
+      agentId: "rebate-collections",
+      subjectType: "RebateInvoice",
+      subjectId: invoiceId,
+      consequential: true,
+      payload: {
+        invoiceId,
+        amountCents: 5_000,
+        reason: "Cash receipt is short of the submitted invoice.",
+      },
+    });
+
+    await reviewProposal({
+      proposalId,
+      decision: "Approved",
+      reviewer: { label: "Finance operator", role: "ops" },
+    });
+
+    expect(
+      await prisma.rebateDispute.findFirst({ where: { invoiceId } }),
+    ).toMatchObject({ amountCents: 5_000, status: "Open" });
+    expect(
+      await prisma.rebateInvoice.findUnique({ where: { id: invoiceId } }),
+    ).toMatchObject({ disputedCents: 5_000 });
+  });
+
+  it("posts one deterministic guarantee credit", async () => {
+    const guaranteeId = `integration-${randomUUID()}`;
+    const { proposalId } = await createProposal({
+      action: "post-guarantee-credit",
+      agentId: "guarantee-credit",
+      subjectType: "PerformanceGuarantee",
+      subjectId: `${guaranteeId}:2026-01`,
+      consequential: true,
+      payload: {
+        guaranteeId,
+        period: "2026-01",
+        amountCents: 12_500,
+        rationale: "The deterministic scorecard returned the contract penalty.",
+      },
+    });
+
+    const result = await reviewProposal({
+      proposalId,
+      decision: "Approved",
+      reviewer: { label: "Plan sponsor", role: "plan_sponsor" },
+    });
+
+    expect(result.status).toBe("Applied");
+    expect(
+      await prisma.guaranteeCredit.findUnique({ where: { proposalId } }),
+    ).toMatchObject({ guaranteeId, period: "2026-01", amountCents: 12_500 });
   });
 });
