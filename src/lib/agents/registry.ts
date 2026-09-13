@@ -241,6 +241,72 @@ export const AGENTS: AgentDef[] = [
       target: "100%",
     },
   },
+  {
+    id: "rebate-collections",
+    name: "Rebate collections",
+    purpose:
+      "Reconciles submitted manufacturer rebate invoices to cash and proposes a governed dispute when an exact balance is overdue or unexplained.",
+    owner: "Manufacturer finance",
+    surface: "Rebate receivables and agent proposals",
+    autonomy: "Propose",
+    tools: ["getRebateInvoiceFact"],
+    mayNot: [
+      "Calculate a rebate. It reads invoiced, collected and already disputed cents from the authoritative receivable.",
+      "Open a second dispute when an open dispute or governed proposal already represents the invoice.",
+      "Move money or contact a manufacturer without finance approval.",
+    ],
+    consequential: ["open-rebate-dispute"],
+    incumbent:
+      "Manual quarterly manufacturer invoice reconciliation and collections follow-up",
+    measure: {
+      name: "Actionable rebate variances backed by invoice evidence",
+      target: "100%",
+    },
+  },
+  {
+    id: "guarantee-credit",
+    name: "Guarantee credit",
+    purpose:
+      "Turns each closed scorecard miss into the exact service credit returned by the contract penalty function.",
+    owner: "Benefits finance",
+    surface: "Guarantee reconciliation and agent proposals",
+    autonomy: "Propose",
+    tools: ["getScorecard", "getSettlementPlan", "getExistingGuaranteeCredit"],
+    mayNot: [
+      "Calculate a credit. The amount must be copied from the deterministic guarantee scorecard.",
+      "Net a guarantee that missed against one that exceeded its target.",
+      "Post a duplicate credit for the same guarantee and measurement period.",
+    ],
+    consequential: ["post-guarantee-credit"],
+    incumbent:
+      "Annual contract reconciliation performed from PBM-supplied scorecards and invoice workbooks",
+    measure: {
+      name: "Missed guarantee periods credited at the contractual amount",
+      target: "100%",
+    },
+  },
+  {
+    id: "service-escalation-triage",
+    name: "Service escalation triage",
+    purpose:
+      "Normalises unresolved prior authorisation, eligibility and agent escalations into one owned service case per source.",
+    owner: "Service operations",
+    surface: "Unified service case queue",
+    autonomy: "Act",
+    tools: ["getEscalationSource"],
+    mayNot: [
+      "Resolve, approve or deny the underlying request.",
+      "Create a second case or proposal for a source already represented in the shared queue.",
+      "Invent an SLA, priority or queue that is not derived from the source record.",
+    ],
+    consequential: [],
+    incumbent:
+      "Cross-queue supervisor triage used to find and route unresolved operational work",
+    measure: {
+      name: "Unresolved escalations represented once in the service queue",
+      target: "100%",
+    },
+  },
 ];
 
 export function agent(id: string): AgentDef {

@@ -152,6 +152,33 @@ const TIMELINE: PolicyStep[] = [
     setBy: "Benefits director",
     from: d(4, 15),
   },
+
+  {
+    agentId: "rebate-collections",
+    autonomy: "Propose",
+    rationale:
+      "Manufacturer disputes move contract money. The agent supplies exact invoice evidence, and finance decides whether to open each dispute.",
+    setBy: "Manufacturer finance director",
+    from: GO_LIVE,
+  },
+
+  {
+    agentId: "guarantee-credit",
+    autonomy: "Propose",
+    rationale:
+      "The scorecard calculates the contractual amount, but a plan-sponsor reviewer approves every credit before it is posted.",
+    setBy: "Benefits director",
+    from: GO_LIVE,
+  },
+
+  {
+    agentId: "service-escalation-triage",
+    autonomy: "Act",
+    rationale:
+      "Opening an idempotent internal service case does not decide coverage or move money. The source remains unchanged and the case is fully reversible.",
+    setBy: "Service operations director",
+    from: GO_LIVE,
+  },
 ];
 
 export async function seedPolicies(prisma: PrismaClient) {
