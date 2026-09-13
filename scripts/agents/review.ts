@@ -83,6 +83,13 @@ export async function reviewProposals(prisma: PrismaClient) {
   })) {
     notes.set(n.paId, n.groundTruth);
   }
+  const paDeterminations = new Map(
+    (
+      await prisma.priorAuthorization.findMany({
+        select: { id: true, determination: true },
+      })
+    ).map((pa) => [pa.id, pa.determination]),
+  );
 
   /*
    * The committee took the first recommendation it was given and has held the
@@ -108,7 +115,17 @@ export async function reviewProposals(prisma: PrismaClient) {
     let override: string | null = null;
 
     if (p.agentId === "pa-intake") {
-      override = intakeOverride(p, notes.get(p.subjectId ?? "") ?? null);
+      const expected =
+        p.action === "record-denial"
+          ? "Denied"
+          : p.action === "record-answer-set"
+            ? "Approved"
+            : null;
+      const recorded = paDeterminations.get(p.subjectId ?? "");
+      override =
+        expected && recorded && expected !== recorded
+          ? `The recorded pharmacist determination is ${recorded}; the agent proposed ${expected}. The existing decision stands.`
+          : intakeOverride(p, notes.get(p.subjectId ?? "") ?? null);
     } else if (p.agentId === "plan-design") {
       override =
         p.id === takenByCommittee
