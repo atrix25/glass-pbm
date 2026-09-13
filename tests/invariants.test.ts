@@ -1616,11 +1616,13 @@ describe("the agents did only what they were allowed to do", () => {
     const disagreements = await prisma.$queryRaw<
       { id: string; runBrain: string; kinds: string }[]
     >`
-      SELECT r.id AS id, r.brain AS runBrain, GROUP_CONCAT(DISTINCT s.brain) AS kinds
+      SELECT r.id AS id,
+             r.brain AS runBrain,
+             STRING_AGG(DISTINCT s.brain, ',' ORDER BY s.brain) AS kinds
       FROM AgentRun r JOIN AgentStep s ON s.runId = r.id
-      GROUP BY r.id
-      HAVING (kinds LIKE '%,%' AND runBrain <> 'mixed')
-          OR (kinds NOT LIKE '%,%' AND runBrain <> kinds)
+      GROUP BY r.id, r.brain
+      HAVING (COUNT(DISTINCT s.brain) > 1 AND r.brain <> 'mixed')
+          OR (COUNT(DISTINCT s.brain) = 1 AND r.brain <> MIN(s.brain))
       LIMIT 5
     `;
     expect(disagreements, "a run whose brain label contradicts its steps").toEqual([]);
