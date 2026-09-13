@@ -169,12 +169,17 @@ export async function runResolver(opts: {
     (value) =>
       `${Object.keys(value.patch).length} eligibility field${Object.keys(value.patch).length === 1 ? "" : "s"} prepared.`,
   );
+  const action =
+    resolution.action === "apply-correction" &&
+    typeof proposalPayload.patch.terminationDate === "string"
+      ? "terminate-coverage"
+      : resolution.action;
 
   run.propose({
     subjectType: "EligibilityTransaction",
     subjectId: tx.id,
-    action: resolution.action,
-    headline: resolutionHeadline(resolution.action),
+    action,
+    headline: resolutionHeadline(action),
     rationale: [resolution.diagnosis, resolution.correction]
       .filter(Boolean)
       .join(" "),
@@ -182,21 +187,21 @@ export async function runResolver(opts: {
     confidence: resolution.confidence,
   });
 
-  const heldForPerson = resolution.action === "terminate-coverage";
+  const heldForPerson = action === "terminate-coverage";
   const result: ResolutionResult = {
     runId: run.id,
     diagnosis: resolution.diagnosis,
     correction: resolution.correction,
     patch: resolution.patch,
-    action: resolution.action,
+    action,
     heldForPerson,
     confidence: resolution.confidence,
   };
 
   if (opts.persist !== false) {
     await run.finish(
-      resolution.action === "escalate" ? "Escalated" : "Completed",
-      `${tx.rejectCode} on ${tx.memberName}: ${resolutionHeadline(resolution.action).toLowerCase()}`,
+      action === "escalate" ? "Escalated" : "Completed",
+      `${tx.rejectCode} on ${tx.memberName}: ${resolutionHeadline(action).toLowerCase()}`,
     );
   }
   return { run, result };

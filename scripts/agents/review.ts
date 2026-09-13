@@ -146,7 +146,7 @@ export async function reviewProposals(prisma: PrismaClient) {
     }
   }
 
-  return { reviewed: proposals.length, overrides, approvals };
+  return { reviewed: approvals + overrides, overrides, approvals };
 }
 
 /**
