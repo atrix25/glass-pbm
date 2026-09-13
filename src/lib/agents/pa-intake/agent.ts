@@ -260,7 +260,15 @@ export async function runIntake(opts: {
     return { run, result };
   }
 
-  const tree = CRITERIA_TREES.find((t) => t.id === pa.treeId);
+  const tree = await run.tool(
+    "getCriteriaTree",
+    "The request must use the exact published criteria tree assigned to it.",
+    async () => CRITERIA_TREES.find((candidate) => candidate.id === pa.treeId),
+    (candidate) =>
+      candidate
+        ? `${candidate.name} (${candidate.steps.length} criteria steps).`
+        : "No assigned criteria tree exists.",
+  );
   if (!tree) {
     run.refuse(
       "No transcribed criteria form governs this product.",

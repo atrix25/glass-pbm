@@ -234,10 +234,16 @@ export async function runPlanDesign(opts: {
   );
 
   const tierName = "Specialty";
-  const candidates = candidatesFor(driver, tierName).filter((c) =>
-    chosen.value.candidateIds.length
-      ? chosen.value.candidateIds.includes(c.id)
-      : true,
+  const candidates = await run.tool(
+    "buildOverride",
+    "Translate the selected strategy into typed replay overrides before any savings are scored.",
+    async () =>
+      candidatesFor(driver, tierName).filter((candidate) =>
+        chosen.value.candidateIds.length
+          ? chosen.value.candidateIds.includes(candidate.id)
+          : true,
+      ),
+    (items) => `${items.length} typed benefit overrides ready for replay.`,
   );
 
   const scored: Scored[] = [];

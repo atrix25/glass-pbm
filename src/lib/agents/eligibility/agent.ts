@@ -162,6 +162,14 @@ export async function runResolver(opts: {
     thought.value,
   );
 
+  const proposalPayload = await run.tool(
+    "proposeCorrection",
+    "Normalize the diagnosed correction into the receiving eligibility system's patch contract.",
+    async () => ({ patch: resolution.patch, rejectCode: tx.rejectCode }),
+    (value) =>
+      `${Object.keys(value.patch).length} eligibility field${Object.keys(value.patch).length === 1 ? "" : "s"} prepared.`,
+  );
+
   run.propose({
     subjectType: "EligibilityTransaction",
     subjectId: tx.id,
@@ -170,7 +178,7 @@ export async function runResolver(opts: {
     rationale: [resolution.diagnosis, resolution.correction]
       .filter(Boolean)
       .join(" "),
-    payload: { patch: resolution.patch, rejectCode: tx.rejectCode },
+    payload: proposalPayload,
     confidence: resolution.confidence,
   });
 
