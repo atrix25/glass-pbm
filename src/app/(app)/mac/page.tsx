@@ -9,6 +9,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 import {
   getAppealOverview,
   getMacOverview,
@@ -400,6 +401,7 @@ export default async function MacPage() {
           />
         ) : null}
       </Card>
+      <AgentWorkPanel subjectTypes={["MacAppeal"]} title="MAC appeal agent work" />
     </div>
   );
 }

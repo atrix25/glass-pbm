@@ -20,6 +20,7 @@ import {
   Th,
 } from "@/components/ui";
 import { EpaExchange } from "@/components/epa-exchange";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 import { getEpaExchange, getPaClaims, getPriorAuthDetail } from "@/lib/queries/pa";
 import { paDeadlines } from "@/lib/pa/engine";
 import { formatCents } from "@/lib/money";
@@ -418,6 +419,11 @@ export default async function PriorAuthDetail({
           ) : null}
         </div>
       </div>
+      <AgentWorkPanel
+        subjectTypes={["PriorAuthorization"]}
+        subjectId={pa.id}
+        title="Agent evidence and review"
+      />
     </div>
   );
 }

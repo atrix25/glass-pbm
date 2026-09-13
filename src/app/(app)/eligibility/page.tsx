@@ -12,6 +12,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 import {
   getAuditFindings,
   getFeedOverview,
@@ -394,6 +395,10 @@ export default async function EligibilityPage() {
           off.
         </div>
       </Card>
+      <AgentWorkPanel
+        subjectTypes={["EligibilityTransaction"]}
+        title="Eligibility agent work"
+      />
     </div>
   );
 }

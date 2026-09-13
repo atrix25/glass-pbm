@@ -8,6 +8,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 import {
   getIncidents,
   getRebateFloor,
@@ -383,6 +384,10 @@ export default async function ReconciliationPage() {
           measurement rather than a report about it.
         </div>
       </Card>
+      <AgentWorkPanel
+        subjectTypes={["PerformanceGuarantee", "SponsorInvoice"]}
+        title="Guarantee-credit agent work"
+      />
     </div>
   );
 }

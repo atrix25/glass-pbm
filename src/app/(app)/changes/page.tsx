@@ -8,6 +8,7 @@ import {
 import { prisma } from "@/lib/db";
 import { resolveClock } from "@/lib/clock";
 import { getRecommendations, type Lever } from "@/lib/nps/recommendations";
+import { AgentWorkPanel } from "@/components/agent-work-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,7 @@ export default async function ChangesPage() {
           recommendations={recommendations}
         />
       </Suspense>
+      <AgentWorkPanel subjectTypes={["PlanDesign"]} title="Plan-design proposals" />
     </div>
   );
 }
