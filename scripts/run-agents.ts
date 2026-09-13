@@ -241,9 +241,9 @@ async function rebateCollections() {
     "../src/lib/agents/rebate-collections/agent.js"
   );
   const at = resolveClock(null).now;
-  const invoiceIds = (await listRebateCollectionWork(at)).slice(0, 24);
+  const invoiceIds = await listRebateCollectionWork(at);
   console.log(
-    `rebate-collections: ${invoiceIds.length} open or disputed invoices sampled.`,
+    `rebate-collections: ${invoiceIds.length} actionable invoice variances.`,
   );
   let proposed = 0;
   for (const [i, invoiceId] of invoiceIds.entries()) {
@@ -271,7 +271,7 @@ async function guaranteeCredit() {
         month: period.month,
       })),
   );
-  console.log(`guarantee-credit: ${missed.length} missed periods sampled.`);
+  console.log(`guarantee-credit: ${missed.length} missed guarantee periods.`);
   let proposed = 0;
   for (const [i, item] of missed.entries()) {
     const out = await runGuaranteeCredit({ ...item, at: clock.now });
@@ -286,9 +286,9 @@ async function serviceEscalationTriage() {
     "../src/lib/agents/service-escalation/agent.js"
   );
   const at = resolveClock(null).now;
-  const sources = (await listServiceEscalationWork(at)).slice(0, 50);
+  const sources = await listServiceEscalationWork(at);
   console.log(
-    `service-escalation-triage: ${sources.length} unresolved sources sampled.`,
+    `service-escalation-triage: ${sources.length} unresolved sources.`,
   );
   let proposed = 0;
   for (const [i, source] of sources.entries()) {

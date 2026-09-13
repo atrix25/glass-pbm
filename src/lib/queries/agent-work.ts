@@ -90,22 +90,31 @@ export async function getRebateInvoiceFact(
   };
 }
 
-/** Submitted invoices that are still open or already carry a dispute. */
+/** Submitted invoices with an overdue or collected shortfall as of `at`. */
 export async function listRebateCollectionWork(at: Date): Promise<string[]> {
   const rows = await prisma.rebateInvoice.findMany({
-    where: {
-      submittedAt: { lte: at },
-      OR: [
-        { collectedAt: null },
-        { collectedAt: { gt: at } },
-        { disputedCents: { gt: 0 } },
-        { disputes: { some: { status: "Open", resolvedAt: null } } },
-      ],
-    },
+    where: { submittedAt: { lte: at } },
     orderBy: [{ dueAt: "asc" }, { id: "asc" }],
-    select: { id: true },
+    select: {
+      id: true,
+      dueAt: true,
+      collectedAt: true,
+      invoicedCents: true,
+      collectedCents: true,
+      disputedCents: true,
+    },
   });
-  return rows.map((row) => row.id);
+  return rows
+    .filter((row) => {
+      const collected =
+        row.collectedAt && row.collectedAt <= at ? row.collectedCents : 0;
+      const shortfall = row.invoicedCents - collected - row.disputedCents;
+      return (
+        shortfall > 0 &&
+        (row.dueAt < at || Boolean(row.collectedAt && row.collectedAt <= at))
+      );
+    })
+    .map((row) => row.id);
 }
 
 export interface ExistingGuaranteeCredit {
