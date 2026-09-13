@@ -98,7 +98,7 @@ async function eligibilityResolver() {
     "../src/lib/agents/eligibility/agent.js"
   );
   const rejects = await prisma.eligibilityTransaction.findMany({
-    where: { status: "Rejected" },
+    where: { status: "Rejected", resolvedAt: null },
     select: { id: true },
     orderBy: { id: "asc" },
   });
@@ -306,12 +306,9 @@ async function serviceEscalationTriage() {
 async function main() {
   const started = Date.now();
 
-  if (!only) {
-    const cleared = await prisma.agentRun.deleteMany();
-    console.log(`Cleared ${cleared.count} previous runs.`);
-  } else {
-    await prisma.agentRun.deleteMany({ where: { agentId: only } });
-  }
+  // Runs, approvals, receipts, and their domain effects are operational
+  // history. Re-running the fleet appends work and lets each agent's duplicate
+  // guard decide whether a source still needs action.
   // Always refresh policy history so a single-agent run still has a row in
   // force for the new agents (e.g. data-agent) and the invariant suite agrees.
   console.log(`Wrote ${await seedPolicies(prisma)} policy periods.`);

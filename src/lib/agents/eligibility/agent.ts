@@ -12,7 +12,8 @@
  * There is one rule the agent cannot talk its way past. A correction that ends
  * somebody's coverage is held for a person, however obvious it looks, because
  * the cost of being wrong is a member who cannot fill a prescription and does
- * not know why. That is enforced in the runtime, not here.
+ * not know why. That is enforced by the typed action registry, not only by
+ * this agent's prompt.
  */
 
 import { z } from "zod";
