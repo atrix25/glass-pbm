@@ -377,7 +377,7 @@ async function buildEmergencySupplyScenario(
           drugId: entry.drug.id,
           determination: "Approved",
           requestType: {
-            in: ["PA", "Reauthorization", "Appeal", "FormularyException"],
+            in: ["PA", "Reauthorization", "Appeal"],
           },
         },
       },

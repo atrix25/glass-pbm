@@ -149,20 +149,22 @@ describe("appeals", () => {
 });
 
 describe("which Approved rows satisfy requiresPA at the counter", () => {
-  it("counts prior authorizations, reauthorizations, appeals, and formulary exceptions", () => {
-    for (const kind of ["PA", "Reauthorization", "Appeal", "FormularyException"]) {
+  it("counts prior authorizations, reauthorizations, and appeals", () => {
+    for (const kind of ["PA", "Reauthorization", "Appeal"]) {
       expect(grantsPriorAuthCoverage(kind)).toBe(true);
     }
   });
 
-  it("does not let a step, quantity, or tiering exception stand in for a PA", () => {
-    // Approving EX2026000202-style StepException for a specialty PA drug used
-    // to enter loadWorld's approvedPAs map and pay the fill. Those request
-    // types ask for a different edit.
+  it("does not let exceptions or grievances stand in for a PA", () => {
+    // Approving a StepException / Grievance for a specialty PA drug used to
+    // enter loadWorld's approvedPAs map and pay the fill. Those request types
+    // are not prior authorizations; formulary exceptions need a typed waiver
+    // before they may satisfy requiresPA.
     for (const kind of [
       "StepException",
       "QuantityException",
       "TieringException",
+      "FormularyException",
       "Grievance",
     ]) {
       expect(grantsPriorAuthCoverage(kind)).toBe(false);
