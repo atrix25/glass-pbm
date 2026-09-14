@@ -24,6 +24,7 @@ import {
   dispositionFor,
   EXCEPTION_KINDS,
   exceptionKind,
+  grantsPriorAuthCoverage,
   mayAppeal,
   mayRecord,
   reviewerLabel,
@@ -144,6 +145,30 @@ describe("appeals", () => {
     expect(verdict.mustDifferFrom).toBe(
       "Rachel Imhoff, PharmD (WI-RPH-041882)",
     );
+  });
+});
+
+describe("which Approved rows satisfy requiresPA at the counter", () => {
+  it("counts prior authorizations, reauthorizations, and appeals", () => {
+    for (const kind of ["PA", "Reauthorization", "Appeal"]) {
+      expect(grantsPriorAuthCoverage(kind)).toBe(true);
+    }
+  });
+
+  it("does not let exceptions or grievances stand in for a PA", () => {
+    // Approving a StepException / Grievance for a specialty PA drug used to
+    // enter loadWorld's approvedPAs map and pay the fill. Those request types
+    // are not prior authorizations; formulary exceptions need a typed waiver
+    // before they may satisfy requiresPA.
+    for (const kind of [
+      "StepException",
+      "QuantityException",
+      "TieringException",
+      "FormularyException",
+      "Grievance",
+    ]) {
+      expect(grantsPriorAuthCoverage(kind)).toBe(false);
+    }
   });
 });
 

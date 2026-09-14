@@ -370,7 +370,17 @@ async function buildEmergencySupplyScenario(
     where: {
       id: "mbr-DEMO-0004-01",
       // Nobody with a live authorization for it, or there is nothing to waive.
-      priorAuths: { none: { drugId: entry.drug.id, determination: "Approved" } },
+      // Step/quantity/tiering exceptions and grievances can also be Approved,
+      // but they do not satisfy requiresPA at the counter.
+      priorAuths: {
+        none: {
+          drugId: entry.drug.id,
+          determination: "Approved",
+          requestType: {
+            in: ["PA", "Reauthorization", "Appeal"],
+          },
+        },
+      },
     },
     select: { id: true, firstName: true, lastName: true },
   });
