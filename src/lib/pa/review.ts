@@ -203,6 +203,33 @@ export function exceptionKind(kind: string): ExceptionKindInfo | undefined {
 }
 
 /**
+ * Whether an Approved row of this request type may satisfy formulary `requiresPA`.
+ *
+ * Point-of-sale loads every Approved authorization into a single drug-dated map
+ * and asks only whether one covers the fill. That is correct for a prior
+ * authorization, a reauthorization, an appeal that overturns a refusal, and a
+ * formulary exception that was filed to waive an authorization requirement. It
+ * is not correct for a step, quantity, or tiering exception — those ask for a
+ * different edit — and a grievance is not a coverage determination at all.
+ *
+ * Without this gate, Approving a StepException for a specialty drug that also
+ * carries a PA flag pays the claim: the engine treats the exception as if it
+ * were a prior authorization.
+ */
+const PRIOR_AUTH_COVERAGE_TYPES = new Set([
+  "PA",
+  "Reauthorization",
+  "Appeal",
+  "FormularyException",
+]);
+
+export function grantsPriorAuthCoverage(
+  requestType: string | null | undefined,
+): boolean {
+  return PRIOR_AUTH_COVERAGE_TYPES.has(requestType ?? "PA");
+}
+
+/**
  * Whether an appeal may be filed, and who may decide it.
  *
  * The constraint that matters is the reviewer, not the timing: an appeal decided

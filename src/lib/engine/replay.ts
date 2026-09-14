@@ -16,6 +16,7 @@ import {
   medicalEncountersFor,
   type MedicalEncounter,
 } from "@/lib/accumulators/medical-feed";
+import { grantsPriorAuthCoverage } from "@/lib/pa/review";
 import {
   adjudicate,
   type AdjudicationContext,
@@ -150,6 +151,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
         select: {
           memberId: true,
           drugId: true,
+          requestType: true,
           approvedEffectiveDate: true,
           approvedTerminationDate: true,
         },
@@ -296,6 +298,10 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
   >();
   for (const pa of paRows) {
     if (!pa.approvedEffectiveDate) continue;
+    // Step / quantity / tiering exceptions and grievances are Approved rows
+    // too, but they are not prior authorizations. Folding them in here is how
+    // Approving a StepException for Skyrizi paid a specialty fill.
+    if (!grantsPriorAuthCoverage(pa.requestType)) continue;
     const list = approvedPAs.get(pa.memberId) ?? [];
     list.push({
       drugId: pa.drugId,

@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { paDeadlines } from "@/lib/pa/engine";
+import { isExceptionRequest, paDeadlines } from "@/lib/pa/engine";
 import { mayRecord, type ReviewAction, type Reviewer } from "@/lib/pa/review";
 import { getClock, getSessionUser } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
@@ -89,6 +89,42 @@ export async function POST(request: Request) {
   }
 
   const action = body.action;
+
+  /*
+   * A grievance complains about conduct. Recording Approved or Denied on it
+   * would put a coverage determination on a row that is not a coverage request,
+   * and the adjudication world would treat that row like a prior authorization.
+   */
+  if (pa.requestType === "Grievance" && action.record !== "Escalated") {
+    return NextResponse.json(
+      {
+        error:
+          "A grievance is not a coverage determination. It cannot be approved or refused as if it were a prior authorization.",
+      },
+      { status: 409 },
+    );
+  }
+
+  /*
+   * An exception's regulatory clock does not start until the supporting
+   * statement arrives. Deciding before that is on file would both invent a
+   * determination the plan is not yet permitted to make and — for a formulary
+   * exception — could unlock coverage without the clinical assertion the
+   * exception turns on.
+   */
+  if (
+    isExceptionRequest(pa.requestType) &&
+    !pa.prescriberStatementAt &&
+    action.record !== "Escalated"
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "An exception cannot be decided until the prescriber's supporting statement is on file.",
+      },
+      { status: 409 },
+    );
+  }
 
   if (action.record === "Escalated") {
     await prisma.priorAuthorization.update({
