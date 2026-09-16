@@ -441,6 +441,31 @@ describe("rejections a member would actually hit", () => {
     expect(out.responseStatus).toBe("P");
   });
 
+  it("pays the same calendar day a live Approve is recorded, even when effectiveDate is afternoon", () => {
+    /*
+     * /api/pa/decide used to store approvedEffectiveDate = clock.now (e.g.
+     * 14:00Z). POS rebuilds date of service as UTC midnight of the date field.
+     * Instant comparison rejected every same-day fill with code 75.
+     */
+    const d = drug({ nadacPerUnit: 300, isBrandLabel: true, isSpecialty: true });
+    const out = adjudicate(
+      makeContext({
+        drug: d,
+        formularyEntry: entry({ level: "4", requiresPA: true, mandatorySpecialty: true }),
+        pharmacy: SPECIALTY_PHARMACY,
+        dateOfService: new Date("2026-06-15T00:00:00Z"),
+        approvedPAs: [
+          {
+            drugId: d.id,
+            effectiveDate: new Date("2026-06-15T14:32:00Z"),
+            terminationDate: new Date("2026-09-13T14:32:00Z"),
+          },
+        ],
+      }),
+    );
+    expect(out.responseStatus).toBe("P");
+  });
+
   it("rejects when the approval has expired before the date of service", () => {
     const d = drug({ nadacPerUnit: 300, isBrandLabel: true, isSpecialty: true });
     const out = adjudicate(

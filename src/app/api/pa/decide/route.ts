@@ -107,6 +107,17 @@ export async function POST(request: Request) {
   const sla = deadlines.binding;
 
   const approved = action.record === "Approved";
+  /*
+   * Effective coverage is a calendar date, not the wall-clock instant of the
+   * click. POS and seed claims carry date-of-service at UTC midnight; storing
+   * `now` here made every same-day fill after Approve fail the
+   * `effectiveDate <= dos` check until the next calendar day.
+   */
+  const effectiveDay = approved
+    ? new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      )
+    : null;
   await prisma.priorAuthorization.update({
     where: { id: pa.id },
     data: {
@@ -115,9 +126,11 @@ export async function POST(request: Request) {
       decidingStepNumber: action.decidingStep ?? null,
       denyReason: approved ? null : action.reason,
       approvedDays: approved ? action.approvedDays : null,
-      approvedEffectiveDate: approved ? now : null,
-      approvedTerminationDate: approved
-        ? new Date(now.getTime() + action.approvedDays * 86_400_000)
+      approvedEffectiveDate: effectiveDay,
+      approvedTerminationDate: approved && effectiveDay
+        ? new Date(
+            effectiveDay.getTime() + action.approvedDays * 86_400_000,
+          )
         : null,
       decidedAt: now,
       decidedBy: verdict.decidedBy ?? null,

@@ -176,6 +176,31 @@ export interface ApprovedPA {
   approvedQuantity?: number | null;
 }
 
+/**
+ * NCPDP date of service is a calendar date. Approvals are stored with a full
+ * instant (`/api/pa/decide` writes `clock.now`), and POS rebuilds DOS as UTC
+ * midnight of the date the pharmacy entered. Comparing those instants with
+ * `<=` rejects every same-day fill after a live Approve: effective at 14:00
+ * is not `<=` midnight of that day. Match on the UTC calendar day instead.
+ */
+function utcDayMs(instant: Date): number {
+  return Date.UTC(
+    instant.getUTCFullYear(),
+    instant.getUTCMonth(),
+    instant.getUTCDate(),
+  );
+}
+
+function paCoversDateOfService(
+  pa: ApprovedPA,
+  dateOfService: Date,
+): boolean {
+  const day = utcDayMs(dateOfService);
+  if (utcDayMs(pa.effectiveDate) > day) return false;
+  if (pa.terminationDate && utcDayMs(pa.terminationDate) < day) return false;
+  return true;
+}
+
 export interface AdjudicationContext {
   request: ClaimRequest;
   member: EngineMember;
@@ -727,10 +752,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
 
   if (formularyEntry.requiresPA) {
     const approved = approvedPAs.find(
-      (pa) =>
-        pa.drugId === drug.id &&
-        pa.effectiveDate <= dos &&
-        (!pa.terminationDate || pa.terminationDate >= dos),
+      (pa) => pa.drugId === drug.id && paCoversDateOfService(pa, dos),
     );
     const hasPA = Boolean(approved) || Boolean(request.priorAuthNumber);
 
