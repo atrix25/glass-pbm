@@ -1203,6 +1203,40 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
     };
   }
 
+  /*
+   * Discount-list / exclusion products (formulary level 100%/EX and similar).
+   * The Certificate puts these at 100% member cost and keeps them out of every
+   * out-of-pocket accumulator. That has to short-circuit before the deductible:
+   * folding them into an unmet deductible would credit progress toward a limit
+   * the CoC says they never reach, and leaving costShareType unhandled (as this
+   * function did) charged the plan for the whole fill on any plan with no
+   * deductible remaining.
+   */
+  if (rule.costShareType === "NotCovered") {
+    trace.cited({
+      ruleId: "costshare.not-covered",
+      stage: "costshare",
+      question: "What does the member pay for a discount-list / exclusion product?",
+      inputs: { level, channel },
+      output: { patientPay: formatCents(toCents(totalAllowedMicros)) },
+      fired: true,
+      detail:
+        "The full allowed amount. This product is on the discount drug list at 100% member cost and does not accumulate to any out-of-pocket limit.",
+      sourceDocumentId: SRC_COC,
+      citation:
+        rule.citation ??
+        "Certificate of Coverage 2026: discount drug list products are 100% member cost and do not count toward any out-of-pocket limit.",
+    });
+    return {
+      patientPayMicros: totalAllowedMicros,
+      appliedToDeductibleMicros: 0,
+      copayCoinsuranceMicros: totalAllowedMicros,
+      brandSelectionPenaltyMicros: 0,
+      accumulatorDeltas: deltas,
+      cappedBy: "total-allowed",
+    };
+  }
+
   // --- Deductible ----------------------------------------------------------
   let remainingMicros = totalAllowedMicros;
   let appliedToDeductibleMicros = 0;
