@@ -13,13 +13,15 @@ export async function createAssurance(sponsor:string,key:string){
  const row=await prisma.assuranceRun.upsert({where:{key:unique},update:{},create:{id:`oas_${randomUUID()}`,key:unique,...where(sponsor),cutoff:new Date(pack.book.cutoff),state:JSON.stringify(state),sealedAnswer:JSON.stringify(pack.answer),commitment:pack.commitment,inputHash:digest(pack.book)}});return row.id;
 }
 export async function readAssurance(id:string,sponsor:string,clock:Date){
+ if(!id.startsWith("oas_"))return null;
  const row=await prisma.assuranceRun.findFirst({where:{id,...where(sponsor),cutoff:{lte:clock}}});if(!row)return null;
  const state=JSON.parse(row.state) as State;
  return {id:row.id,sponsor,createdAt:row.createdAt.toISOString(),revision:row.revision,commitment:row.commitment,inputHash:row.inputHash,state,versions:state.versions??{detector:"Not recorded",repair:"Not recorded",verifier:"Not recorded"},answer:state.detected?JSON.parse(row.sealedAnswer) as Answer:null};
 }
-export async function recentAssurance(sponsor:string,clock:Date){return prisma.assuranceRun.findMany({where:{...where(sponsor),cutoff:{lte:clock}},select:{id:true,createdAt:true},orderBy:{createdAt:'desc'},take:8});}
+export async function recentAssurance(sponsor:string,clock:Date){return prisma.assuranceRun.findMany({where:{...where(sponsor),id:{startsWith:'oas_'},cutoff:{lte:clock}},select:{id:true,createdAt:true},orderBy:{createdAt:'desc'},take:8});}
 export type Command={action:'run'|'review'|'external';id:string;revision:number;patchId?:string;decision?:'Approved'|'Rejected'};
 export async function act(sponsor:string,clock:Date,c:Command,actor:string){
+ if(!c.id.startsWith("oas_"))throw Error("Run unavailable");
  return prisma.$transaction(async tx=>{
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(74839215)::text`;
   // Answer withheld until the detector and repair outputs are computed.

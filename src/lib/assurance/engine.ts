@@ -1,7 +1,7 @@
 import {adjudicate,type AdjudicationContext} from '@/lib/engine/adjudicate';
 import type {Book,Specimen,Values} from './types';
 /** Actual production adjudication function, bound to isolated synthetic contexts. */
-export function engineResult(record:Specimen,book:Book):Values{
+export function engineContext(record:Specimen,book:Book):AdjudicationContext{
  const variant=String(record.basis.variant),benefit=book.records.find(r=>r.id===record.dependencies[0]);
  const ctx:AdjudicationContext={
  request:{dateOfService:new Date(record.serviceAt),cardholderId:record.memberId,personCode:'01',serviceProviderId:'1111111111',productServiceId:'00000000001',rxNumber:record.claimId,fillNumber:0,quantityDispensed:30,daysSupply:30,dawCode:'0',usualAndCustomaryCents:5000,ingredientCostSubmittedCents:1000},
@@ -12,7 +12,14 @@ export function engineResult(record:Specimen,book:Book):Values{
  pharmacy:{id:'pharmacy',npi:'1111111111',name:'Synthetic pharmacy',pharmacyType:'Chain',isDesignatedSpecialty:false,is340B:false,inNetwork:variant!=='network'},
  contract:{id:'synthetic',model:'PassThrough',retailMaxDaysSupply:34,discountExclusions:[],rebateExclusions:[],rebateMemberShareThresholdBps:10000,rebatePassThroughBps:10000,rates:[{channel:'Retail',drugClass:'All',dispensingFeeCents:100,lesserOfArms:['SUBMITTED'],includeUandC:false}]},
  priorFills:[],approvedPAs:[],accumulators:{rxOopAccumulatedCents:variant==='accumulator'?59900:0,federalOopAccumulatedCents:0,deductibleAccumulatedCents:0}};
- const out=adjudicate(ctx);
- if(variant==='reversal')return {status:'Reversed',billedCents:0,memberCents:0,planCents:0};
+ return ctx;
+}
+export function engineResult(record:Specimen,book:Book):Values{
+ const variant=String(record.basis.variant);
+ const out=adjudicate(engineContext(record,book));
+ if(variant==='reversal'){
+  const reversal={billedCents:-out.totalBilledCents,memberCents:-out.patientPayCents,planCents:-out.planPaidCents};
+  return {status:'Reversed',billedCents:out.totalBilledCents+reversal.billedCents,memberCents:out.patientPayCents+reversal.memberCents,planCents:out.planPaidCents+reversal.planCents};
+ }
  return {status:out.responseStatus,billedCents:out.totalBilledCents,memberCents:out.patientPayCents,planCents:out.planPaidCents};
 }
