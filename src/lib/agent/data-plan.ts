@@ -42,6 +42,7 @@ export interface DataPlannedCall {
 }
 
 export interface DataPlan {
+  brain?: "model" | "deterministic";
   intent: DataIntent;
   calls: DataPlannedCall[];
   claimRef: string | null;
@@ -640,5 +641,5 @@ Use full-report when they ask to write/generate/compose a report or briefing.`,
     fallback,
   });
 
-  return planFromJudgement(thought.value, question);
+  return { ...planFromJudgement(thought.value, question), brain: thought.brain };
 }

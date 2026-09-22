@@ -1,0 +1,15 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({findFirst:vi.fn(),findUnique:vi.fn(),upsert:vi.fn(),updateMany:vi.fn(),answer:vi.fn()}));
+vi.mock('@/lib/db',()=>({prisma:{dataAgentCheck:m}}));
+vi.mock('@/lib/agents/data-agent/agent',()=>({answerDataQuestion:m.answer}));
+import {createCheck,nextQuestion,readCheck} from '@/lib/data-checks/service';
+import {CASES} from '@/lib/data-checks/cases';
+const clock=new Date('2026-09-22');
+const row=()=>({id:'daq_test',cutoff:clock,cases:JSON.stringify(CASES),items:'[]'});
+beforeEach(()=>{vi.resetAllMocks();m.findFirst.mockResolvedValue(row());m.updateMany.mockResolvedValue({count:1});m.answer.mockResolvedValue({paragraphs:['Answer'],work:[],citations:[],intent:'unknown'});});
+it('calls the real agent interface without operational persistence and records answers',async()=>{await nextQuestion('daq_test',0,clock);expect(m.answer).toHaveBeenCalledWith(expect.objectContaining({question:CASES[0].question,persist:false,clock:expect.objectContaining({now:clock})}));expect(m.updateMany.mock.calls[1][0].data.items).toContain('Answer');});
+it('does not rerun saved questions or concurrent leased questions',async()=>{m.findFirst.mockResolvedValue({...row(),items:'[{}]'});await nextQuestion('daq_test',0,clock);expect(m.answer).not.toHaveBeenCalled();m.findFirst.mockResolvedValue(row());m.updateMany.mockResolvedValue({count:0});await expect(nextQuestion('daq_test',0,clock)).rejects.toThrow('running');expect(m.answer).not.toHaveBeenCalled();});
+it('records execution failures without exposing internals or calling them passes',async()=>{m.answer.mockRejectedValue(Error('database password secret'));await nextQuestion('daq_test',0,clock);const result=m.updateMany.mock.calls[1][0].data.items;expect(result).not.toContain('secret');expect(JSON.parse(result)[0].answer).toBeNull();});
+it('scopes reads to tenant, book and selected cutoff',async()=>{await readCheck('daq_test',clock);expect(m.findFirst.mock.calls[0][0].where).toMatchObject({tenantId:'steel-potatoes',sponsorId:'wisconsin',cutoff:{lte:clock}});});
+it('rejects skipped questions and missing runs',async()=>{await expect(nextQuestion('daq_test',5,clock)).rejects.toThrow('unavailable');m.findFirst.mockResolvedValue(null);await expect(nextQuestion('daq_test',0,clock)).rejects.toThrow('unavailable');});
+it('keeps create idempotent but rejects changed question',async()=>{m.findUnique.mockResolvedValue({...row(),cases:JSON.stringify(CASES)});expect(await createCheck('key',clock)).toBe('daq_test');await expect(createCheck('key',clock,'Different')).rejects.toThrow('conflict');});

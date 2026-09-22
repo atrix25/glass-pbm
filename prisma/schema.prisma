@@ -2165,3 +2165,18 @@ model LeakageChallenge {
   scoredAt DateTime?
   @@index([tenantId, sponsorId, createdAt])
 }
+
+// QA transcripts stay outside operational AgentRun and proposal queues.
+model DataAgentCheck {
+ id String @id
+ key String @unique
+ tenantId String
+ sponsorId String
+ cutoff DateTime
+ cases String
+ items String
+ lease String?
+ leaseUntil DateTime?
+ createdAt DateTime @default(now())
+ @@index([tenantId, sponsorId, createdAt])
+}

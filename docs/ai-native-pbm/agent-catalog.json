@@ -28,7 +28,8 @@
     "data-agent",
     "account-management",
     "rebate-protection",
-    "leakage-challenge"
+    "leakage-challenge",
+    "data-agent-tester"
   ],
   "domains": [
     {
@@ -5244,7 +5245,8 @@
             "quality.change-deployed"
           ],
           "currentGlassAgents": [
-            "leakage-challenge"
+            "leakage-challenge",
+            "data-agent-tester"
           ]
         },
         {

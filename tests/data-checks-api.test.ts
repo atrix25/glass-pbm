@@ -1,0 +1,14 @@
+import {beforeEach,afterEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({selectedSponsor:vi.fn(),authenticatedStaff:vi.fn(),getClock:vi.fn(),createCheck:vi.fn(),nextQuestion:vi.fn(),readCheck:vi.fn()}));
+vi.mock('@/lib/contract-checks/context',()=>({selectedSponsor:m.selectedSponsor}));
+vi.mock('@/lib/contract-checks/access',()=>({authenticatedStaff:m.authenticatedStaff,sameOrigin:(r:Request)=>r.headers.get('origin')==='http://localhost'}));
+vi.mock('@/lib/session',()=>({getClock:m.getClock}));
+vi.mock('@/lib/data-checks/service',()=>m);
+import {POST,GET} from '@/app/api/data-agent-checks/route';
+const req=(body:unknown,origin='http://localhost')=>new Request('http://localhost/api/data-agent-checks',{method:'POST',headers:{origin},body:JSON.stringify(body)});
+const body={action:'create',key:'abc12345-1234-4123-8123-123456789012'};
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv('DEMO_FEATURES','1');m.authenticatedStaff.mockResolvedValue(true);m.selectedSponsor.mockResolvedValue('wisconsin');m.getClock.mockResolvedValue({now:new Date('2026-09-22')});m.createCheck.mockResolvedValue('daq_test');});
+afterEach(()=>vi.unstubAllEnvs());
+it('enforces origin, sponsor, staff and demo gates',async()=>{expect((await POST(req(body,'https://other'))).status).toBe(403);m.selectedSponsor.mockResolvedValue('tennessee');expect((await POST(req(body))).status).toBe(403);m.selectedSponsor.mockResolvedValue('wisconsin');m.authenticatedStaff.mockResolvedValue(false);expect((await GET(new Request('http://localhost/api/data-agent-checks'))).status).toBe(403);m.authenticatedStaff.mockResolvedValue(true);vi.stubEnv('DEMO_FEATURES','0');expect((await POST(req(body))).status).toBe(403);expect(m.createCheck).not.toHaveBeenCalled();});
+it('validates questions and disallows caller-injected results',async()=>{for(const extra of [{question:' '},{question:'x'.repeat(1001)},{answer:{}},{sponsor:'tennessee'}])expect((await POST(req({...body,...extra}))).status).toBe(400);expect((await POST(req(body))).status).toBe(200);});
+it('omits internal leases and idempotency keys from export',async()=>{m.readCheck.mockResolvedValue({id:'daq_test',lease:'private',leaseUntil:new Date(),key:'private',items:[]});const r=await GET(new Request('http://localhost/api/data-agent-checks?id=daq_test'));expect(await r.json()).toEqual({id:'daq_test',items:[]});});

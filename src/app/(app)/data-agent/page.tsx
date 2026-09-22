@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { demoFeaturesEnabled } from "@/lib/config";
 import { DataAgent } from "@/components/data-agent";
 import { SectionTitle } from "@/components/ui";
 
@@ -32,6 +34,7 @@ export default function DataAgentPage() {
         therapy and PA rules, or say “write the year-end report briefing.”
       </p>
 
+      {demoFeaturesEnabled()&&<Link href="/data-agent-checks" className="block text-sm font-medium">Test the data agent →</Link>}
       <DataAgent suggestions={SUGGESTIONS} />
     </div>
   );

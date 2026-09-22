@@ -48,6 +48,10 @@ export default async function AgentDetailPage({
   params: Promise<{ agentId: string }>;
 }) {
   const { agentId } = await params;
+  if(agentId === "data-agent-tester") {
+    if(!demoFeaturesEnabled())notFound();
+    return <div className="space-y-6"><SectionTitle description="Quality assurance · Analytics. Scripted question selection; actual data-agent execution.">Data agent tester</SectionTitle><Card><div className="space-y-4 p-6"><p>Tests routine questions, alternate wording, missing records and unsupported requests. Records complete answers and tool evidence, with bounded automated checks.</p><p>Staff review relevance, completeness and factual accuracy. Test transcripts remain outside operational queues.</p><Link href="/data-agent-checks">Open data agent checks →</Link></div></Card></div>;
+  }
   if(agentId === "leakage-challenge") {
     if(!demoFeaturesEnabled())notFound();
     return <div className="space-y-6"><SectionTitle description="Quality assurance · Finance controls. Scripted sandbox execution.">Leakage challenge</SectionTitle><Card><div className="space-y-4 p-6"><p>Prepares randomized synthetic errors, withholds the answer key from the detector and scores frozen findings using a separate evaluator.</p><p>No operational records, benefits, payments or staff assignments are changed. Same-application code separation is not an independent external audit.</p><Link href="/leakage-challenges">Open blind challenges →</Link></div></Card></div>;

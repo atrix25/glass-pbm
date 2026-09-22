@@ -50,6 +50,7 @@ export interface AgentDef {
 }
 
 export const AGENTS: AgentDef[] = [
+ {id:"data-agent-tester",name:"Data agent tester",purpose:"Asks varied questions of the actual data agent and records answers, tool evidence and bounded quality checks.",owner:"Quality assurance · Analytics",surface:"Data agent checks",autonomy:"Act",tools:["askDataAgent","evaluateDataAnswer"],mayNot:["Modify claims, contracts or payments.","Treat source presence as proof of factual accuracy.","Mix sponsor books or insert test runs into operational queues."],consequential:[],incumbent:"Analytics quality assurance",measure:{name:"Question coverage and answer quality",target:"Recorded checks, failures and explicit human-review gaps"}},
   {
     id: "leakage-challenge", name: "Leakage challenge",
     purpose: "Introduces undisclosed errors into isolated synthetic records and evaluates frozen detector findings against a withheld answer key.",
