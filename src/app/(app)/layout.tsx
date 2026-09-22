@@ -92,7 +92,7 @@ export default async function AppLayout({
 
   const sidebar = (
     <>
-      <Link href="/sponsor" className="border-b border-ink-100 px-6 py-6 text-2xl font-semibold tracking-[-1px] text-ink-900">glass <span className="ml-3 text-[10px] font-medium tracking-normal text-rose-700">CVS Caremark</span></Link>
+      <Link href="/sponsor" className="border-b border-ink-100 px-6 py-6 text-2xl font-semibold tracking-[-1px] text-ink-900">glass</Link>
 
       <div className="scroll-thin flex-1 overflow-y-auto">
         <SideNav groups={GROUPS} />

@@ -59,9 +59,12 @@ export async function simulation(id:string,clock:Date,requestedCutoff?:string) {
   const run=await prisma.rebateSandboxRun.findFirst({where:{id,tenantId:tenantSponsorId()},include:{events:{orderBy:[{recordedAt:"asc"},{id:"asc"}]},exceptions:true}});
   if(!run)return null;
   const snapshot=JSON.parse(run.snapshot) as Snapshot;
+  // Refresh display copy in older sandbox records without modifying frozen financial data.
+  const displayCitation = "Synthetic rebate exhibit v1 · not actual contract terms";
+  snapshot.terms = snapshot.terms.map(term => ({...term, citation: term.citation.startsWith("Synthetic rebate exhibit v1 ·") ? displayCitation : term.citation}));
   const current=run.reviewedAt&&run.stage===1?run.reviewedAt.toISOString():day(snapshot.anchor,DAYS[run.stage]);
   const cutoff=new Date(Math.min(clock.getTime(),Date.parse(current),requestedCutoff?Date.parse(requestedCutoff):Infinity)).toISOString();
-  const visible=run.events.filter(e=>e.recordedAt<=new Date(cutoff)).map(e=>({...e,path:e.path as Event["path"],serviceAt:e.serviceAt.toISOString(),recordedAt:e.recordedAt.toISOString(),settledAt:e.settledAt?.toISOString()??null,createdAt:e.createdAt.toISOString()}));
+  const visible=run.events.filter(e=>e.recordedAt<=new Date(cutoff)).map(e=>({...e,detail:e.detail.replace(/Synthetic rebate exhibit v1 · not [^.]+ contract terms/g,displayCitation),path:e.path as Event["path"],serviceAt:e.serviceAt.toISOString(),recordedAt:e.recordedAt.toISOString(),settledAt:e.settledAt?.toISOString()??null,createdAt:e.createdAt.toISOString()}));
   const reviewVisible=run.reviewedAt&&run.reviewedAt<=new Date(cutoff);
   const viewStage=DAYS.reduce((a,n,i)=>day(snapshot.anchor,n)<=cutoff?i:a,-1);
   return {id:run.id,scenarioId:run.scenarioId,snapshot,cutoff,stage:viewStage,currentStage:run.stage,

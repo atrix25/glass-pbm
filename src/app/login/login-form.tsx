@@ -63,17 +63,7 @@ export default function LoginForm({ demo = false }: { demo?: boolean }) {
         }}
       >
         <h1 style={{ margin: 0, fontSize: 28, letterSpacing: "-0.02em" }}>
-          glass{" "}
-          <span
-            style={{
-              fontSize: 11,
-              color: "#b51e3b",
-              letterSpacing: 0,
-              marginLeft: 14,
-            }}
-          >
-            CVS Caremark
-          </span>
+          glass
         </h1>
         <p style={{ margin: 0, color: "#667a6e", fontSize: 14 }}>
           Sign in to your plan.

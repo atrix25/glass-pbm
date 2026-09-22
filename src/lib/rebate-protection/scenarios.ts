@@ -11,7 +11,7 @@ export const SCENARIOS: Scenario[] = [
 export function fixture(id: string, anchor: string, cadence: Cadence): Snapshot {
   const scenario = SCENARIOS.find(s=>s.id===id); if(!scenario) throw Error("Unknown scenario");
   const claims = Array.from({length: id === "duplicate" ? 11 : 10},(_,i)=>({id:`synthetic-claim-${i+1}`,drug:id==="eligibility" && i>=8 ? "Excluded brand" : "Demo brand",channel:"Retail",tier:2,pa:true,serviceAt:day(anchor,i<5?1:31),reversed:i===10}));
-  const base = {version:1,effectiveFrom:anchor,effectiveTo:day(anchor,365),channel:"*",submissionDays:80,cadence,offsets:"None" as const,citation:"Synthetic rebate exhibit v1 · not Caremark contract terms"};
+  const base = {version:1,effectiveFrom:anchor,effectiveTo:day(anchor,365),channel:"*",submissionDays:80,cadence,offsets:"None" as const,citation:"Synthetic rebate exhibit v1 · not actual contract terms"};
   const terms: Snapshot["terms"] = [
     {...base,id:"manufacturer-v1",side:"Manufacturer",drug:"Demo brand",tier:2,pa:true,excluded:false,cents:id==="unfavorable"?6000:10000},
     {...base,id:"manufacturer-exclusion-v1",side:"Manufacturer",drug:"Excluded brand",excluded:true,cents:0},

@@ -21,7 +21,7 @@ export function AppShell({ sidebar, children }: { sidebar: ReactNode; children: 
   return <div className={styles.shell}>
     <a href="#main-content" className={styles.skip}>Skip to content</a>
     <header className={styles.header}>
-      <Link href="/sponsor" className={styles.brand} aria-label="Glass sponsor overview">glass <span>CVS Caremark</span></Link>
+      <Link href="/sponsor" className={styles.brand} aria-label="Glass sponsor overview">glass</Link>
       <div className={styles.tools}><span className={styles.demo}>Demo data</span><Link href="/operations">Operations</Link><button onClick={() => dialog.current?.showModal()} aria-label="Open workspace navigation" aria-haspopup="dialog"><Menu size={16}/><span>Workspace</span></button></div>
     </header>
     <div className={styles.navFrame}><nav className={styles.tabs} aria-label="Sponsor sections">{sections.map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{label}</Link>)}</nav></div>

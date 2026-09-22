@@ -67,7 +67,7 @@ export default async function SponsorDashboard() {
           <div className={styles.links}><Link href="/clinical">Clinical programs <ArrowUpRight size={13}/></Link><Link href="/experience">Access & experience <ArrowUpRight size={13}/></Link></div>
         </section>
       </div>
-      <details className={styles.sources}><summary>Data & methodology</summary><p>Demo book · {data.pbm} · {data.contract}. These are historical demo terms, not Caremark pricing. PMPM uses eligible calendar member-months, with overlapping coverage counted once. Annualized cost extends the average completed month; it excludes future drug changes, guarantee credits and enrollment changes. Forecasts, clinical outcomes and integrated medical value are not yet connected.</p></details>
+      <details className={styles.sources}><summary>Data & methodology</summary><p>Demo book · {data.pbm} · {data.contract}. These are historical demo terms. PMPM uses eligible calendar member-months, with overlapping coverage counted once. Annualized cost extends the average completed month; it excludes future drug changes, guarantee credits and enrollment changes. Forecasts, clinical outcomes and integrated medical value are not yet connected.</p></details>
     </div>
   );
 }
