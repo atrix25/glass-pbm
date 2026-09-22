@@ -1,0 +1,12 @@
+export const AREAS = ['Contract implementation','Drug definitions','Claim adjudication','Rebate guarantees','Rate adjustments','Client invoicing','Manufacturer invoicing','Nonstandard terms'] as const;
+export type Values=Record<string,string|number|boolean|null>;
+export type Requirement={id:string;version:number;clause:string;from:string;to:string;recordedAt:string;population:string;approved:boolean;values:Values};
+export type Specimen={id:string;control:string;area:number;label:string;owner:string;kind:'mapping'|'engine'|'invoice'|'rate'|'notice'|'collection'|'guarantee';population:string;serviceAt:string;recordedAt:string;requirements:Requirement[];actual:Values;basis:Values;dependencies:string[];review:boolean;external:boolean;memberId:string;claimId:string;invoiceId:string|null};
+export type Book={version:1;sponsor:string;cutoff:string;records:Specimen[];sourceManifest:string[]|null};
+export type Finding={id:string;recordId:string;area:number;control:string;label:string;state:'Exception'|'Not verified'|'Clear'|'Not due';reason:string;expected:Values|null;actual:Values;amountCents:number|null;review:boolean;external:boolean;permanent:boolean;clause:string[]};
+export type Patch={id:string;recordId:string;before:Values;after:Values;dependencies:string[];state:'Prepared'|'Awaiting review'|'Rejected'|'Applied'|'Verified'|'Failed verification';review:boolean;reason:string};
+export type AuditEvent={id:string;at:string;effectiveAt:string;kind:string;recordId:string|null;actor:string;detail:string;before?:Values;after?:Values};
+export type Expectation={recordId:string;state:Finding['state'];target:Values|null;amountCents:number|null;repairable:boolean};
+export type Answer={seed:string;salt:string;expectations:Expectation[];originalIds:string[]};
+export type State={versions?:{detector:string;repair:string;verifier:string};book:Book;baseline:Book;initial:Finding[];findings:Finding[];patches:Patch[];events:AuditEvent[];revision:number;detected:boolean;score:Score|null};
+export type Score={detected:number;missed:number;falseAlarms:number;exactAmounts:number;verifiedRepairs:number;unresolved:number;regressions:number;cleanControls:number;unverified:number;details:{id:string;detection:string;resolution:string}[]};

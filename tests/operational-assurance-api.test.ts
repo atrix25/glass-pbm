@@ -1,0 +1,15 @@
+import {beforeEach,afterEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({selectedSponsor:vi.fn(),authenticatedStaff:vi.fn(),getClock:vi.fn(),getSessionUser:vi.fn(),createAssurance:vi.fn(),act:vi.fn(),readAssurance:vi.fn()}));
+vi.mock('@/lib/contract-checks/context',()=>({selectedSponsor:m.selectedSponsor}));
+vi.mock('@/lib/contract-checks/access',()=>({authenticatedStaff:m.authenticatedStaff,sameOrigin:(r:Request)=>r.headers.get('origin')==='http://localhost'}));
+vi.mock('@/lib/session',()=>({getClock:m.getClock,getSessionUser:m.getSessionUser}));
+vi.mock('@/lib/assurance/service',()=>m);
+import {POST,GET} from '@/app/api/operational-assurance/route';
+const req=(body:unknown,origin='http://localhost')=>new Request('http://localhost/api/operational-assurance',{method:'POST',headers:{origin},body:JSON.stringify(body)});
+const body={action:'create',key:'abc12345-1234-4123-8123-123456789012'};
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv('DEMO_FEATURES','1');m.authenticatedStaff.mockResolvedValue(true);m.selectedSponsor.mockResolvedValue('tennessee');m.getClock.mockResolvedValue({now:new Date('2026-09-22')});m.getSessionUser.mockResolvedValue(null);m.createAssurance.mockResolvedValue('oas_test');});
+afterEach(()=>vi.unstubAllEnvs());
+it('requires demo mode, authentication and same origin',async()=>{expect((await POST(req(body,'https://other'))).status).toBe(403);m.authenticatedStaff.mockResolvedValue(false);expect((await GET(new Request('http://localhost/api/operational-assurance'))).status).toBe(403);m.authenticatedStaff.mockResolvedValue(true);vi.stubEnv('DEMO_FEATURES','0');expect((await POST(req(body))).status).toBe(404);});
+it('does not accept caller-injected expected results, actor or sponsor',async()=>{for(const extra of [{answer:{}},{actor:'Finance'},{sponsor:'wisconsin'}])expect((await POST(req({...body,...extra}))).status).toBe(400);expect(await(await POST(req(body))).json()).toEqual({id:'oas_test'});expect(m.createAssurance).toHaveBeenCalledWith('tennessee',body.key);});
+it('requires valid review state and marks anonymous demo identity explicitly',async()=>{const c={action:'review',id:'oas_test',revision:1,patchId:'patch-test',decision:'Approved'};expect((await POST(req(c))).status).toBe(200);expect(m.act).toHaveBeenCalledWith('tennessee',expect.any(Date),c,'Simulated demo reviewer · individual identity not recorded');});
+it('does not expose internal exceptions or inaccessible runs',async()=>{m.act.mockRejectedValue(Error('database credential'));const r=await POST(req({action:'run',id:'oas_test',revision:0}));expect(JSON.stringify(await r.json())).not.toContain('credential');m.readAssurance.mockResolvedValue(null);expect((await GET(new Request('http://localhost/api/operational-assurance?id=oas_other'))).status).toBe(404);});

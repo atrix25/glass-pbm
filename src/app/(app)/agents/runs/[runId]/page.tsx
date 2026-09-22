@@ -1,3 +1,4 @@
+import { AssuranceWorkspace } from "@/components/assurance-workspace";
 import { DataCheckPage } from "@/components/data-check-page";
 import { ChallengePage } from "@/components/leakage-challenge-page";
 import { readCheck } from "@/lib/contract-checks/service";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 const stamp=(d:Date)=>d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZone:"UTC"})+" UTC";
 export default async function RunPage({params}:{params:Promise<{runId:string}>}) {
   const clock=await getClock(); const runId=(await params).runId;
+  if(runId.startsWith("oas_")){if(!demoFeaturesEnabled())notFound();return <AssuranceWorkspace id={runId} tab="history"/>;}
   if(runId.startsWith("daq_")){if(!demoFeaturesEnabled())notFound();return <DataCheckPage id={runId}/>;}
   if(runId.startsWith("lch_")){if(!demoFeaturesEnabled())notFound();return <ChallengePage runId={runId}/>;}
   if(runId.startsWith("cck_")) {

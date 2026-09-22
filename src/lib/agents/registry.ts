@@ -61,10 +61,10 @@ export const AGENTS: AgentDef[] = [
     measure: {name: "Exact detection, misses and false positives", target: "Measured for each synthetic challenge; no universal guarantee"},
   },
   {
-    id: "rebate-protection", name: "Rebate protection",
-    purpose: "Checks rebate obligations, repairs sandbox submission errors and prepares recovery evidence. Synthetic proof only.",
+    id: "rebate-protection", name: "Operational leakage protection",
+    purpose: "Checks eight operational areas, repairs deterministic sandbox errors, routes consequential changes to simulated review and verifies corrected records.",
     owner: "Rebate operations · Finance", surface: "Rebate protection sandbox",
-    autonomy: "Propose", tools: ["evaluateRebateTerms", "reconcileRebateLedger", "prepareRebateCorrection"],
+    autonomy: "Propose", tools: ["evaluateRebateTerms", "reconcileRebateLedger", "prepareRebateCorrection", "checkOperationalControls", "repairSandboxRecords", "verifyCorrections"],
     mayNot: ["Change employer entitlements or care access to create savings.", "Submit external claims or move real money.", "Count uncollected recoveries as savings.", "Insert simulated reviews into operational queues."],
     consequential: ["interpret-contract", "write-off", "correct-payment", "activate-benefit"],
     incumbent: "Rebate operations and Finance review",

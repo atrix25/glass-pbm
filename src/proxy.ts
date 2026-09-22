@@ -23,8 +23,8 @@ function constantTimeEqual(a: string, b: string): boolean {
 function nextForSponsor(request: NextRequest) {
   if (demoFeaturesEnabled() && request.cookies.get("glass_demo_sponsor")?.value === "tennessee") {
     const path=request.nextUrl.pathname;
-    const allowed=["/sponsor","/sponsor/assurance","/rebate-protection","/contract-checks","/api/contract-checks","/api/demo-sponsor","/leakage-challenges","/api/leakage-challenges","/agents/leakage-challenge","/data-agent-checks","/api/data-agent-checks","/agents/data-agent-tester"];
-    if (!allowed.includes(path) && !path.startsWith("/api/auth") && !path.startsWith("/_next/") && !path.startsWith("/agents/runs/cck_") && !path.startsWith("/agents/runs/lch_")) {
+    const allowed=["/sponsor","/sponsor/assurance","/rebate-protection","/contract-checks","/api/contract-checks","/api/operational-assurance","/api/demo-sponsor","/leakage-challenges","/api/leakage-challenges","/agents/leakage-challenge","/agents/rebate-protection","/data-agent-checks","/api/data-agent-checks","/agents/data-agent-tester"];
+    if (!allowed.includes(path) && !path.startsWith("/api/auth") && !path.startsWith("/_next/") && !path.startsWith("/agents/runs/cck_") && !path.startsWith("/agents/runs/lch_") && !path.startsWith("/agents/runs/oas_")) {
       if(path.startsWith("/api/")) return NextResponse.json({error:"This workflow is unavailable for the Tennessee demo sponsor."},{status:409});
       return NextResponse.redirect(new URL("/rebate-protection",request.url));
     }

@@ -1,5 +1,6 @@
 import { demoFeaturesEnabled } from "@/lib/config";
-import { recentSimulations } from "@/lib/rebate-protection/service";
+import { recentAssurance } from "@/lib/assurance/service";
+import { selectedSponsor } from "@/lib/contract-checks/context";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -58,8 +59,8 @@ export default async function AgentDetailPage({
   }
   if(agentId === "rebate-protection") {
     if(!demoFeaturesEnabled())notFound();
-    const recent=await recentSimulations();
-    return <div className="space-y-6"><SectionTitle description="Rebate operations · Finance. Scripted sandbox execution; no operational assignments.">Rebate protection</SectionTitle><Card><div className="p-6"><p>Checks separate manufacturer and employer obligations, prepares corrections and requires simulated review for consequential changes.</p><Link href="/rebate-protection" className="mt-4 block text-glass-700">Open rebate protection →</Link><p className="mt-3 text-sm text-ink-500">Synthetic results are excluded from operational work and savings totals.</p></div></Card><Card><div className="space-y-3 p-6"><h2 className="font-semibold">Sandbox runs</h2>{recent.length?recent.map(r=><Link key={r.id} href={`/agents/runs/${r.id}`} className="block text-sm text-glass-700">{r.scenarioId} · {r.createdAt.toISOString()}</Link>):<p>No simulations recorded.</p>}</div></Card></div>;
+    const recent=await recentAssurance(await selectedSponsor(),(await getClock()).now);
+    return <div className="space-y-6"><SectionTitle description="Rebate operations · Finance. Scripted sandbox execution; no operational assignments.">Operational leakage protection</SectionTitle><Card><div className="space-y-4 p-6"><p>Checks all eight operational areas, corrects safe draft errors and verifies changed records. Network, Benefits, Clinical operations, Finance and Contract administration review consequential corrections.</p><Link href="/rebate-protection">Open leakage controls →</Link><p>Synthetic reviews and external evidence do not authorize operational changes.</p></div></Card><Card><div className="space-y-3 p-6"><h2 className="font-semibold">Assurance runs</h2>{recent.length?recent.map(r=><Link key={r.id} href={`/agents/runs/${r.id}`} className="block text-sm">{r.createdAt.toISOString()} · Open recorded work</Link>):<p>No assurance runs recorded for this sponsor.</p>}</div></Card></div>;
   }
   const clock = await getClock();
   const detail = await getAgentDetail(agentId, clock);

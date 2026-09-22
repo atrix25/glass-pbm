@@ -1,3 +1,4 @@
+import { AssuranceWorkspace } from "@/components/assurance-workspace";
 import { selectedSponsor } from "@/lib/contract-checks/context";
 import { ContractCheckPage } from "@/components/contract-check-page";
 import Link from "next/link";
@@ -10,9 +11,10 @@ import { RebateControls } from "@/components/rebate-protection-controls";
 import { RebatePosition, RebateExceptions, RebateProof, RebateCheckpoints, RebateMetrics } from "@/components/rebate-protection-view";
 import styles from "@/components/rebate-protection.module.css";
 export const dynamic="force-dynamic";
-export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string;test?:string}>}){
+export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string;test?:string;area?:string}>}){
  if(!demoFeaturesEnabled())notFound();
  const q=await searchParams;
+ if(q.run?.startsWith("oas_")||(!q.run&&(!q.tab||["controls","proof","history"].includes(q.tab))))return <AssuranceWorkspace id={q.run} area={q.area} tab={q.tab}/>;
  if(await selectedSponsor()==="tennessee"||q.run?.startsWith("cck_")||(!q.run&&q.tab!=="scenarios"))return <ContractCheckPage runId={q.run} tab={q.tab} testId={q.test}/>;
  const clock=await getClock();
  const recent=await recentSimulations();

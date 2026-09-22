@@ -2180,3 +2180,19 @@ model DataAgentCheck {
  createdAt DateTime @default(now())
  @@index([tenantId, sponsorId, createdAt])
 }
+
+// Isolated operational-assurance snapshots and immutable audit trail in state.
+model AssuranceRun {
+ id String @id
+ key String @unique
+ tenantId String
+ sponsorId String
+ cutoff DateTime
+ state String
+ sealedAnswer String
+ commitment String
+ inputHash String
+ revision Int @default(0)
+ createdAt DateTime @default(now())
+ @@index([tenantId,sponsorId,createdAt])
+}
