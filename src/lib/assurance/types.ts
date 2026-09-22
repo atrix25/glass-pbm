@@ -1,6 +1,6 @@
 export const AREAS = ['Contract implementation','Drug definitions','Claim adjudication','Rebate guarantees','Rate adjustments','Client invoicing','Manufacturer invoicing','Nonstandard terms'] as const;
 export type Values=Record<string,string|number|boolean|null>;
-export type Requirement={id:string;version:number;clause:string;from:string;to:string;recordedAt:string;population:string;approved:boolean;values:Values};
+export type Requirement={id:string;version:number;clause:string;source?:{kind:'contract'|'synthetic';text:string;document:string;location:string;url?:string;recordedAt:string};from:string;to:string;recordedAt:string;population:string;approved:boolean;values:Values};
 export type Specimen={id:string;control:string;area:number;label:string;owner:string;kind:'mapping'|'engine'|'invoice'|'rate'|'notice'|'collection'|'guarantee';population:string;serviceAt:string;recordedAt:string;requirements:Requirement[];actual:Values;basis:Values;dependencies:string[];review:boolean;external:boolean;memberId:string;claimId:string;invoiceId:string|null};
 export type Book={version:1;sponsor:string;cutoff:string;records:Specimen[];sourceManifest:string[]|null};
 export type Finding={id:string;recordId:string;area:number;control:string;label:string;state:'Exception'|'Not verified'|'Clear'|'Not due';reason:string;expected:Values|null;actual:Values;amountCents:number|null;review:boolean;external:boolean;permanent:boolean;clause:string[]};
