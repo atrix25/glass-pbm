@@ -2146,3 +2146,22 @@ model ContractCheckRun {
   createdAt DateTime @default(now())
   @@index([tenantId, sponsorId, createdAt])
 }
+
+// Isolated challenge records. The sealed answer is never sent to the detector.
+model LeakageChallenge {
+  id String @id
+  key String @unique
+  tenantId String
+  sponsorId String
+  cutoff DateTime
+  input String
+  inputHash String
+  sealedAnswer String
+  commitment String
+  result String?
+  score String?
+  detectorVersion String?
+  createdAt DateTime @default(now())
+  scoredAt DateTime?
+  @@index([tenantId, sponsorId, createdAt])
+}

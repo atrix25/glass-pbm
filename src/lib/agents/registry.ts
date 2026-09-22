@@ -51,6 +51,15 @@ export interface AgentDef {
 
 export const AGENTS: AgentDef[] = [
   {
+    id: "leakage-challenge", name: "Leakage challenge",
+    purpose: "Introduces undisclosed errors into isolated synthetic records and evaluates frozen detector findings against a withheld answer key.",
+    owner: "Quality assurance · Finance controls", surface: "Blind challenges",
+    autonomy: "Act", tools: ["prepareSyntheticChallenge", "runBlindDetector", "scoreFrozenFindings"],
+    mayNot: ["Modify operational claims, payments, benefits or staff queues.", "Expose the answer key to the detector.", "Claim that detection is prevention or that this is an independent external audit."],
+    consequential: [], incumbent: "Independent control testing",
+    measure: {name: "Exact detection, misses and false positives", target: "Measured for each synthetic challenge; no universal guarantee"},
+  },
+  {
     id: "rebate-protection", name: "Rebate protection",
     purpose: "Checks rebate obligations, repairs sandbox submission errors and prepares recovery evidence. Synthetic proof only.",
     owner: "Rebate operations · Finance", surface: "Rebate protection sandbox",

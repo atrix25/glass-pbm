@@ -33,6 +33,7 @@ export function nextStep(status: string) {
   }
 }
 export const QUEUES: Record<string, { href: string; label: string; handoff: string }> = {
+  "leakage-challenge": {href:"/leakage-challenges",label:"Blind challenges",handoff:"Quality assurance and Finance review misses and unexpected alerts. Synthetic challenge records remain outside operational queues."},
   "rebate-protection": { href: "/rebate-protection", label: "Rebate protection", handoff: "Finance reviews contract interpretation, payment corrections and benefit changes in an isolated sandbox. No operational work is assigned." },
   "account-management": { href: "/account-management", label: "Benefit goals", handoff: "The benefits lead approves measured options before activation and follows rollout tasks." },
   "pa-intake": { href: "/pa/review", label: "Clinical review", handoff: "A pharmacist reviews unsupported answers and proposed denials." },

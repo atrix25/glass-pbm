@@ -28,6 +28,7 @@ const CURRENT_AGENTS = [
   "data-agent",
   "account-management",
   "rebate-protection",
+  "leakage-challenge",
 ] as const;
 
 const EXECUTION_MODES = new Set([

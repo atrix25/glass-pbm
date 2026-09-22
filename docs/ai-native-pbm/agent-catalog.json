@@ -27,7 +27,8 @@
     "member-service",
     "data-agent",
     "account-management",
-    "rebate-protection"
+    "rebate-protection",
+    "leakage-challenge"
   ],
   "domains": [
     {
@@ -5242,7 +5243,9 @@
           "downstreamEvents": [
             "quality.change-deployed"
           ],
-          "currentGlassAgents": []
+          "currentGlassAgents": [
+            "leakage-challenge"
+          ]
         },
         {
           "id": "quality-resilience.root-cause-improvement",

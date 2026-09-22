@@ -30,6 +30,7 @@ export async function ContractCheckPage({runId,tab="tests",testId}:{runId?:strin
    <article><span>Not connected</span><strong>{COVERAGE_GAPS.length}</strong><small>Additional sources and controls needed</small></article>
   </div>
   {sponsor==="wisconsin"&&<Link href="/rebate-protection?tab=scenarios">Scenario simulations →</Link>}
+  <Link className={styles.panel} href="/leakage-challenges"><strong>Blind challenges →</strong><p>Let the challenge agent introduce undisclosed errors, then compare what Glass caught and missed.</p></Link>
   <ContractCheckControls key={saved?.id??sponsor} cutoff={cutoff} maxDate={clock.now.toISOString().slice(0,10)}/>
   <div className={styles.sectionHeading}><p className={styles.muted}>{active.length} items need attention · Cutoff {cutoff.slice(0,10)}{saved?` · Saved ${saved.createdAt.toISOString().slice(0,19).replace("T"," ")} UTC`:" · Calculated on load"}</p>{saved&&<div className="flex gap-5"><Link href={`/agents/runs/${saved.id}`}>Agent work →</Link><a href={`/api/contract-checks?id=${saved.id}`}>Export run →</a></div>}</div>
   <nav className={styles.tabs} aria-label="Contract checks">{[["tests","Tests"],["findings","All findings"],["evidence","Evidence"],["source","Source & scope"]].map(([id,name])=><Link key={id} href={`${base}tab=${id}`} aria-current={visibleTab===id?"page":undefined}>{name}</Link>)}</nav>

@@ -48,6 +48,10 @@ export default async function AgentDetailPage({
   params: Promise<{ agentId: string }>;
 }) {
   const { agentId } = await params;
+  if(agentId === "leakage-challenge") {
+    if(!demoFeaturesEnabled())notFound();
+    return <div className="space-y-6"><SectionTitle description="Quality assurance · Finance controls. Scripted sandbox execution.">Leakage challenge</SectionTitle><Card><div className="space-y-4 p-6"><p>Prepares randomized synthetic errors, withholds the answer key from the detector and scores frozen findings using a separate evaluator.</p><p>No operational records, benefits, payments or staff assignments are changed. Same-application code separation is not an independent external audit.</p><Link href="/leakage-challenges">Open blind challenges →</Link></div></Card></div>;
+  }
   if(agentId === "rebate-protection") {
     if(!demoFeaturesEnabled())notFound();
     const recent=await recentSimulations();
