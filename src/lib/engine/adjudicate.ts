@@ -56,6 +56,12 @@ export interface EngineDrug {
   isSpecialty: boolean;
   therapeuticClass?: string | null;
   nadacPerUnit: number;
+  /**
+   * NADAC per unit of a same-molecule generic, when one is on file. Used only
+   * for the DAW-1 brand selection penalty: the CoC charges the difference
+   * between the brand and the generic, never the brand's own acquisition cost.
+   */
+  genericEquivalentNadacPerUnit?: number | null;
   /** Units in one package, and the unit they are counted in, from the NDC.
    *  Needed to turn a limit written in tubes into one written in grams. */
   packageSize?: number | null;
@@ -1011,7 +1017,12 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
     accumulators,
     dawCode: request.dawCode,
     brandGeneric,
-    genericReferenceMicros: prices.macMicros ?? prices.nadacMicros,
+    genericReferenceMicros: resolveGenericReferenceMicros({
+      brandGeneric,
+      drug,
+      quantityDispensed: request.quantityDispensed,
+      assumptions,
+    }),
     emergencySupply,
   });
 
@@ -1114,6 +1125,70 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * The DAW-1 brand selection penalty is the difference between the brand
+ * allowed amount and the cost of the generic that was available. It is not
+ * the gap between brand AWP-minus and the brand's own NADAC — that is an
+ * acquisition/spread figure, and using it under-charges the member by tens
+ * to hundreds of dollars on a typical multi-source brand fill.
+ *
+ * When no same-molecule generic NADAC is on file, return 0 so the penalty
+ * does not fire rather than inventing a reference from the brand NDC.
+ */
+export function resolveGenericReferenceMicros(args: {
+  brandGeneric: BrandGeneric;
+  drug: EngineDrug;
+  quantityDispensed: number;
+  assumptions?: BenchmarkAssumptions;
+}): Micros {
+  if (args.brandGeneric !== "Brand") return 0;
+  const genericNadac = args.drug.genericEquivalentNadacPerUnit;
+  if (genericNadac == null || genericNadac <= 0) return 0;
+
+  const assumptions = args.assumptions ?? DEFAULT_ASSUMPTIONS;
+  // Jitter against a stable synthetic key so the same brand always sees the
+  // same generic MAC arm, independent of whichever generic NDC was cheapest.
+  const unit = deriveUnitPrices(
+    `generic-ref:${args.drug.ndc11}`,
+    genericNadac,
+    false,
+    assumptions,
+    args.drug.isSpecialty,
+  );
+  const extended = extendPrices(unit, args.quantityDispensed);
+  return extended.macMicros ?? extended.nadacMicros;
+}
+
+/**
+ * Attach the cheapest same-molecule generic NADAC to each brand drug. Callers
+ * that load the full drug book (POS, reproduce, replay) use this so DAW-1
+ * pricing does not need a second database round-trip per fill.
+ */
+export function attachGenericEquivalentNadac<
+  T extends {
+    isBrandLabel: boolean;
+    molecule?: string | null;
+    nadacPerUnit: number;
+    genericEquivalentNadacPerUnit?: number | null;
+  },
+>(drugs: Iterable<T>): void {
+  const cheapestGenericByMolecule = new Map<string, number>();
+  for (const d of drugs) {
+    if (d.isBrandLabel) continue;
+    if (!d.molecule) continue;
+    if (!(d.nadacPerUnit > 0)) continue;
+    const prior = cheapestGenericByMolecule.get(d.molecule);
+    if (prior == null || d.nadacPerUnit < prior) {
+      cheapestGenericByMolecule.set(d.molecule, d.nadacPerUnit);
+    }
+  }
+  for (const d of drugs) {
+    if (!d.isBrandLabel || !d.molecule) continue;
+    d.genericEquivalentNadacPerUnit =
+      cheapestGenericByMolecule.get(d.molecule) ?? null;
+  }
+}
 
 interface CostShareArgs {
   trace: TraceBuilder;
