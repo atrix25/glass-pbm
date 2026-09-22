@@ -41,7 +41,7 @@ export default async function ReconciliationPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Every promise in the contract, measured against the records that prove it, with the money attached. ${scorecard.closedMonths} months of the plan year have closed. ${missedMeasures.length === 0 ? "Nothing has been missed." : `${missedMeasures.length} measures were missed and ${formatCentsWhole(scorecard.totalCreditCents)} is owed back to the sponsor.`}`}
+        description={`${scorecard.closedMonths} closed months · ${missedMeasures.length} missed measures. Demo credits: ${formatCentsWhole(scorecard.totalCreditCents)}.`}
       >
         Guarantee reconciliation
       </SectionTitle>
@@ -292,7 +292,7 @@ export default async function ReconciliationPage() {
       {incidents.map((incident) => (
         <Card key={incident.id}>
           <CardHeader
-            title="What happened"
+            title="Activity"
             description={`${formatDate(incident.startedAt)} to ${formatDate(incident.endedAt)}. The sponsor was told ${incident.notifiedWithinHours} hours in, not at the quarterly review.`}
             action={<Badge tone="warn">{incident.severity}</Badge>}
           />

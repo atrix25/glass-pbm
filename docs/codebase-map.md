@@ -1,6 +1,6 @@
 # Codebase map
 
-Glass is a **single-tenant PBM demo / production foundation**: Next.js UI + adjudication engine + Postgres book, deployed on Fly.
+Glass targets a **CVS Caremark offering for small group employers**, combining high automation, transparent TrueCost or drug-level rebate economics, and 100% rebate pass-through. The current code is a **single-tenant PBM demo / production foundation**: Next.js UI + adjudication engine + Postgres book, deployed on Fly. See [initiative context](ai-native-pbm/initiative-context.md) for target scope versus current capability.
 
 Use this file when onboarding someone or deciding where a change belongs.
 
@@ -15,7 +15,7 @@ Use this file when onboarding someone or deciding where a change belongs.
 | **clinical** | `src/lib/clinical/`, `src/lib/pa/` | DUR, opioids, prior auth |
 | **nps** | `src/lib/nps/` | Member-experience model / survey proxy |
 | **integrity** | `src/lib/integrity/`, `src/lib/agents/` | Detectors and agent workflows |
-| **platform** | `src/lib/db.ts`, `src/lib/pg-sql.ts`, `src/lib/auth.ts`, `src/middleware.ts` | DB dialect, auth, config, jobs |
+| **platform** | `src/lib/db.ts`, `src/lib/pg-sql.ts`, `src/lib/auth.ts`, `src/proxy.ts` | DB dialect, auth, config, jobs |
 | **schema** | `prisma/` | Data model |
 | **book-build** | `scripts/` (seed/build/ingest) | Synthetic book construction |
 | **ops** | `scripts/` (restore/import/worker), `fly.toml`, `docs/` | Deploy, restore, runbooks |
@@ -89,7 +89,7 @@ Domain rules and detectors. Heavy scans (e.g. experience over ~1.6M claims) must
 |------|------|
 | `db.ts` | Prisma client + pooler-friendly URL params |
 | `pg-sql.ts` | SQLite→Postgres SQL dialect adapter |
-| `auth.ts` / `middleware.ts` | Auth gates |
+| `auth.ts` / `proxy.ts` | Auth gates |
 | `config.ts` | Env (`AUTH_MODE`, `DEMO_FEATURES`, …) |
 | `jobs.ts` + `scripts/worker.ts` | Async job queue |
 | `clock.ts` / `session.ts` | Simulation clock + demo session |

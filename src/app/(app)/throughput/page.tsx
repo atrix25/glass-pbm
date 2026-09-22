@@ -94,7 +94,7 @@ export default async function ThroughputPage() {
 
       <Card>
         <CardHeader
-          title="Where the time goes"
+          title="Processing time"
           description="Percentiles from the individual timings, not from dividing a total. A mean latency is the number you quote when the tail is embarrassing, so the tail is here: the slowest request in the run, and the shape of the distribution behind it."
         />
         <Table>
@@ -145,7 +145,7 @@ export default async function ThroughputPage() {
 
       <Card>
         <CardHeader
-          title="What that means at scale"
+          title="Capacity"
           description="Arithmetic on the measured rate. Nothing here assumes a faster engine, a bigger machine, or more than the one thread that was timed."
         />
         <Table>
@@ -207,7 +207,7 @@ export default async function ThroughputPage() {
 
       <Card>
         <CardHeader
-          title="What this does not prove"
+          title="Coverage limits"
           description="A benchmark that only flatters itself is marketing. These are the things between this measurement and a production claim processor, stated plainly, because a management team that discovers them later will discount everything else on this page."
         />
         <div className="grid gap-4 px-5 py-4 md:grid-cols-2">

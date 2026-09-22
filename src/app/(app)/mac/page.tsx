@@ -36,7 +36,7 @@ export default async function MacPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`The ceiling on every multi-source generic, and what happened when a pharmacy said it was too low. ${formatNumber(mac.macClaims)} paid fills — ${macShare}% of the book — were priced by this list rather than by any discount guarantee.`}
+        description={`Generic reimbursement ceilings and pharmacy appeals. ${macShare}% of paid fills use MAC pricing.`}
       >
         Maximum allowable cost
       </SectionTitle>
@@ -76,7 +76,7 @@ export default async function MacPage() {
 
       <Card>
         <CardHeader
-          title="What the statute requires, and what happened"
+          title="Statutory requirements"
           description={`${MAC_STATUTE.citation} sets out the obligations a pharmacy benefit manager takes on when it prices against a MAC list in Wisconsin. Each one is a date on a record here, which means each one is measurable rather than asserted.`}
         />
         <Table>

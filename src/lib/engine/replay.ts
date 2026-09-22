@@ -8,7 +8,10 @@
  * hollow.
  */
 
+import { latestRelease } from "@/lib/benefit-release";
+import { patchEntry } from "@/lib/agents/account-management/model";
 import { prisma } from "@/lib/db";
+import { tenantSponsorId } from "@/lib/config";
 import { PLAN_YEAR_END } from "@/lib/clock";
 import { hashString } from "@/lib/hash";
 import {
@@ -323,6 +326,14 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
 // Applying an override
 // ---------------------------------------------------------------------------
 
+/** Effective release for new service; the filed replay/reproduction world stays immutable. */
+export async function loadEffectiveWorld(at = new Date()) {
+  const world = await loadWorld();
+  const release = await latestRelease(at);
+  if (!release) return { ...world, releaseId: null as string | null };
+  return { ...world, releaseId: release.id, formulary: new Map([...world.formulary].map(([id, entry]) => [id, patchEntry(entry, id, release.benefit)])) };
+}
+
 function applyPlanOverride(
   plan: EngineBenefitPlan,
   o: ConfigOverride,
@@ -450,6 +461,8 @@ export interface ReplayResult {
   claimsEvaluated: number;
   claimsChanged: number;
   membersAffected: number;
+  membersPayingMore: number;
+  membersWithNewRejects: number;
   planPaidBeforeCents: number;
   planPaidAfterCents: number;
   memberPaidBeforeCents: number;
@@ -558,6 +571,7 @@ async function* streamClaimsByMember(
 
   for (;;) {
     const page: { id: string }[] = await prisma.member.findMany({
+      where: { sponsorId: tenantSponsorId() },
       select: { id: true },
       orderBy: { id: "asc" },
       take,
@@ -597,10 +611,11 @@ async function* streamClaimsByMember(
        JOIN Member m ON m.id = c.memberId
        JOIN Drug d   ON d.id = c.drugId
        WHERE c.memberId IN (${ids.map(() => "?").join(",")})
-         AND c.dateOfService <= ?
+         AND c.dateOfService <= (?::timestamptz AT TIME ZONE 'UTC')
+         AND c.adjudicatedAt <= (?::timestamptz AT TIME ZONE 'UTC')
        ORDER BY c.memberId, c.dateOfService, c.claimNumber`,
       ...ids,
-      cutoff,
+      cutoff, cutoff,
     );
     if (rows.length > 0) yield rows;
   }
@@ -651,13 +666,13 @@ async function loadFixedSignals(
                            (CASE WHEN p.urgency = 'Expedited' THEN ${expeditedMs} ELSE ${standardMs} END)
                       THEN 1 ELSE 0 END) AS onTime
       FROM PriorAuthorization p
-      WHERE p.decidedAt IS NOT NULL AND p.decidedAt <= ${cutoff}
+      WHERE p.decidedAt IS NOT NULL AND p.decidedAt <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
       GROUP BY p.memberId
     `,
     prisma.$queryRaw<{ memberId: string; major: bigint | number }[]>`
       SELECT memberId, COUNT(*) AS major
       FROM DurAlert
-      WHERE severity = 'Major' AND dateOfService <= ${cutoff}
+      WHERE severity = 'Major' AND dateOfService <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
       GROUP BY memberId
     `,
     prisma.$queryRaw<{ memberId: string }[]>`
@@ -666,9 +681,9 @@ async function loadFixedSignals(
       JOIN EligibilitySpan e ON e.memberId = c.memberId
       WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
         AND e.retroReportedAt IS NOT NULL
-        AND e.retroReportedAt <= ${cutoff}
+        AND e.retroReportedAt <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
         AND c.dateOfService > e.reportedTerminationDate
-        AND c.dateOfService <= ${cutoff}
+        AND c.dateOfService <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
     `,
   ]);
 
@@ -734,6 +749,8 @@ export async function replay(
     claimsEvaluated: 0,
     claimsChanged: 0,
     membersAffected: 0,
+    membersPayingMore: 0,
+    membersWithNewRejects: 0,
     planPaidBeforeCents: 0,
     planPaidAfterCents: 0,
     memberPaidBeforeCents: 0,
@@ -782,6 +799,8 @@ export async function replay(
     federalOopAccumulatedCents: 0,
     deductibleAccumulatedCents: 0,
   };
+  const rejectedMembers = new Set<string>();
+  const higherCostMembers = new Set<string>();
   const memberTotals = new Map<
     string,
     { name: string; before: number; after: number; claims: number; changed: boolean }
@@ -999,6 +1018,7 @@ export async function replay(
     totals.claims++;
 
     const statusChanged = out.responseStatus !== row.responseStatus;
+    if (out.patientPayCents > row.patientPayCents) higherCostMembers.add(row.memberId);
     const moneyChanged =
       out.planPaidCents !== row.planPaidCents ||
       out.patientPayCents !== row.patientPayCents ||
@@ -1007,7 +1027,7 @@ export async function replay(
     if (statusChanged || moneyChanged) {
       result.claimsChanged++;
       totals.changed = true;
-      if (statusChanged && out.responseStatus === "R") result.newRejects++;
+      if (statusChanged && out.responseStatus === "R") { result.newRejects++; rejectedMembers.add(row.memberId); }
       if (statusChanged && out.responseStatus === "P") result.newlyPaid++;
 
       if (result.diffs.length < maxDiffs) {
@@ -1076,6 +1096,8 @@ export async function replay(
       });
     }
   }
+  result.membersPayingMore = higherCostMembers.size;
+  result.membersWithNewRejects = rejectedMembers.size;
   result.memberImpacts.sort(
     (a, b) => Math.abs(b.deltaCents) - Math.abs(a.deltaCents),
   );

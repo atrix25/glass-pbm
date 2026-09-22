@@ -2079,3 +2079,50 @@ model ApiKey {
 
   @@index([active])
 }
+
+// Isolated synthetic proof. No foreign keys to operational claims or agent work.
+model RebateSandboxRun {
+  id          String   @id
+  key         String   @unique
+  scenarioId  String
+  tenantId    String
+  snapshot    String
+  stage       Int      @default(0)
+  decision    String?
+  reviewer    String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+  events      RebateSandboxEvent[]
+  exceptions  RebateSandboxException[]
+  @@index([tenantId, createdAt])
+}
+
+model RebateSandboxEvent {
+  id          String   @id
+  runId       String
+  run         RebateSandboxRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  path        String
+  kind        String
+  claimId     String?
+  termId      String?
+  evidenceId  String?
+  amountCents Int      @default(0)
+  serviceAt   DateTime
+  recordedAt  DateTime
+  settledAt   DateTime?
+  detail      String
+  createdAt   DateTime @default(now())
+  @@index([runId, recordedAt])
+}
+
+model RebateSandboxException {
+  id          String   @id
+  runId       String
+  run         RebateSandboxRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  owner       String
+  reason      String
+  amountCents Int?
+  dueAt       DateTime
+  evidence    String
+  @@index([runId])
+}

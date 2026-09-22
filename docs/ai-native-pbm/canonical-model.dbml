@@ -1,0 +1,1528 @@
+Project ai_native_pbm {
+  database_type: "PostgreSQL"
+  Note: '''
+  Target logical model for a commercial-first, full-service, multi-tenant PBM.
+  This is not a migration. Tenant-owned identifiers are unique only with tenant_id.
+  Effective time uses valid_from/valid_to; system time uses recorded_at/superseded_at.
+  Facts marked append-only are corrected with compensating or superseding facts.
+  Posted money uses bigint ISO-4217 minor units; rates use decimal(18,9), unit prices
+  decimal(19,9), and quantities decimal(24,9). Provisional values round before posting.
+  '''
+}
+
+Enum tenant_status {
+  provisioning
+  active
+  suspended
+  closed
+}
+
+Enum fact_status {
+  pending
+  accepted
+  rejected
+  reversed
+  void
+}
+
+Enum work_status {
+  queued
+  assigned
+  in_progress
+  waiting
+  completed
+  cancelled
+}
+
+Enum decision_status {
+  proposed
+  approved
+  denied
+  expired
+  withdrawn
+}
+
+Enum agent_run_status {
+  queued
+  running
+  completed
+  escalated
+  refused
+  failed
+  cancelled
+}
+
+Enum ledger_side {
+  debit
+  credit
+}
+
+Enum data_classification {
+  public
+  internal
+  confidential
+  phi
+  restricted
+}
+
+Table tenant {
+  tenant_id uuid [pk]
+  tenant_key varchar(64) [not null, unique]
+  legal_name varchar(256) [not null]
+  status tenant_status [not null]
+  home_region varchar(32) [not null]
+  default_currency char(3) [not null, default: 'USD']
+  created_at timestamp [not null]
+  closed_at timestamp
+}
+
+Table party {
+  tenant_id uuid [not null]
+  party_id uuid [not null]
+  party_type varchar(32) [not null, note: 'sponsor, pbm, manufacturer, pharmacy, prescriber, carrier, vendor, regulator, person']
+  legal_name varchar(256) [not null]
+  tax_id_token varchar(256) [note: 'Token only; clear value belongs in restricted vault']
+  external_key varchar(128)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, party_id) [pk]
+    (tenant_id, external_key, valid_from) [unique]
+    (tenant_id, party_type)
+  }
+}
+
+Table party_identifier {
+  tenant_id uuid [not null]
+  party_identifier_id uuid [not null]
+  party_id uuid [not null]
+  identifier_type varchar(32) [not null, note: 'NPI, NCPDP, EIN_TOKEN, NAIC, internal']
+  identifier_value_token varchar(256) [not null]
+  issuing_authority varchar(128)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, party_identifier_id) [pk]
+    (tenant_id, identifier_type, identifier_value_token, valid_from) [unique]
+  }
+}
+
+Table agreement {
+  tenant_id uuid [not null]
+  agreement_id uuid [not null]
+  agreement_number varchar(128) [not null]
+  agreement_type varchar(32) [not null, note: 'client, pharmacy, manufacturer, vendor, clinical']
+  buyer_party_id uuid [not null]
+  seller_party_id uuid [not null]
+  parent_agreement_id uuid
+  commercial_model varchar(32) [not null, note: 'Client agreements: caremark_truecost or caremark_drug_level_rebate; other agreement types: not_applicable. Pricing choice is separate from 100% rebate pass-through.']
+  status varchar(24) [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, agreement_id) [pk]
+    (tenant_id, agreement_number, valid_from) [unique]
+  }
+}
+
+Table agreement_term {
+  tenant_id uuid [not null]
+  agreement_term_id uuid [not null]
+  agreement_id uuid [not null]
+  term_code varchar(96) [not null]
+  scope_json jsonb [not null]
+  value_json jsonb [not null]
+  source_artifact_id uuid
+  source_locator varchar(256)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, agreement_term_id) [pk]
+    (tenant_id, agreement_id, term_code, valid_from)
+  }
+}
+
+Table configuration_release {
+  tenant_id uuid [not null]
+  configuration_release_id uuid [not null]
+  release_name varchar(128) [not null]
+  content_hash char(64) [not null]
+  schema_version varchar(32) [not null]
+  engine_version varchar(64) [not null]
+  ruleset_version varchar(64) [not null]
+  artifact_uri varchar(512)
+  approved_by_principal_id uuid
+  approved_at timestamp
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, configuration_release_id) [pk]
+    (tenant_id, content_hash) [unique]
+  }
+}
+
+Table benefit_plan {
+  tenant_id uuid [not null]
+  benefit_plan_id uuid [not null]
+  sponsor_party_id uuid [not null]
+  client_agreement_id uuid [not null]
+  plan_code varchar(64) [not null]
+  plan_name varchar(256) [not null]
+  line_of_business varchar(32) [not null, note: 'commercial first; extensible to EGWP/Medicaid']
+  funding_type varchar(32) [not null]
+  configuration_release_id uuid [not null]
+  formulary_id uuid [not null]
+  network_id uuid [not null]
+  accumulator_period_rule varchar(64) [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, benefit_plan_id) [pk]
+    (tenant_id, plan_code, valid_from) [unique]
+  }
+}
+
+Table benefit_rule {
+  tenant_id uuid [not null]
+  benefit_rule_id uuid [not null]
+  benefit_plan_id uuid [not null]
+  rule_type varchar(48) [not null, note: 'cost_share, deductible, oop, channel, DAW, exclusion']
+  priority int [not null]
+  predicate_json jsonb [not null]
+  outcome_json jsonb [not null]
+  source_artifact_id uuid
+  source_locator varchar(256)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, benefit_rule_id) [pk]
+    (tenant_id, benefit_plan_id, rule_type, priority, valid_from) [unique]
+  }
+}
+
+Table person {
+  tenant_id uuid [not null]
+  person_id uuid [not null]
+  person_token varchar(256) [not null, note: 'Stable pseudonymous join key; no direct identifiers']
+  year_of_birth smallint
+  sex_code varchar(16)
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, person_id) [pk]
+    (tenant_id, person_token) [unique]
+  }
+}
+
+Table phi.member_identity {
+  tenant_id uuid [not null]
+  person_id uuid [not null]
+  encrypted_payload bytea [not null, note: 'Name, full DOB, address, phone, email']
+  key_reference varchar(256) [not null]
+  payload_hash char(64) [not null]
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, person_id, recorded_at) [pk]
+  }
+}
+
+Table member {
+  tenant_id uuid [not null]
+  member_id uuid [not null]
+  person_id uuid [not null]
+  sponsor_party_id uuid [not null]
+  subscriber_member_id uuid
+  cardholder_token varchar(256) [not null]
+  person_code varchar(8) [not null]
+  relationship_code varchar(8) [not null]
+  member_status varchar(24) [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, member_id) [pk]
+    (tenant_id, cardholder_token, person_code, valid_from) [unique]
+  }
+}
+
+Table eligibility_file {
+  tenant_id uuid [not null]
+  eligibility_file_id uuid [not null]
+  sponsor_party_id uuid [not null]
+  control_number varchar(128) [not null]
+  file_type varchar(24) [not null]
+  content_hash char(64) [not null]
+  object_uri varchar(512) [not null]
+  created_at timestamp [not null]
+  received_at timestamp [not null]
+  processed_at timestamp
+  status fact_status [not null]
+
+  Indexes {
+    (tenant_id, eligibility_file_id) [pk]
+    (tenant_id, sponsor_party_id, control_number) [unique]
+    (tenant_id, content_hash) [unique]
+  }
+}
+
+Table eligibility_event {
+  tenant_id uuid [not null]
+  eligibility_event_id uuid [not null]
+  eligibility_file_id uuid [not null]
+  source_record_key varchar(128) [not null]
+  member_id uuid
+  benefit_plan_id uuid
+  event_type varchar(24) [not null, note: 'add, change, terminate, reinstate, reject']
+  coverage_tier varchar(32)
+  coverage_valid_from timestamp
+  coverage_valid_to timestamp
+  status fact_status [not null]
+  reason_code varchar(32)
+  payload_hash char(64) [not null]
+  recorded_at timestamp [not null]
+  supersedes_event_id uuid
+
+  Indexes {
+    (tenant_id, eligibility_event_id) [pk]
+    (tenant_id, eligibility_file_id, source_record_key) [unique]
+    (tenant_id, member_id, recorded_at)
+  }
+}
+
+Table eligibility_span {
+  tenant_id uuid [not null]
+  eligibility_span_id uuid [not null]
+  member_id uuid [not null]
+  benefit_plan_id uuid [not null]
+  source_event_id uuid [not null]
+  coverage_tier varchar(32) [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, eligibility_span_id) [pk]
+    (tenant_id, member_id, benefit_plan_id, valid_from, recorded_at) [unique]
+  }
+}
+
+Table drug_product {
+  drug_product_id uuid [pk]
+  ndc11 char(11) [not null, unique]
+  rxnorm_cui varchar(32)
+  gpi varchar(32)
+  label_name varchar(256) [not null]
+  generic_name varchar(256)
+  dosage_form varchar(64)
+  strength varchar(64)
+  route varchar(32)
+  package_size decimal(24,9) [not null]
+  unit_of_measure varchar(16) [not null]
+  multi_source_code varchar(8)
+  therapeutic_class varchar(128)
+  is_specialty boolean [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+}
+
+Table formulary {
+  tenant_id uuid [not null]
+  formulary_id uuid [not null]
+  formulary_code varchar(64) [not null]
+  name varchar(256) [not null]
+  version varchar(64) [not null]
+  configuration_release_id uuid [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, formulary_id) [pk]
+    (tenant_id, formulary_code, version) [unique]
+  }
+}
+
+Table formulary_coverage {
+  tenant_id uuid [not null]
+  formulary_coverage_id uuid [not null]
+  formulary_id uuid [not null]
+  drug_product_id uuid [not null]
+  tier_code varchar(16) [not null]
+  coverage_status varchar(24) [not null]
+  prior_auth_required boolean [not null]
+  step_therapy_required boolean [not null]
+  quantity_limit_json jsonb
+  channel_restriction_json jsonb
+  criteria_set_id uuid
+  source_artifact_id uuid
+  source_locator varchar(256)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, formulary_coverage_id) [pk]
+    (tenant_id, formulary_id, drug_product_id, valid_from, recorded_at) [unique]
+  }
+}
+
+Table pharmacy {
+  tenant_id uuid [not null]
+  pharmacy_id uuid [not null]
+  party_id uuid [not null]
+  ncpdp_id varchar(16) [not null]
+  npi varchar(16)
+  pharmacy_type varchar(32) [not null]
+  is_340b boolean [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, pharmacy_id) [pk]
+    (tenant_id, ncpdp_id, valid_from) [unique]
+  }
+}
+
+Table network {
+  tenant_id uuid [not null]
+  network_id uuid [not null]
+  network_code varchar(64) [not null]
+  name varchar(256) [not null]
+  network_type varchar(32) [not null]
+  configuration_release_id uuid [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, network_id) [pk]
+    (tenant_id, network_code, valid_from) [unique]
+  }
+}
+
+Table network_participation {
+  tenant_id uuid [not null]
+  network_participation_id uuid [not null]
+  network_id uuid [not null]
+  pharmacy_id uuid [not null]
+  pharmacy_agreement_id uuid [not null]
+  participation_status varchar(24) [not null]
+  reimbursement_schedule_id uuid [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, network_participation_id) [pk]
+    (tenant_id, network_id, pharmacy_id, valid_from, recorded_at) [unique]
+  }
+}
+
+Table reimbursement_schedule {
+  tenant_id uuid [not null]
+  reimbursement_schedule_id uuid [not null]
+  agreement_id uuid [not null]
+  side varchar(16) [not null, note: 'pharmacy or client']
+  line_of_business varchar(32) [not null]
+  channel varchar(24) [not null]
+  drug_class varchar(24) [not null]
+  formula_json jsonb [not null, note: 'Ordered lesser-of arms, discounts, fees, U&C behavior']
+  source_artifact_id uuid
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, reimbursement_schedule_id) [pk]
+    (tenant_id, agreement_id, side, line_of_business, channel, drug_class, valid_from)
+  }
+}
+
+Table price_list {
+  tenant_id uuid [not null]
+  price_list_id uuid [not null]
+  price_type varchar(24) [not null, note: 'NADAC, AWP, WAC, MAC, U&C survey']
+  owner_party_id uuid
+  version varchar(64) [not null]
+  content_hash char(64) [not null]
+  source_artifact_id uuid
+  published_at timestamp
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, price_list_id) [pk]
+    (tenant_id, price_type, version) [unique]
+    (tenant_id, content_hash) [unique]
+  }
+}
+
+Table product_price {
+  tenant_id uuid [not null]
+  product_price_id uuid [not null]
+  price_list_id uuid [not null]
+  drug_product_id uuid [not null]
+  unit_price decimal(19,9) [not null]
+  currency char(3) [not null]
+  source_product_ndc11 char(11)
+  is_simulated boolean [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, product_price_id) [pk]
+    (tenant_id, price_list_id, drug_product_id, valid_from, recorded_at) [unique]
+  }
+}
+
+Table mac_appeal {
+  tenant_id uuid [not null]
+  mac_appeal_id uuid [not null]
+  pharmacy_id uuid [not null]
+  claim_id uuid [not null]
+  drug_product_id uuid [not null]
+  submitted_at timestamp [not null]
+  invoice_unit_price decimal(19,9) [not null]
+  applied_mac_unit_price decimal(19,9) [not null]
+  status work_status [not null]
+  outcome varchar(24)
+  determination_due_at timestamp [not null]
+  determined_at timestamp
+  adjustment_due_at timestamp
+  adjusted_at timestamp
+  denial_reason varchar(1024)
+  cited_ndc11 char(11)
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, mac_appeal_id) [pk]
+    (tenant_id, pharmacy_id, submitted_at)
+  }
+}
+
+Table claim {
+  tenant_id uuid [not null]
+  claim_id uuid [not null]
+  claim_number varchar(128) [not null]
+  source_system varchar(64) [not null]
+  source_transaction_key varchar(128) [not null]
+  idempotency_key varchar(256) [not null]
+  transaction_code varchar(8) [not null, note: 'B1, B2, B3']
+  reversal_of_claim_id uuid
+  member_id uuid [not null]
+  eligibility_span_id uuid
+  benefit_plan_id uuid [not null]
+  pharmacy_id uuid [not null]
+  drug_product_id uuid [not null]
+  client_agreement_id uuid [not null]
+  service_at timestamp [not null]
+  submitted_at timestamp [not null]
+  adjudicated_at timestamp [not null]
+  quantity_dispensed decimal(24,9) [not null]
+  days_supply int [not null]
+  daw_code varchar(8) [not null]
+  channel varchar(24) [not null]
+  response_status varchar(16) [not null]
+  reject_codes jsonb [not null]
+  configuration_release_id uuid [not null]
+  engine_version varchar(64) [not null]
+  ruleset_version varchar(64) [not null]
+  input_hash char(64) [not null]
+  output_hash char(64) [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, claim_id) [pk]
+    (tenant_id, claim_number) [unique]
+    (tenant_id, source_system, source_transaction_key) [unique]
+    (tenant_id, idempotency_key) [unique]
+    (tenant_id, member_id, service_at)
+  }
+}
+
+Table claim_amount {
+  tenant_id uuid [not null]
+  claim_id uuid [not null]
+  amount_type varchar(48) [not null, note: 'submitted, allowed, pharmacy_paid, client_billed, plan_paid, patient_pay, deductible, copay, penalty, benchmark']
+  component varchar(48) [not null]
+  amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  unit_price decimal(19,9)
+  price_list_id uuid
+  product_price_id uuid
+
+  Indexes {
+    (tenant_id, claim_id, amount_type, component) [pk]
+  }
+}
+
+Table adjudication_trace {
+  tenant_id uuid [not null]
+  adjudication_trace_id uuid [not null]
+  claim_id uuid [not null]
+  ordinal int [not null]
+  stage varchar(32) [not null]
+  rule_id varchar(128) [not null]
+  rule_version varchar(64) [not null]
+  inputs_hash char(64) [not null]
+  inputs_json jsonb [not null]
+  output_json jsonb [not null]
+  fired boolean [not null]
+  source_artifact_id uuid
+  source_locator varchar(256)
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, adjudication_trace_id) [pk]
+    (tenant_id, claim_id, ordinal) [unique]
+  }
+}
+
+Table accumulator_account {
+  tenant_id uuid [not null]
+  accumulator_account_id uuid [not null]
+  member_id uuid [not null]
+  benefit_plan_id uuid [not null]
+  accumulator_type varchar(48) [not null]
+  benefit_period_start date [not null]
+  benefit_period_end date [not null]
+  limit_amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, accumulator_account_id) [pk]
+    (tenant_id, member_id, benefit_plan_id, accumulator_type, benefit_period_start) [unique]
+  }
+}
+
+Table accumulator_event {
+  tenant_id uuid [not null]
+  accumulator_event_id uuid [not null]
+  accumulator_account_id uuid [not null]
+  claim_id uuid
+  source_event_id uuid
+  event_type varchar(24) [not null, note: 'apply, reverse, transfer, adjustment']
+  amount bigint [not null, note: 'Signed append-only delta in ISO-4217 minor units']
+  currency char(3) [not null]
+  incurred_at timestamp [not null]
+  recorded_at timestamp [not null]
+  idempotency_key varchar(256) [not null]
+  reverses_event_id uuid
+
+  Indexes {
+    (tenant_id, accumulator_event_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+    (tenant_id, accumulator_account_id, incurred_at, recorded_at)
+  }
+}
+
+Table clinical_criteria_set {
+  tenant_id uuid [not null]
+  criteria_set_id uuid [not null]
+  criteria_code varchar(64) [not null]
+  name varchar(256) [not null]
+  scope_json jsonb [not null]
+  executable_definition jsonb [not null]
+  source_artifact_id uuid [not null]
+  engine_version varchar(64) [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, criteria_set_id) [pk]
+    (tenant_id, criteria_code, valid_from, recorded_at) [unique]
+  }
+}
+
+Table utilization_management_case {
+  tenant_id uuid [not null]
+  um_case_id uuid [not null]
+  case_number varchar(128) [not null]
+  member_id uuid [not null]
+  drug_product_id uuid
+  criteria_set_id uuid
+  request_type varchar(32) [not null]
+  urgency varchar(16) [not null]
+  status work_status [not null]
+  received_at timestamp [not null]
+  decision_due_at timestamp [not null]
+  configuration_release_id uuid [not null]
+  engine_version varchar(64) [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, um_case_id) [pk]
+    (tenant_id, case_number) [unique]
+    (tenant_id, member_id, received_at)
+  }
+}
+
+Table clinical_evidence {
+  tenant_id uuid [not null]
+  clinical_evidence_id uuid [not null]
+  um_case_id uuid [not null]
+  evidence_type varchar(32) [not null]
+  encrypted_payload bytea
+  structured_facts jsonb [not null]
+  source_artifact_id uuid
+  received_at timestamp [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, clinical_evidence_id) [pk]
+    (tenant_id, um_case_id, received_at)
+  }
+}
+
+Table clinical_decision {
+  tenant_id uuid [not null]
+  clinical_decision_id uuid [not null]
+  um_case_id uuid [not null]
+  decision decision_status [not null]
+  reason_code varchar(64)
+  rationale varchar(2048) [not null]
+  effective_from timestamp
+  effective_to timestamp
+  decided_by_principal_id uuid [not null]
+  deciding_agent_run_id uuid
+  criteria_snapshot_hash char(64) [not null]
+  recorded_at timestamp [not null]
+  supersedes_decision_id uuid
+
+  Indexes {
+    (tenant_id, clinical_decision_id) [pk]
+    (tenant_id, um_case_id, recorded_at)
+  }
+}
+
+Table dur_signal {
+  tenant_id uuid [not null]
+  dur_signal_id uuid [not null]
+  member_id uuid [not null]
+  claim_id uuid
+  signal_code varchar(16) [not null]
+  severity varchar(16) [not null]
+  evidence_json jsonb [not null]
+  rule_id varchar(128) [not null]
+  engine_version varchar(64) [not null]
+  observed_at timestamp [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, dur_signal_id) [pk]
+    (tenant_id, member_id, observed_at)
+  }
+}
+
+Table rebate_agreement {
+  tenant_id uuid [not null]
+  rebate_agreement_id uuid [not null]
+  agreement_id uuid [not null]
+  manufacturer_party_id uuid [not null]
+  contracting_party_id uuid [not null]
+  client_agreement_id uuid
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, rebate_agreement_id) [pk]
+  }
+}
+
+Table rebate_term {
+  tenant_id uuid [not null]
+  rebate_term_id uuid [not null]
+  rebate_agreement_id uuid [not null]
+  remuneration_type varchar(48) [not null]
+  scope_json jsonb [not null]
+  calculation_basis varchar(32) [not null]
+  rate decimal(18,9)
+  flat_amount bigint [note: 'ISO-4217 minor units']
+  currency char(3)
+  pass_through_rate decimal(18,9) [not null, note: 'Glass offering requires 1.000000000; separate service fees cannot reduce entitlement']
+  source_artifact_id uuid
+  source_locator varchar(256)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, rebate_term_id) [pk]
+    (tenant_id, rebate_agreement_id, remuneration_type, valid_from)
+  }
+}
+
+Table rebate_accrual_event {
+  tenant_id uuid [not null]
+  rebate_accrual_event_id uuid [not null]
+  claim_id uuid [not null]
+  rebate_term_id uuid [not null]
+  event_type varchar(24) [not null, note: 'accrue, true_up, reverse']
+  basis_amount bigint [not null, note: 'ISO-4217 minor units']
+  gross_amount bigint [not null, note: 'ISO-4217 minor units']
+  client_amount bigint [not null, note: 'ISO-4217 minor units']
+  retained_amount bigint [not null, note: 'ISO-4217 minor units; must be zero for Glass; client_amount must equal gross_amount']
+  currency char(3) [not null]
+  accrual_period varchar(16) [not null]
+  idempotency_key varchar(256) [not null]
+  reverses_event_id uuid
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, rebate_accrual_event_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+    (tenant_id, claim_id)
+  }
+}
+
+Table invoice {
+  tenant_id uuid [not null]
+  invoice_id uuid [not null]
+  invoice_number varchar(128) [not null]
+  invoice_type varchar(32) [not null, note: 'sponsor, manufacturer_rebate, pharmacy_remittance']
+  agreement_id uuid [not null]
+  payer_party_id uuid [not null]
+  payee_party_id uuid [not null]
+  period_start date [not null]
+  period_end date [not null]
+  issued_at timestamp [not null]
+  due_at timestamp [not null]
+  status varchar(24) [not null]
+  total_amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, invoice_id) [pk]
+    (tenant_id, invoice_number) [unique]
+  }
+}
+
+Table invoice_line {
+  tenant_id uuid [not null]
+  invoice_line_id uuid [not null]
+  invoice_id uuid [not null]
+  line_type varchar(48) [not null]
+  source_entity_type varchar(48)
+  source_entity_id uuid
+  quantity decimal(24,9) [not null]
+  unit_amount bigint [not null, note: 'ISO-4217 minor units']
+  line_amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  lineage_edge_set_id uuid
+
+  Indexes {
+    (tenant_id, invoice_line_id) [pk]
+    (tenant_id, invoice_id)
+  }
+}
+
+Table ledger_account {
+  tenant_id uuid [not null]
+  ledger_account_id uuid [not null]
+  account_code varchar(64) [not null]
+  account_name varchar(256) [not null]
+  account_type varchar(24) [not null, note: 'asset, liability, equity, revenue, expense']
+  party_id uuid
+  currency char(3) [not null]
+  active boolean [not null]
+
+  Indexes {
+    (tenant_id, ledger_account_id) [pk]
+    (tenant_id, account_code, currency) [unique]
+  }
+}
+
+Table journal_entry {
+  tenant_id uuid [not null]
+  journal_entry_id uuid [not null]
+  journal_number varchar(128) [not null]
+  event_type varchar(48) [not null]
+  source_entity_type varchar(48) [not null]
+  source_entity_id uuid [not null]
+  idempotency_key varchar(256) [not null]
+  accounting_date date [not null]
+  posted_at timestamp [not null]
+  reverses_journal_entry_id uuid
+  description varchar(512) [not null]
+
+  Indexes {
+    (tenant_id, journal_entry_id) [pk]
+    (tenant_id, journal_number) [unique]
+    (tenant_id, idempotency_key) [unique]
+  }
+}
+
+Table journal_line {
+  tenant_id uuid [not null]
+  journal_line_id uuid [not null]
+  journal_entry_id uuid [not null]
+  line_number int [not null]
+  ledger_account_id uuid [not null]
+  side ledger_side [not null]
+  amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  dimension_json jsonb [not null]
+
+  Indexes {
+    (tenant_id, journal_line_id) [pk]
+    (tenant_id, journal_entry_id, line_number) [unique]
+  }
+}
+
+Table payment_event {
+  tenant_id uuid [not null]
+  payment_event_id uuid [not null]
+  invoice_id uuid
+  payer_party_id uuid [not null]
+  payee_party_id uuid [not null]
+  event_type varchar(24) [not null, note: 'authorize, settle, return, reverse']
+  amount bigint [not null, note: 'ISO-4217 minor units']
+  currency char(3) [not null]
+  payment_reference varchar(128) [not null]
+  idempotency_key varchar(256) [not null]
+  occurred_at timestamp [not null]
+  recorded_at timestamp [not null]
+  reverses_event_id uuid
+
+  Indexes {
+    (tenant_id, payment_event_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+  }
+}
+
+Table service_case {
+  tenant_id uuid [not null]
+  service_case_id uuid [not null]
+  case_number varchar(128) [not null]
+  case_type varchar(48) [not null]
+  subject_type varchar(48) [not null]
+  subject_id uuid [not null]
+  priority varchar(16) [not null]
+  status work_status [not null]
+  queue_id uuid [not null]
+  owner_principal_id uuid
+  opened_at timestamp [not null]
+  due_at timestamp
+  closed_at timestamp
+  resolution_code varchar(64)
+
+  Indexes {
+    (tenant_id, service_case_id) [pk]
+    (tenant_id, case_number) [unique]
+    (tenant_id, queue_id, status, due_at)
+  }
+}
+
+Table work_item {
+  tenant_id uuid [not null]
+  work_item_id uuid [not null]
+  service_case_id uuid
+  work_type varchar(48) [not null]
+  status work_status [not null]
+  queue_id uuid [not null]
+  assignee_principal_id uuid
+  payload_json jsonb [not null]
+  available_at timestamp [not null]
+  due_at timestamp
+  attempts int [not null]
+  max_attempts int [not null]
+  lease_owner varchar(128)
+  lease_expires_at timestamp
+  idempotency_key varchar(256) [not null]
+  created_at timestamp [not null]
+  completed_at timestamp
+
+  Indexes {
+    (tenant_id, work_item_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+    (tenant_id, queue_id, status, available_at)
+  }
+}
+
+Table compliance_obligation {
+  tenant_id uuid [not null]
+  compliance_obligation_id uuid [not null]
+  jurisdiction varchar(32) [not null]
+  obligation_code varchar(64) [not null]
+  subject_type varchar(48) [not null]
+  trigger_definition jsonb [not null]
+  deadline_definition jsonb [not null]
+  evidence_requirements jsonb [not null]
+  source_artifact_id uuid [not null]
+  source_locator varchar(256)
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, compliance_obligation_id) [pk]
+    (tenant_id, jurisdiction, obligation_code, valid_from) [unique]
+  }
+}
+
+Table compliance_event {
+  tenant_id uuid [not null]
+  compliance_event_id uuid [not null]
+  compliance_obligation_id uuid [not null]
+  subject_type varchar(48) [not null]
+  subject_id uuid [not null]
+  event_type varchar(32) [not null]
+  occurred_at timestamp [not null]
+  deadline_at timestamp
+  evidence_artifact_id uuid
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, compliance_event_id) [pk]
+    (tenant_id, compliance_obligation_id, subject_type, subject_id, occurred_at)
+  }
+}
+
+Table audit_event {
+  tenant_id uuid [not null]
+  audit_event_id uuid [not null]
+  actor_principal_id uuid
+  actor_agent_run_id uuid
+  action varchar(96) [not null]
+  entity_type varchar(64) [not null]
+  entity_id uuid [not null]
+  before_hash char(64)
+  after_hash char(64)
+  request_id varchar(128)
+  ip_token varchar(256)
+  occurred_at timestamp [not null]
+  detail_json jsonb [not null]
+
+  Indexes {
+    (tenant_id, audit_event_id) [pk]
+    (tenant_id, entity_type, entity_id, occurred_at)
+  }
+}
+
+Table source_artifact {
+  tenant_id uuid [not null]
+  source_artifact_id uuid [not null]
+  artifact_type varchar(48) [not null]
+  title varchar(512) [not null]
+  publisher_party_id uuid
+  uri varchar(1024)
+  object_uri varchar(512)
+  media_type varchar(128)
+  content_hash char(64) [not null]
+  published_at timestamp
+  retrieved_at timestamp [not null]
+  data_classification data_classification [not null]
+
+  Indexes {
+    (tenant_id, source_artifact_id) [pk]
+    (tenant_id, content_hash) [unique]
+  }
+}
+
+Table ingestion_run {
+  tenant_id uuid [not null]
+  ingestion_run_id uuid [not null]
+  source_artifact_id uuid [not null]
+  pipeline_name varchar(128) [not null]
+  pipeline_version varchar(64) [not null]
+  idempotency_key varchar(256) [not null]
+  started_at timestamp [not null]
+  completed_at timestamp
+  status fact_status [not null]
+  record_count bigint
+  reject_count bigint
+  output_hash char(64)
+
+  Indexes {
+    (tenant_id, ingestion_run_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+  }
+}
+
+Table lineage_edge {
+  tenant_id uuid [not null]
+  lineage_edge_id uuid [not null]
+  edge_set_id uuid [not null]
+  from_entity_type varchar(64) [not null]
+  from_entity_id uuid [not null]
+  to_entity_type varchar(64) [not null]
+  to_entity_id uuid [not null]
+  transformation_name varchar(128) [not null]
+  transformation_version varchar(64) [not null]
+  ordinal int [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, lineage_edge_id) [pk]
+    (tenant_id, edge_set_id, ordinal) [unique]
+    (tenant_id, to_entity_type, to_entity_id)
+  }
+}
+
+Table analytics_metric_definition {
+  tenant_id uuid [not null]
+  metric_definition_id uuid [not null]
+  metric_code varchar(96) [not null]
+  semantic_version varchar(32) [not null]
+  definition_sql varchar [not null]
+  grain_json jsonb [not null]
+  measure_type varchar(24) [not null]
+  owner_principal_id uuid
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, metric_definition_id) [pk]
+    (tenant_id, metric_code, semantic_version) [unique]
+  }
+}
+
+Table analytics_fact_daily {
+  tenant_id uuid [not null]
+  analytics_fact_daily_id uuid [not null]
+  metric_definition_id uuid [not null]
+  benefit_plan_id uuid
+  metric_date date [not null]
+  dimensions_json jsonb [not null]
+  dimension_hash char(64) [not null]
+  value_decimal decimal(28,9)
+  value_count bigint
+  currency char(3)
+  source_watermark timestamp [not null]
+  build_run_id uuid [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, analytics_fact_daily_id) [pk]
+    (tenant_id, metric_definition_id, metric_date, dimension_hash, build_run_id) [unique]
+  }
+}
+
+Table principal {
+  tenant_id uuid [not null]
+  principal_id uuid [not null]
+  principal_type varchar(24) [not null, note: 'human, service, agent']
+  external_subject varchar(256)
+  display_name varchar(256) [not null]
+  status varchar(24) [not null]
+  created_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, principal_id) [pk]
+    (tenant_id, external_subject) [unique]
+  }
+}
+
+Table role_assignment {
+  tenant_id uuid [not null]
+  role_assignment_id uuid [not null]
+  principal_id uuid [not null]
+  role_code varchar(64) [not null]
+  scope_type varchar(48) [not null]
+  scope_id uuid
+  constraints_json jsonb [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, role_assignment_id) [pk]
+    (tenant_id, principal_id, role_code, scope_type, scope_id, valid_from)
+  }
+}
+
+Table agent_definition {
+  tenant_id uuid [not null]
+  agent_definition_id uuid [not null]
+  agent_code varchar(64) [not null]
+  version varchar(64) [not null]
+  purpose varchar(1024) [not null]
+  model_provider varchar(64)
+  model_name varchar(128)
+  model_version varchar(128)
+  system_prompt_hash char(64) [not null]
+  tool_manifest_hash char(64) [not null]
+  input_schema jsonb [not null]
+  output_schema jsonb [not null]
+  data_classification_ceiling data_classification [not null]
+  active boolean [not null]
+
+  Indexes {
+    (tenant_id, agent_definition_id) [pk]
+    (tenant_id, agent_code, version) [unique]
+  }
+}
+
+Table agent_policy {
+  tenant_id uuid [not null]
+  agent_policy_id uuid [not null]
+  agent_definition_id uuid [not null]
+  autonomy_level varchar(24) [not null, note: 'propose, act_with_review, act, suspended']
+  allowed_actions jsonb [not null]
+  denied_actions jsonb [not null]
+  consequential_action_policy jsonb [not null]
+  phi_policy jsonb [not null]
+  spend_limit_amount bigint [note: 'ISO-4217 minor units']
+  currency char(3)
+  set_by_principal_id uuid [not null]
+  valid_from timestamp [not null]
+  valid_to timestamp
+  recorded_at timestamp [not null]
+  superseded_at timestamp
+
+  Indexes {
+    (tenant_id, agent_policy_id) [pk]
+    (tenant_id, agent_definition_id, valid_from, recorded_at) [unique]
+  }
+}
+
+Table agent_run {
+  tenant_id uuid [not null]
+  agent_run_id uuid [not null]
+  agent_definition_id uuid [not null]
+  agent_policy_id uuid [not null]
+  initiating_principal_id uuid [not null]
+  parent_agent_run_id uuid
+  correlation_id varchar(128) [not null]
+  idempotency_key varchar(256) [not null]
+  goal varchar(2048) [not null]
+  subject_type varchar(48)
+  subject_id uuid
+  status agent_run_status [not null]
+  model_name varchar(128)
+  model_version varchar(128)
+  prompt_hash char(64) [not null]
+  context_manifest_hash char(64) [not null]
+  started_at timestamp [not null]
+  ended_at timestamp
+  input_tokens bigint [not null]
+  output_tokens bigint [not null]
+  cost_amount decimal(19,6) [not null]
+  currency char(3) [not null]
+  outcome_summary varchar(2048)
+
+  Indexes {
+    (tenant_id, agent_run_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+    (tenant_id, agent_definition_id, started_at)
+  }
+}
+
+Table agent_step {
+  tenant_id uuid [not null]
+  agent_step_id uuid [not null]
+  agent_run_id uuid [not null]
+  ordinal int [not null]
+  step_type varchar(24) [not null, note: 'plan, tool, evidence, decision, gate, refusal']
+  tool_definition_id uuid
+  input_hash char(64) [not null]
+  output_hash char(64)
+  rationale varchar(2048)
+  status varchar(24) [not null]
+  started_at timestamp [not null]
+  ended_at timestamp
+
+  Indexes {
+    (tenant_id, agent_step_id) [pk]
+    (tenant_id, agent_run_id, ordinal) [unique]
+  }
+}
+
+Table tool_definition {
+  tenant_id uuid [not null]
+  tool_definition_id uuid [not null]
+  tool_code varchar(96) [not null]
+  version varchar(64) [not null]
+  operation_type varchar(24) [not null, note: 'read, propose, write, external']
+  input_schema jsonb [not null]
+  output_schema jsonb [not null]
+  required_scopes jsonb [not null]
+  consequential boolean [not null]
+  idempotency_supported boolean [not null]
+
+  Indexes {
+    (tenant_id, tool_definition_id) [pk]
+    (tenant_id, tool_code, version) [unique]
+  }
+}
+
+Table tool_invocation {
+  tenant_id uuid [not null]
+  tool_invocation_id uuid [not null]
+  agent_step_id uuid [not null]
+  tool_definition_id uuid [not null]
+  idempotency_key varchar(256)
+  request_json jsonb [not null]
+  request_hash char(64) [not null]
+  response_json jsonb
+  response_hash char(64)
+  status varchar(24) [not null]
+  started_at timestamp [not null]
+  ended_at timestamp
+  external_request_id varchar(128)
+
+  Indexes {
+    (tenant_id, tool_invocation_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+  }
+}
+
+Table agent_evidence {
+  tenant_id uuid [not null]
+  agent_evidence_id uuid [not null]
+  agent_run_id uuid [not null]
+  agent_step_id uuid
+  source_entity_type varchar(64) [not null]
+  source_entity_id uuid [not null]
+  source_version varchar(128)
+  source_hash char(64) [not null]
+  locator varchar(512)
+  excerpt_hash char(64)
+  data_classification data_classification [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, agent_evidence_id) [pk]
+    (tenant_id, agent_run_id, source_entity_type, source_entity_id)
+  }
+}
+
+Table agent_proposal {
+  tenant_id uuid [not null]
+  agent_proposal_id uuid [not null]
+  agent_run_id uuid [not null]
+  action_type varchar(64) [not null]
+  subject_type varchar(48) [not null]
+  subject_id uuid [not null]
+  payload_json jsonb [not null]
+  payload_hash char(64) [not null]
+  confidence decimal(6,5) [not null]
+  consequential boolean [not null]
+  status decision_status [not null]
+  created_at timestamp [not null]
+  expires_at timestamp
+
+  Indexes {
+    (tenant_id, agent_proposal_id) [pk]
+    (tenant_id, agent_run_id, action_type, payload_hash) [unique]
+  }
+}
+
+Table approval_gate {
+  tenant_id uuid [not null]
+  approval_gate_id uuid [not null]
+  agent_proposal_id uuid [not null]
+  gate_type varchar(32) [not null, note: 'human, dual_control, policy, clinical, finance']
+  required_role_code varchar(64)
+  status decision_status [not null]
+  decided_by_principal_id uuid
+  decision_reason varchar(2048)
+  requested_at timestamp [not null]
+  decided_at timestamp
+
+  Indexes {
+    (tenant_id, approval_gate_id) [pk]
+    (tenant_id, agent_proposal_id, gate_type) [unique]
+  }
+}
+
+Table action_execution {
+  tenant_id uuid [not null]
+  action_execution_id uuid [not null]
+  agent_proposal_id uuid [not null]
+  tool_invocation_id uuid
+  idempotency_key varchar(256) [not null]
+  status varchar(24) [not null]
+  target_entity_type varchar(64) [not null]
+  target_entity_id uuid
+  before_hash char(64)
+  after_hash char(64)
+  executed_at timestamp
+  compensated_by_execution_id uuid
+
+  Indexes {
+    (tenant_id, action_execution_id) [pk]
+    (tenant_id, idempotency_key) [unique]
+  }
+}
+
+Table agent_evaluation_case {
+  tenant_id uuid [not null]
+  evaluation_case_id uuid [not null]
+  suite_code varchar(64) [not null]
+  case_version varchar(32) [not null]
+  category varchar(64) [not null]
+  input_json jsonb [not null]
+  expected_json jsonb [not null]
+  expected_tools jsonb [not null]
+  expects_refusal boolean [not null]
+  data_classification data_classification [not null]
+
+  Indexes {
+    (tenant_id, evaluation_case_id) [pk]
+    (tenant_id, suite_code, case_version, evaluation_case_id) [unique]
+  }
+}
+
+Table agent_evaluation_result {
+  tenant_id uuid [not null]
+  evaluation_result_id uuid [not null]
+  evaluation_case_id uuid [not null]
+  agent_run_id uuid [not null]
+  scorer_version varchar(64) [not null]
+  passed boolean [not null]
+  score decimal(6,5) [not null]
+  result_json jsonb [not null]
+  recorded_at timestamp [not null]
+
+  Indexes {
+    (tenant_id, evaluation_result_id) [pk]
+    (tenant_id, evaluation_case_id, agent_run_id, scorer_version) [unique]
+  }
+}
+
+Ref: party.tenant_id > tenant.tenant_id
+Ref: party_identifier.(tenant_id, party_id) > party.(tenant_id, party_id)
+Ref: agreement.(tenant_id, buyer_party_id) > party.(tenant_id, party_id)
+Ref: agreement.(tenant_id, seller_party_id) > party.(tenant_id, party_id)
+Ref: agreement.(tenant_id, parent_agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: agreement_term.(tenant_id, agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: agreement_term.(tenant_id, source_artifact_id) > source_artifact.(tenant_id, source_artifact_id)
+Ref: benefit_plan.(tenant_id, sponsor_party_id) > party.(tenant_id, party_id)
+Ref: benefit_plan.(tenant_id, client_agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: benefit_plan.(tenant_id, configuration_release_id) > configuration_release.(tenant_id, configuration_release_id)
+Ref: benefit_plan.(tenant_id, formulary_id) > formulary.(tenant_id, formulary_id)
+Ref: benefit_plan.(tenant_id, network_id) > network.(tenant_id, network_id)
+Ref: benefit_rule.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: person.tenant_id > tenant.tenant_id
+Ref: phi.member_identity.(tenant_id, person_id) > person.(tenant_id, person_id)
+Ref: member.(tenant_id, person_id) > person.(tenant_id, person_id)
+Ref: member.(tenant_id, sponsor_party_id) > party.(tenant_id, party_id)
+Ref: member.(tenant_id, subscriber_member_id) > member.(tenant_id, member_id)
+Ref: eligibility_file.(tenant_id, sponsor_party_id) > party.(tenant_id, party_id)
+Ref: eligibility_event.(tenant_id, eligibility_file_id) > eligibility_file.(tenant_id, eligibility_file_id)
+Ref: eligibility_event.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: eligibility_event.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: eligibility_span.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: eligibility_span.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: eligibility_span.(tenant_id, source_event_id) > eligibility_event.(tenant_id, eligibility_event_id)
+Ref: formulary.(tenant_id, configuration_release_id) > configuration_release.(tenant_id, configuration_release_id)
+Ref: formulary_coverage.(tenant_id, formulary_id) > formulary.(tenant_id, formulary_id)
+Ref: formulary_coverage.drug_product_id > drug_product.drug_product_id
+Ref: pharmacy.(tenant_id, party_id) > party.(tenant_id, party_id)
+Ref: network.(tenant_id, configuration_release_id) > configuration_release.(tenant_id, configuration_release_id)
+Ref: network_participation.(tenant_id, network_id) > network.(tenant_id, network_id)
+Ref: network_participation.(tenant_id, pharmacy_id) > pharmacy.(tenant_id, pharmacy_id)
+Ref: network_participation.(tenant_id, pharmacy_agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: network_participation.(tenant_id, reimbursement_schedule_id) > reimbursement_schedule.(tenant_id, reimbursement_schedule_id)
+Ref: reimbursement_schedule.(tenant_id, agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: product_price.(tenant_id, price_list_id) > price_list.(tenant_id, price_list_id)
+Ref: product_price.drug_product_id > drug_product.drug_product_id
+Ref: mac_appeal.(tenant_id, pharmacy_id) > pharmacy.(tenant_id, pharmacy_id)
+Ref: mac_appeal.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: mac_appeal.drug_product_id > drug_product.drug_product_id
+Ref: claim.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: claim.(tenant_id, eligibility_span_id) > eligibility_span.(tenant_id, eligibility_span_id)
+Ref: claim.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: claim.(tenant_id, pharmacy_id) > pharmacy.(tenant_id, pharmacy_id)
+Ref: claim.drug_product_id > drug_product.drug_product_id
+Ref: claim.(tenant_id, client_agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: claim.(tenant_id, configuration_release_id) > configuration_release.(tenant_id, configuration_release_id)
+Ref: claim_amount.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: adjudication_trace.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: accumulator_account.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: accumulator_account.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: accumulator_event.(tenant_id, accumulator_account_id) > accumulator_account.(tenant_id, accumulator_account_id)
+Ref: accumulator_event.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: formulary_coverage.(tenant_id, criteria_set_id) > clinical_criteria_set.(tenant_id, criteria_set_id)
+Ref: utilization_management_case.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: utilization_management_case.drug_product_id > drug_product.drug_product_id
+Ref: utilization_management_case.(tenant_id, criteria_set_id) > clinical_criteria_set.(tenant_id, criteria_set_id)
+Ref: clinical_evidence.(tenant_id, um_case_id) > utilization_management_case.(tenant_id, um_case_id)
+Ref: clinical_decision.(tenant_id, um_case_id) > utilization_management_case.(tenant_id, um_case_id)
+Ref: dur_signal.(tenant_id, member_id) > member.(tenant_id, member_id)
+Ref: dur_signal.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: rebate_agreement.(tenant_id, agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: rebate_term.(tenant_id, rebate_agreement_id) > rebate_agreement.(tenant_id, rebate_agreement_id)
+Ref: rebate_accrual_event.(tenant_id, claim_id) > claim.(tenant_id, claim_id)
+Ref: rebate_accrual_event.(tenant_id, rebate_term_id) > rebate_term.(tenant_id, rebate_term_id)
+Ref: invoice.(tenant_id, agreement_id) > agreement.(tenant_id, agreement_id)
+Ref: invoice_line.(tenant_id, invoice_id) > invoice.(tenant_id, invoice_id)
+Ref: journal_line.(tenant_id, journal_entry_id) > journal_entry.(tenant_id, journal_entry_id)
+Ref: journal_line.(tenant_id, ledger_account_id) > ledger_account.(tenant_id, ledger_account_id)
+Ref: payment_event.(tenant_id, invoice_id) > invoice.(tenant_id, invoice_id)
+Ref: work_item.(tenant_id, service_case_id) > service_case.(tenant_id, service_case_id)
+Ref: compliance_event.(tenant_id, compliance_obligation_id) > compliance_obligation.(tenant_id, compliance_obligation_id)
+Ref: ingestion_run.(tenant_id, source_artifact_id) > source_artifact.(tenant_id, source_artifact_id)
+Ref: analytics_fact_daily.(tenant_id, metric_definition_id) > analytics_metric_definition.(tenant_id, metric_definition_id)
+Ref: analytics_fact_daily.(tenant_id, benefit_plan_id) > benefit_plan.(tenant_id, benefit_plan_id)
+Ref: role_assignment.(tenant_id, principal_id) > principal.(tenant_id, principal_id)
+Ref: agent_policy.(tenant_id, agent_definition_id) > agent_definition.(tenant_id, agent_definition_id)
+Ref: agent_policy.(tenant_id, set_by_principal_id) > principal.(tenant_id, principal_id)
+Ref: agent_run.(tenant_id, agent_definition_id) > agent_definition.(tenant_id, agent_definition_id)
+Ref: agent_run.(tenant_id, agent_policy_id) > agent_policy.(tenant_id, agent_policy_id)
+Ref: agent_run.(tenant_id, initiating_principal_id) > principal.(tenant_id, principal_id)
+Ref: agent_run.(tenant_id, parent_agent_run_id) > agent_run.(tenant_id, agent_run_id)
+Ref: agent_step.(tenant_id, agent_run_id) > agent_run.(tenant_id, agent_run_id)
+Ref: agent_step.(tenant_id, tool_definition_id) > tool_definition.(tenant_id, tool_definition_id)
+Ref: tool_invocation.(tenant_id, agent_step_id) > agent_step.(tenant_id, agent_step_id)
+Ref: tool_invocation.(tenant_id, tool_definition_id) > tool_definition.(tenant_id, tool_definition_id)
+Ref: agent_evidence.(tenant_id, agent_run_id) > agent_run.(tenant_id, agent_run_id)
+Ref: agent_evidence.(tenant_id, agent_step_id) > agent_step.(tenant_id, agent_step_id)
+Ref: agent_proposal.(tenant_id, agent_run_id) > agent_run.(tenant_id, agent_run_id)
+Ref: approval_gate.(tenant_id, agent_proposal_id) > agent_proposal.(tenant_id, agent_proposal_id)
+Ref: approval_gate.(tenant_id, decided_by_principal_id) > principal.(tenant_id, principal_id)
+Ref: action_execution.(tenant_id, agent_proposal_id) > agent_proposal.(tenant_id, agent_proposal_id)
+Ref: action_execution.(tenant_id, tool_invocation_id) > tool_invocation.(tenant_id, tool_invocation_id)
+Ref: agent_evaluation_result.(tenant_id, evaluation_case_id) > agent_evaluation_case.(tenant_id, evaluation_case_id)
+Ref: agent_evaluation_result.(tenant_id, agent_run_id) > agent_run.(tenant_id, agent_run_id)

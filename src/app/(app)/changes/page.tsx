@@ -103,7 +103,7 @@ export default async function ChangesPage() {
 
   return (
     <div className="space-y-5">
-      <SectionTitle description="Change the benefit and see the consequence before it is real. Every stored claim is re-adjudicated against the proposed configuration, in date order, with each member's accumulators rebuilt from scratch. Projections run the same engine over a sample and say so; a measured run is the whole book, with no trend factor anywhere.">
+      <SectionTitle description={"Preview benefit changes before committing. Full runs replay the book; projections use a labeled sample."}>
         Change console
       </SectionTitle>
 

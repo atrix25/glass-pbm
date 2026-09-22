@@ -21,7 +21,7 @@ export default async function MethodologyPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="What in this system is real, what is transcribed from a document, and what is invented. The distinction matters more than the numbers: a claim priced off a benchmark nobody can see is not transparent no matter how many decimal places it carries.">
+      <SectionTitle description={"Data sources, model assumptions and known limits."}>
         Methodology
       </SectionTitle>
 
@@ -117,7 +117,7 @@ export default async function MethodologyPage() {
       {/* Lesser of */}
       <Card>
         <CardHeader
-          title="What the plan pays for the ingredient"
+          title="Ingredient pricing"
           description="Exhibit C prices off AWP with a MAC ceiling, capped by the pharmacy's cash price. The engine computes every applicable arm and takes the lowest, then records which arm won and by how much."
         />
         <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed text-ink-700">
@@ -143,7 +143,7 @@ export default async function MethodologyPage() {
       <div id="awp" className="scroll-mt-24" />
       <Card className="border-amber-600/30">
         <CardHeader
-          title="How AWP is modeled"
+          title="AWP model"
           description="Average Wholesale Price is the benchmark every discount in this contract is quoted against, and it is not published. Medi-Span and First Databank license it. Exhibit C states that Medi-Span is Navitus' only source of drug pricing data and is used for all claims adjudication, which means the plan sponsor is contractually bound to a number it cannot audit."
         />
         <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed text-ink-700">
@@ -215,7 +215,7 @@ export default async function MethodologyPage() {
       {/* Population */}
       <Card>
         <CardHeader
-          title="How the membership was generated"
+          title="Population model"
           description="Calibrated against ET-8933, the state's published pharmacy fact sheet: 211,424 commercial participants filled 3,062,138 prescriptions costing $321,911,357 in 2025. That is 14.5 prescriptions and $1,523 per participant, and those two numbers are what the generated book is tuned to reproduce at a smaller scale."
         />
         <Table>
@@ -304,7 +304,7 @@ export default async function MethodologyPage() {
       {/* Limitations */}
       <Card className="border-rose-600/25">
         <CardHeader
-          title="What this does not establish"
+          title="Model limits"
           description="The limitations that would matter if this were run for a real plan, stated plainly rather than left for someone to find."
         />
         <ul className="divide-y divide-ink-100">

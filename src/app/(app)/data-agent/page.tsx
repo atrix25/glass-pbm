@@ -19,7 +19,7 @@ const SUGGESTIONS = [
 export default function DataAgentPage() {
   return (
     <div className="space-y-4">
-      <SectionTitle description="Ask a book-of-business question or request a report briefing. The agent calls the same sponsor and contract queries the dashboards use — every figure is tool-backed, never invented.">
+      <SectionTitle description={"Explore plan data and create report briefings."}>
         Data agent
       </SectionTitle>
 

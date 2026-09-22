@@ -38,7 +38,7 @@ export default async function SettlementPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="A PBM is a payments company wearing a clinical hat. It collects from the plan monthly, pays the network twice a month, and chases manufacturers for money it booked two quarters ago. Under pass-through the first two are equal by construction. The third is where the industry makes its money.">
+      <SectionTitle description={"Sponsor invoices, pharmacy payments and rebate collections. Scheduled payments are not bank confirmations."}>
         Settlement
       </SectionTitle>
 

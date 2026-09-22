@@ -1,3 +1,4 @@
+import { demoFeaturesEnabled } from "@/lib/config";
 import Link from "next/link";
 import { getClock, getRole } from "@/lib/session";
 import { RoleSwitcher } from "@/components/role-switcher";
@@ -20,6 +21,7 @@ const GROUPS: NavGroup[] = [
     title: "Plan sponsor",
     items: [
       { href: "/sponsor", label: "Dashboard", icon: "sponsor" },
+      { href: "/sponsor/assurance", label: "Assurance", icon: "integrity" },
       { href: "/claims", label: "Claim ledger", icon: "claims" },
       { href: "/members", label: "Membership", icon: "members" },
       { href: "/experience", label: "Member experience", icon: "experience" },
@@ -57,8 +59,11 @@ const GROUPS: NavGroup[] = [
   {
     title: "Agents",
     items: [
+      { href: "/account-management", label: "Account management", icon: "changes" },
+      ...(demoFeaturesEnabled() ? [{ href: "/rebate-protection", label: "Rebate protection", icon: "integrity" as const }] : []),
       { href: "/agents", label: "Agent operations", icon: "agents" },
-      { href: "/assistant", label: "AI member service", icon: "assistant" },
+      { href: "/assistant", label: "Member service", icon: "assistant" },
+      ...(demoFeaturesEnabled() ? [{ href: "/member-calls", label: "Member calls", icon: "assistant" as const }] : []),
       { href: "/data-agent", label: "Data agent", icon: "dataAgent" },
     ],
   },
@@ -87,20 +92,7 @@ export default async function AppLayout({
 
   const sidebar = (
     <>
-      <Link
-        href="/sponsor"
-        className="flex items-center gap-2.5 border-b border-ink-200/70 px-4 py-[13px]"
-      >
-        <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-glass-400 to-glass-700">
-          <span className="h-2.5 w-2.5 rounded-[2px] border-[1.5px] border-white/90" />
-        </span>
-        <span className="text-[14px] font-semibold tracking-tight text-ink-900">
-          Glass
-        </span>
-        <span className="mr-8 ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 lg:mr-0">
-          ETG0013
-        </span>
-      </Link>
+      <Link href="/sponsor" className="border-b border-ink-100 px-6 py-6 text-2xl font-semibold tracking-[-1px] text-ink-900">glass <span className="ml-3 text-[10px] font-medium tracking-normal text-rose-700">CVS Caremark</span></Link>
 
       <div className="scroll-thin flex-1 overflow-y-auto">
         <SideNav groups={GROUPS} />
@@ -114,11 +106,11 @@ export default async function AppLayout({
 
   return (
     <AppShell sidebar={sidebar}>
-      <DemoRail />
-      <div className="border-b border-ink-200/70 bg-white/60 px-4 py-2 sm:px-6 lg:px-8">
-        <ClockBar clock={clock} />
-      </div>
-      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+      <details className="mx-auto mt-3 w-full max-w-[1180px] px-4 text-[11px] text-ink-500" data-operations-chrome>
+        <summary className="cursor-pointer py-1">Demo controls · {clock.now.toISOString().slice(0, 10)}{clock.pinned ? " · Pinned" : ""}</summary>
+        <div className="mt-2 overflow-hidden rounded-lg border border-ink-200 bg-white"><DemoRail /><div className="p-3"><ClockBar clock={clock} /></div></div>
+      </details>
+      <main id="main-content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
         <div className="mx-auto w-full max-w-[1180px]">{children}</div>
       </main>
 

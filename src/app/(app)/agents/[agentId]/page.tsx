@@ -1,3 +1,5 @@
+import { demoFeaturesEnabled } from "@/lib/config";
+import { recentSimulations } from "@/lib/rebate-protection/service";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -46,6 +48,11 @@ export default async function AgentDetailPage({
   params: Promise<{ agentId: string }>;
 }) {
   const { agentId } = await params;
+  if(agentId === "rebate-protection") {
+    if(!demoFeaturesEnabled())notFound();
+    const recent=await recentSimulations();
+    return <div className="space-y-6"><SectionTitle description="Rebate operations · Finance. Scripted sandbox execution; no operational assignments.">Rebate protection</SectionTitle><Card><div className="p-6"><p>Checks separate manufacturer and employer obligations, prepares corrections and requires simulated review for consequential changes.</p><Link href="/rebate-protection" className="mt-4 block text-glass-700">Open rebate protection →</Link><p className="mt-3 text-sm text-ink-500">Synthetic results are excluded from operational work and savings totals.</p></div></Card><Card><div className="space-y-3 p-6"><h2 className="font-semibold">Sandbox runs</h2>{recent.length?recent.map(r=><Link key={r.id} href={`/agents/runs/${r.id}`} className="block text-sm text-glass-700">{r.scenarioId} · {r.createdAt.toISOString()}</Link>):<p>No simulations recorded.</p>}</div></Card></div>;
+  }
   const clock = await getClock();
   const detail = await getAgentDetail(agentId, clock);
   if (!detail) notFound();
@@ -74,6 +81,7 @@ export default async function AgentDetailPage({
 
   return (
     <div className="space-y-6">
+      {agentId === "account-management" && <Link href="/account-management" className="inline-flex rounded-lg bg-glass-700 px-4 py-3 text-sm text-white">Open benefit goals →</Link>}
       <div>
         <Link
           href="/agents"
@@ -166,7 +174,7 @@ export default async function AgentDetailPage({
 
       <Card>
         <CardHeader
-          title="What it may never do"
+          title="Guardrails"
           description="These hold at every autonomy level. The two enforcement points are different: the tool list is checked when a tool is called, and the consequential actions are checked when a proposal is written."
         />
         <ul className="divide-y divide-ink-100">
@@ -266,7 +274,7 @@ export default async function AgentDetailPage({
           </Table>
           <div className="border-t border-ink-200/70 bg-ink-50/50 px-5 py-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="warn">Held for the plan sponsor</Badge>
+              <Badge tone="neutral">{planDesign.status}</Badge>
               <span className="text-[13px] font-medium text-ink-900">
                 {planDesign.headline}
               </span>
@@ -275,11 +283,11 @@ export default async function AgentDetailPage({
               {planDesign.rationale}
             </p>
             <p className="mt-2 text-[12.5px] text-ink-600">
-              Nothing here has been applied. Take any option to the{" "}
+              Review the proposal in the{" "}
               <Link href="/changes" className="text-glass-700 hover:text-glass-900">
                 change console
               </Link>{" "}
-              to run it yourself and commit it.
+              to confirm its current workflow state.
             </p>
           </div>
         </Card>
@@ -311,7 +319,7 @@ export default async function AgentDetailPage({
       {escalations.length > 0 ? (
         <Card>
           <CardHeader
-            title="Where it stopped"
+            title="Escalated & refused runs"
             description="The runs where the agent declined to act. This is the half of the log worth reading: an agent that never escalates is not being careful, it is guessing."
           />
           <RunTable rows={escalations} />
@@ -368,7 +376,7 @@ function RunTable({ rows }: { rows: RunRow[] }) {
               </span>
               {r.held ? (
                 <Badge tone="warn" className="mt-1">
-                  held for a person
+                  awaiting review
                 </Badge>
               ) : null}
             </Td>

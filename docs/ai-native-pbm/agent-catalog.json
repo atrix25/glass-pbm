@@ -1,0 +1,5330 @@
+{
+  "$schema": "./agent-catalog.schema.json",
+  "schemaVersion": "1.0.0",
+  "catalogId": "ai-native-pbm-commercial-full-service",
+  "title": "CVS Caremark small-group offering operating agent catalog",
+  "domainIds": [
+    "commercial-client",
+    "implementation-eligibility",
+    "claims-benefit",
+    "clinical-um",
+    "formulary",
+    "pharmacy-network",
+    "pricing-mac",
+    "manufacturer-rebates",
+    "finance-settlement",
+    "stakeholder-service",
+    "data-analytics",
+    "compliance-security",
+    "quality-resilience"
+  ],
+  "currentGlassAgentIds": [
+    "pa-intake",
+    "plan-design",
+    "integrity-triage",
+    "eligibility-resolver",
+    "appeal-drafter",
+    "member-service",
+    "data-agent",
+    "account-management",
+    "rebate-protection"
+  ],
+  "domains": [
+    {
+      "id": "commercial-client",
+      "name": "Commercial and client management",
+      "commercialPurpose": "Sell and retain the highly automated, transparent CVS Caremark Glass offering for small group employers.",
+      "processes": [
+        {
+          "id": "commercial-client.market-opportunity-qualification",
+          "name": "Market opportunity qualification",
+          "domain": "commercial-client",
+          "description": "Qualify small group employer opportunities for the CVS Caremark Glass offering against approved group eligibility, funding arrangements, channel, launch geography, and service economics.",
+          "trigger": {
+            "type": "event",
+            "event": "Lead or broker opportunity received"
+          },
+          "owner": "Commercial strategy",
+          "accountableAuthority": "Chief commercial officer",
+          "inputs": [
+            "CRM opportunity",
+            "census and claims summary",
+            "broker requirements"
+          ],
+          "outputs": [
+            "qualification score",
+            "pursuit decision brief"
+          ],
+          "sourceOfTruth": [
+            "CRM",
+            "approved market segmentation"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "approved opportunity scoring model"
+          },
+          "tools": [
+            {
+              "name": "commercial-workbench",
+              "access": "write",
+              "scope": "opportunity scoring and notes"
+            }
+          ],
+          "evidence": [
+            "scored criteria and source links"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract"
+          ],
+          "riskTier": "moderate",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Sales leadership",
+            "conditions": [
+              "pursue, no-bid, or invest decision"
+            ]
+          },
+          "sla": {
+            "target": "2 business days",
+            "escalation": "Commercial operations leader"
+          },
+          "controls": [
+            "Use approved scoring weights and current pipeline permissions"
+          ],
+          "metrics": [
+            {
+              "name": "qualified-opportunity win rate",
+              "target": ">= 30%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Route to manual qualification",
+            "escalation": "Missing economics to finance",
+            "recovery": "Rescore after data correction"
+          },
+          "downstreamEvents": [
+            "commercial.rfp-started"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "commercial-client.rfp-response",
+          "name": "RFP response management",
+          "domain": "commercial-client",
+          "description": "Prepare evidence-backed small-group employer and broker proposals, standard questionnaires, and RFP responses for the Caremark Glass offering.",
+          "trigger": {
+            "type": "event",
+            "event": "RFP accepted for pursuit"
+          },
+          "owner": "Proposal management",
+          "accountableAuthority": "Chief commercial officer",
+          "inputs": [
+            "RFP documents",
+            "approved content library",
+            "deal assumptions"
+          ],
+          "outputs": [
+            "requirements matrix",
+            "response package",
+            "exception log"
+          ],
+          "sourceOfTruth": [
+            "RFP repository",
+            "approved product and legal content"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "proposal-workspace",
+              "access": "write",
+              "scope": "draft answers and trace requirements"
+            }
+          ],
+          "evidence": [
+            "answer-to-source citations",
+            "review history"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Legal, product, and commercial owners",
+            "conditions": [
+              "external submission"
+            ]
+          },
+          "sla": {
+            "target": "By procurement deadline",
+            "escalation": "Executive deal sponsor"
+          },
+          "controls": [
+            "No unsupported capability, guarantee, or security claim"
+          ],
+          "metrics": [
+            {
+              "name": "requirements answered and approved",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Assign unanswered items to human owners",
+            "escalation": "Material exception to deal sponsor",
+            "recovery": "Version and reapprove corrected response"
+          },
+          "downstreamEvents": [
+            "commercial.proposal-requested"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "commercial-client.proposal-underwriting",
+          "name": "Proposal pricing and underwriting",
+          "domain": "commercial-client",
+          "description": "Compare approved Caremark TrueCost and drug-level rebate configurations using 100% rebate pass-through, separately disclosed fees, net cost, and cost to serve.",
+          "trigger": {
+            "type": "request",
+            "event": "Priced proposal requested"
+          },
+          "owner": "Commercial underwriting",
+          "accountableAuthority": "Chief financial officer",
+          "inputs": [
+            "claims and census",
+            "benefit assumptions",
+            "network and rebate forecasts",
+            "expense loads",
+            "Approved Caremark TrueCost or drug-level rebate terms and small-group product eligibility"
+          ],
+          "outputs": [
+            "priced offer",
+            "margin bridge",
+            "sensitivity cases"
+          ],
+          "sourceOfTruth": [
+            "versioned underwriting model",
+            "approved rate cards"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned underwriting engine"
+          },
+          "tools": [
+            {
+              "name": "underwriting-engine",
+              "access": "execute",
+              "scope": "calculate approved deal scenarios"
+            }
+          ],
+          "evidence": [
+            "input snapshot",
+            "calculation version",
+            "scenario outputs"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Finance pricing committee",
+            "conditions": [
+              "all external prices and nonstandard terms"
+            ]
+          },
+          "sla": {
+            "target": "5 business days",
+            "escalation": "VP underwriting"
+          },
+          "controls": [
+            "Margin floors, delegated limits, and independent model checks",
+            "Require 100% rebate pass-through and separately disclosed service fees; prohibit retained-rebate economics"
+          ],
+          "metrics": [
+            {
+              "name": "realized-to-underwritten margin variance",
+              "target": "<= 5%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold quote and calculate manually",
+            "escalation": "Model or data variance to finance",
+            "recovery": "Rerun from immutable input snapshot"
+          },
+          "downstreamEvents": [
+            "commercial.offer-approved"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "plan-design"
+          ]
+        },
+        {
+          "id": "commercial-client.contracting",
+          "name": "Contract negotiation and configuration",
+          "domain": "commercial-client",
+          "description": "Translate approved Caremark small-group terms into versioned pricing-model selection, 100% rebate pass-through, fees, benefit packages, member rebate elections, and obligations.",
+          "trigger": {
+            "type": "event",
+            "event": "Prospect selects offer for contracting"
+          },
+          "owner": "Contract management",
+          "accountableAuthority": "General counsel",
+          "inputs": [
+            "approved proposal",
+            "redlines",
+            "delegation matrix",
+            "Approved Caremark TrueCost or drug-level rebate terms and small-group product eligibility"
+          ],
+          "outputs": [
+            "executed contract",
+            "obligation register",
+            "configuration requirements"
+          ],
+          "sourceOfTruth": [
+            "contract lifecycle repository"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "contract-lifecycle-system",
+              "access": "write",
+              "scope": "clauses, approvals, and obligations"
+            }
+          ],
+          "evidence": [
+            "redline history",
+            "signatures",
+            "approval record"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Authorized legal and business signatories",
+            "conditions": [
+              "contract execution or amendment"
+            ]
+          },
+          "sla": {
+            "target": "Per deal close plan",
+            "escalation": "General counsel and deal sponsor"
+          },
+          "controls": [
+            "Clause playbook, signing authority, and obligation reconciliation",
+            "Require 100% rebate pass-through and separately disclosed service fees; prohibit retained-rebate economics"
+          ],
+          "metrics": [
+            {
+              "name": "executed obligations configured before launch",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Stop configuration of disputed term",
+            "escalation": "Unresolved variance to signatories",
+            "recovery": "Issue approved amendment or corrected configuration"
+          },
+          "downstreamEvents": [
+            "implementation.client-kickoff"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "commercial-client.performance-renewal",
+          "name": "Client performance and renewal",
+          "domain": "commercial-client",
+          "description": "Track contractual value, guarantees, satisfaction, risks, and renewal options across the client lifecycle.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Monthly review and renewal milestones"
+          },
+          "owner": "Account management",
+          "accountableAuthority": "Chief client officer",
+          "inputs": [
+            "service scorecard",
+            "financial results",
+            "guarantees",
+            "client feedback"
+          ],
+          "outputs": [
+            "business review",
+            "remediation plan",
+            "renewal strategy"
+          ],
+          "sourceOfTruth": [
+            "client contract",
+            "certified reporting marts",
+            "CRM"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "contract performance calculation service"
+          },
+          "tools": [
+            {
+              "name": "client-performance-hub",
+              "access": "write",
+              "scope": "scorecards, risks, and renewal actions"
+            }
+          ],
+          "evidence": [
+            "recomputable measures",
+            "meeting decisions"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Account executive and finance",
+            "conditions": [
+              "credits, concessions, or renewal offer"
+            ]
+          },
+          "sla": {
+            "target": "Reports by contractual due date",
+            "escalation": "Chief client officer"
+          },
+          "controls": [
+            "Use contract-specific definitions and certified data"
+          ],
+          "metrics": [
+            {
+              "name": "gross revenue retention",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Publish delayed-status notice, not estimates",
+            "escalation": "Guarantee risk to executive owner",
+            "recovery": "Restate from corrected certified data"
+          },
+          "downstreamEvents": [
+            "commercial.remediation-opened",
+            "commercial.renewal-started"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "plan-design",
+            "account-management"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "implementation-eligibility",
+      "name": "Implementation and eligibility",
+      "commercialPurpose": "Launch contracted benefits accurately and maintain timely, auditable member enrollment.",
+      "processes": [
+        {
+          "id": "implementation-eligibility.requirements-design",
+          "name": "Implementation requirements and design",
+          "domain": "implementation-eligibility",
+          "description": "Map small-group employer requirements to approved Caremark benefit packages, eligibility integrations, pricing models, and repeatable launch workflows.",
+          "trigger": {
+            "type": "event",
+            "event": "Executed contract handed to implementation"
+          },
+          "owner": "Implementation management",
+          "accountableAuthority": "VP implementation",
+          "inputs": [
+            "contract obligations",
+            "benefit specifications",
+            "eligibility rules",
+            "vendor interfaces"
+          ],
+          "outputs": [
+            "solution design",
+            "requirements trace",
+            "launch plan"
+          ],
+          "sourceOfTruth": [
+            "executed contract",
+            "implementation repository"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "implementation-workbench",
+              "access": "write",
+              "scope": "requirements, dependencies, and decisions"
+            }
+          ],
+          "evidence": [
+            "signed requirements trace"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "contract"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Client and PBM implementation leads",
+            "conditions": [
+              "baseline design and scope changes"
+            ]
+          },
+          "sla": {
+            "target": "Baseline within 10 business days",
+            "escalation": "Executive implementation sponsor"
+          },
+          "controls": [
+            "Every contractual obligation maps to an owner and test"
+          ],
+          "metrics": [
+            {
+              "name": "requirements traced to acceptance tests",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold affected configuration",
+            "escalation": "Unresolved requirement to governance",
+            "recovery": "Rebaseline approved design"
+          },
+          "downstreamEvents": [
+            "implementation.configuration-started"
+          ],
+          "currentGlassAgents": [
+            "plan-design"
+          ]
+        },
+        {
+          "id": "implementation-eligibility.benefit-configuration",
+          "name": "Benefit and group configuration",
+          "domain": "implementation-eligibility",
+          "description": "Configure groups, plans, networks, formularies, cost shares, accumulators, and effective dates from approved design.",
+          "trigger": {
+            "type": "event",
+            "event": "Configuration-ready requirements approved"
+          },
+          "owner": "Benefit configuration",
+          "accountableAuthority": "VP implementation",
+          "inputs": [
+            "approved solution design",
+            "product configuration templates"
+          ],
+          "outputs": [
+            "versioned plan configuration",
+            "configuration audit report"
+          ],
+          "sourceOfTruth": [
+            "benefit configuration repository"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "benefit configuration compiler and rules engine"
+          },
+          "tools": [
+            {
+              "name": "benefit-configurator",
+              "access": "write",
+              "scope": "approved client plan versions"
+            }
+          ],
+          "evidence": [
+            "source-to-config diff",
+            "compiler validation"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Configuration lead and client benefit owner",
+            "conditions": [
+              "production activation"
+            ]
+          },
+          "sla": {
+            "target": "Complete before testing gate",
+            "escalation": "Implementation director"
+          },
+          "controls": [
+            "Four-eyes review and effective-dated immutable versions"
+          ],
+          "metrics": [
+            {
+              "name": "configuration defects found after launch",
+              "target": "0 critical"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Retain last approved version",
+            "escalation": "Configuration conflict to benefit owner",
+            "recovery": "Correct, recompile, and rerun regression suite"
+          },
+          "downstreamEvents": [
+            "implementation.configuration-ready"
+          ],
+          "currentGlassAgents": [
+            "plan-design"
+          ]
+        },
+        {
+          "id": "implementation-eligibility.eligibility-ingestion",
+          "name": "Eligibility ingestion and reconciliation",
+          "domain": "implementation-eligibility",
+          "description": "Validate, match, apply, and reconcile enrollment transactions while preserving effective-dated coverage history.",
+          "trigger": {
+            "type": "event",
+            "event": "834, API, or enrollment file received"
+          },
+          "owner": "Eligibility operations",
+          "accountableAuthority": "Director eligibility",
+          "inputs": [
+            "enrollment transactions",
+            "group rules",
+            "member master"
+          ],
+          "outputs": [
+            "accepted updates",
+            "rejects",
+            "control-total reconciliation"
+          ],
+          "sourceOfTruth": [
+            "eligibility ledger",
+            "inbound interchange archive"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "eligibility rules and reconciliation engine"
+          },
+          "tools": [
+            {
+              "name": "eligibility-gateway",
+              "access": "execute",
+              "scope": "validate and apply authorized enrollment changes"
+            }
+          ],
+          "evidence": [
+            "transaction lineage",
+            "before-and-after coverage",
+            "control totals"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Eligibility specialist",
+            "conditions": [
+              "termination, retroactive loss, or unmatched sponsor instruction"
+            ]
+          },
+          "sla": {
+            "target": "95% within 4 hours",
+            "escalation": "Eligibility operations manager"
+          },
+          "controls": [
+            "Idempotency, control totals, effective dating, and termination hold"
+          ],
+          "metrics": [
+            {
+              "name": "clean transactions applied",
+              "target": ">= 99.5%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Quarantine invalid batch without partial commit",
+            "escalation": "Member-impacting rejects immediately",
+            "recovery": "Replay idempotently after correction"
+          },
+          "downstreamEvents": [
+            "eligibility.member-updated",
+            "eligibility.reject-created"
+          ],
+          "currentGlassAgents": [
+            "eligibility-resolver"
+          ]
+        },
+        {
+          "id": "implementation-eligibility.reject-resolution",
+          "name": "Eligibility reject resolution",
+          "domain": "implementation-eligibility",
+          "description": "Diagnose rejected enrollment instructions and propose or apply evidence-backed reversible corrections.",
+          "trigger": {
+            "type": "event",
+            "event": "Eligibility transaction rejected"
+          },
+          "owner": "Eligibility operations",
+          "accountableAuthority": "Director eligibility",
+          "inputs": [
+            "rejected transaction",
+            "member context",
+            "sponsor rules"
+          ],
+          "outputs": [
+            "diagnosis",
+            "correction or sponsor return",
+            "audit trail"
+          ],
+          "sourceOfTruth": [
+            "eligibility ledger",
+            "original sponsor instruction"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "eligibility-resolution-console",
+              "access": "write",
+              "scope": "reversible corrections and case routing"
+            }
+          ],
+          "evidence": [
+            "field-level support for each correction"
+          ],
+          "consequenceClasses": [
+            "coverage"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Eligibility specialist",
+            "conditions": [
+              "coverage termination or unsupported correction"
+            ]
+          },
+          "sla": {
+            "target": "85% within 1 business day",
+            "escalation": "Aged or access-impacting case to manager"
+          },
+          "controls": [
+            "Never invent member data; human authority for termination"
+          ],
+          "metrics": [
+            {
+              "name": "rejects resolved within one business day",
+              "target": ">= 85%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Return to sponsor with precise defect",
+            "escalation": "Urgent access issue to rapid response",
+            "recovery": "Reverse correction and replay source instruction"
+          },
+          "downstreamEvents": [
+            "eligibility.reject-resolved",
+            "service.member-outreach-needed"
+          ],
+          "currentGlassAgents": [
+            "eligibility-resolver",
+            "member-service"
+          ]
+        },
+        {
+          "id": "implementation-eligibility.launch-certification",
+          "name": "Launch testing and certification",
+          "domain": "implementation-eligibility",
+          "description": "Execute end-to-end claim, eligibility, accumulator, financial, reporting, and service acceptance tests before go-live.",
+          "trigger": {
+            "type": "event",
+            "event": "Configured client reaches test-ready gate"
+          },
+          "owner": "Implementation quality",
+          "accountableAuthority": "Executive implementation sponsor",
+          "inputs": [
+            "approved test plan",
+            "production-like configuration",
+            "expected results"
+          ],
+          "outputs": [
+            "test evidence",
+            "defect disposition",
+            "go-live recommendation"
+          ],
+          "sourceOfTruth": [
+            "test management repository",
+            "approved requirements"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims and financial calculation engines under test"
+          },
+          "tools": [
+            {
+              "name": "launch-certification-suite",
+              "access": "execute",
+              "scope": "isolated end-to-end acceptance scenarios"
+            }
+          ],
+          "evidence": [
+            "input-output fixtures",
+            "results",
+            "defect approvals"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Joint client/PBM go-live committee",
+            "conditions": [
+              "production launch"
+            ]
+          },
+          "sla": {
+            "target": "Exit before contractual go-live",
+            "escalation": "Executive sponsors"
+          },
+          "controls": [
+            "No critical open defects; representative positive and negative cases"
+          ],
+          "metrics": [
+            {
+              "name": "critical acceptance tests passed",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "No-go or controlled contingency plan",
+            "escalation": "Any critical defect to go-live committee",
+            "recovery": "Fix and rerun impacted regression set"
+          },
+          "downstreamEvents": [
+            "implementation.go-live-approved"
+          ],
+          "currentGlassAgents": [
+            "plan-design",
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claims-benefit",
+      "name": "Claims and benefit administration",
+      "commercialPurpose": "Adjudicate pharmacy transactions accurately in real time and maintain defensible benefit outcomes.",
+      "processes": [
+        {
+          "id": "claims-benefit.transaction-intake",
+          "name": "Real-time transaction intake",
+          "domain": "claims-benefit",
+          "description": "Authenticate, normalize, validate, deduplicate, and route NCPDP pharmacy transactions.",
+          "trigger": {
+            "type": "event",
+            "event": "Pharmacy transaction received"
+          },
+          "owner": "Claims platform operations",
+          "accountableAuthority": "Chief operations officer",
+          "inputs": [
+            "NCPDP transaction",
+            "trading-partner identity",
+            "routing configuration"
+          ],
+          "outputs": [
+            "validated transaction",
+            "protocol reject or routed request"
+          ],
+          "sourceOfTruth": [
+            "immutable transaction journal"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "claims-gateway",
+              "access": "execute",
+              "scope": "authenticated transaction validation and routing"
+            }
+          ],
+          "evidence": [
+            "request-response envelope",
+            "routing decision",
+            "timestamps"
+          ],
+          "consequenceClasses": [
+            "coverage"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": false,
+            "authority": null,
+            "conditions": []
+          },
+          "sla": {
+            "target": "Gateway p95 under 200 ms",
+            "escalation": "Claims incident commander"
+          },
+          "controls": [
+            "Authentication, replay protection, schema validation, and idempotency"
+          ],
+          "metrics": [
+            {
+              "name": "valid transactions successfully routed",
+              "target": ">= 99.99%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Standards-compliant reject or redundant route",
+            "escalation": "Error-rate threshold to incident command",
+            "recovery": "Replay only idempotent queued transactions"
+          },
+          "downstreamEvents": [
+            "claims.transaction-validated"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "claims-benefit.adjudication",
+          "name": "Benefit adjudication",
+          "domain": "claims-benefit",
+          "description": "Determine eligibility, coverage, utilization edits, network status, price, cost share, and accumulators.",
+          "trigger": {
+            "type": "event",
+            "event": "Validated claim ready for adjudication"
+          },
+          "owner": "Claims administration",
+          "accountableAuthority": "Chief operations officer",
+          "inputs": [
+            "validated claim",
+            "effective plan version",
+            "eligibility",
+            "drug and pharmacy masters",
+            "history"
+          ],
+          "outputs": [
+            "paid or rejected response",
+            "pricing components",
+            "reason codes"
+          ],
+          "sourceOfTruth": [
+            "versioned claims rules engine",
+            "claim ledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned claims adjudication engine"
+          },
+          "tools": [
+            {
+              "name": "claims-adjudicator",
+              "access": "execute",
+              "scope": "authoritative claim decision and calculation"
+            }
+          ],
+          "evidence": [
+            "rules version",
+            "ordered rule trace",
+            "calculation detail"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": false,
+            "authority": null,
+            "conditions": []
+          },
+          "sla": {
+            "target": "End-to-end p95 under 1 second",
+            "escalation": "Claims incident commander"
+          },
+          "controls": [
+            "Only effective approved rules; exact decimal arithmetic; full decision trace"
+          ],
+          "metrics": [
+            {
+              "name": "financial adjudication accuracy",
+              "target": ">= 99.99%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Safe reject or approved continuity mode",
+            "escalation": "Systemic misadjudication immediately",
+            "recovery": "Correct rules and deterministic reprocess"
+          },
+          "downstreamEvents": [
+            "claims.adjudicated",
+            "finance.claim-liability-posted"
+          ],
+          "currentGlassAgents": [
+            "member-service",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "claims-benefit.accumulator-management",
+          "name": "Accumulator management",
+          "domain": "claims-benefit",
+          "description": "Maintain deductible, out-of-pocket, benefit maximum, and cross-vendor accumulator balances.",
+          "trigger": {
+            "type": "event",
+            "event": "Claim, reversal, adjustment, or external accumulator received"
+          },
+          "owner": "Benefit operations",
+          "accountableAuthority": "Director claims administration",
+          "inputs": [
+            "adjudicated financial events",
+            "plan accumulator rules",
+            "external balances"
+          ],
+          "outputs": [
+            "effective-dated balances",
+            "reconciliation exceptions"
+          ],
+          "sourceOfTruth": [
+            "double-entry accumulator ledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "accumulator ledger service"
+          },
+          "tools": [
+            {
+              "name": "accumulator-ledger",
+              "access": "write",
+              "scope": "balanced postings tied to claim events"
+            }
+          ],
+          "evidence": [
+            "posting lineage",
+            "before-and-after balance",
+            "reconciliation totals"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Benefit operations specialist",
+            "conditions": [
+              "manual balance adjustment"
+            ]
+          },
+          "sla": {
+            "target": "Real time for claims; daily for external reconciliation",
+            "escalation": "Balance variance to operations manager"
+          },
+          "controls": [
+            "Balanced postings, idempotency, and no direct balance mutation"
+          ],
+          "metrics": [
+            {
+              "name": "unreconciled accumulator value",
+              "target": "$0 beyond 2 business days"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Queue posting and prevent double application",
+            "escalation": "Member harm to rapid correction",
+            "recovery": "Post compensating entry and replay"
+          },
+          "downstreamEvents": [
+            "benefit.accumulator-updated"
+          ],
+          "currentGlassAgents": [
+            "member-service",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "claims-benefit.adjustments-reprocessing",
+          "name": "Claim adjustment and reprocessing",
+          "domain": "claims-benefit",
+          "description": "Correct claim outcomes through reversals, replacements, mass reprocessing, and balanced financial adjustments.",
+          "trigger": {
+            "type": "event",
+            "event": "Approved correction, reversal, or systemic defect identified"
+          },
+          "owner": "Claims adjustment operations",
+          "accountableAuthority": "Director claims administration",
+          "inputs": [
+            "original claim",
+            "approved correction",
+            "current and historical rules"
+          ],
+          "outputs": [
+            "replacement outcome",
+            "member and pharmacy adjustments",
+            "reconciliation"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "approved correction case"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims reprocessing engine"
+          },
+          "tools": [
+            {
+              "name": "claims-reprocessor",
+              "access": "execute",
+              "scope": "approved claim set and pinned rules version"
+            }
+          ],
+          "evidence": [
+            "population definition",
+            "before-and-after outcomes",
+            "balanced totals"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Claims and finance change authority",
+            "conditions": [
+              "all mass or manual reprocessing"
+            ]
+          },
+          "sla": {
+            "target": "Member-critical correction within 1 business day",
+            "escalation": "Material exposure to executive incident team"
+          },
+          "controls": [
+            "Dry run, impact threshold, dual approval, and compensating entries"
+          ],
+          "metrics": [
+            {
+              "name": "reprocessing population accuracy",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Stop batch before commit",
+            "escalation": "Variance outside approval to finance",
+            "recovery": "Rollback by compensating transactions"
+          },
+          "downstreamEvents": [
+            "claims.reprocessed",
+            "finance.adjustment-posted"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "claims-benefit.claim-inquiry-explanation",
+          "name": "Claim inquiry and explanation",
+          "domain": "claims-benefit",
+          "description": "Explain an adjudicated outcome from the exact rule trace without recomputing or inventing figures.",
+          "trigger": {
+            "type": "request",
+            "event": "Authorized stakeholder asks about a claim"
+          },
+          "owner": "Claims support",
+          "accountableAuthority": "Member services supervisor",
+          "inputs": [
+            "claim identifier",
+            "authorized requester",
+            "decision trace"
+          ],
+          "outputs": [
+            "plain-language explanation",
+            "next action or handoff"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "adjudication trace"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims adjudication engine output"
+          },
+          "tools": [
+            {
+              "name": "claim-explainer",
+              "access": "read",
+              "scope": "authorized claim and rule trace only"
+            }
+          ],
+          "evidence": [
+            "cited rule and claim fields"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": false,
+            "authority": null,
+            "conditions": []
+          },
+          "sla": {
+            "target": "Immediate self-service or same-day handoff",
+            "escalation": "Dispute to claims specialist"
+          },
+          "controls": [
+            "Figures copied from authoritative output; minimum-necessary access"
+          ],
+          "metrics": [
+            {
+              "name": "explanations backed by decision trace",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "State unavailable and open supported case",
+            "escalation": "Potential defect to claims operations",
+            "recovery": "Send corrected explanation after authoritative correction"
+          },
+          "downstreamEvents": [
+            "service.claim-inquiry-completed"
+          ],
+          "currentGlassAgents": [
+            "member-service",
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clinical-um",
+      "name": "Clinical programs and utilization management",
+      "commercialPurpose": "Apply evidence-based clinical policy while protecting timely access, due process, and licensed clinical authority.",
+      "processes": [
+        {
+          "id": "clinical-um.pa-intake",
+          "name": "Prior authorization intake",
+          "domain": "clinical-um",
+          "description": "Normalize requests, extract evidence with citations, identify missing information, and build the criteria answer set.",
+          "trigger": {
+            "type": "event",
+            "event": "Prior authorization request received"
+          },
+          "owner": "Clinical operations",
+          "accountableAuthority": "Clinical operations pharmacist",
+          "inputs": [
+            "request",
+            "chart note",
+            "member claim history",
+            "published criteria"
+          ],
+          "outputs": [
+            "criteria answer set",
+            "evidence citations",
+            "missing-information request"
+          ],
+          "sourceOfTruth": [
+            "request record",
+            "source clinical documents",
+            "published criteria version"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "pa-intake-workbench",
+              "access": "write",
+              "scope": "extract supported criteria answers only"
+            }
+          ],
+          "evidence": [
+            "quoted source for every populated answer"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Licensed clinical reviewer",
+            "conditions": [
+              "any adverse or discretionary determination"
+            ]
+          },
+          "sla": {
+            "target": "Intake within 1 hour",
+            "escalation": "Urgent request immediately"
+          },
+          "controls": [
+            "Unsupported answers remain blank; model cannot approve or deny"
+          ],
+          "metrics": [
+            {
+              "name": "field extraction accuracy",
+              "target": ">= 97%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Manual intake with source document attached",
+            "escalation": "Missing urgent evidence to clinical queue",
+            "recovery": "Correct answer set with versioned audit"
+          },
+          "downstreamEvents": [
+            "clinical.pa-ready-for-review"
+          ],
+          "currentGlassAgents": [
+            "pa-intake"
+          ]
+        },
+        {
+          "id": "clinical-um.pa-determination",
+          "name": "Prior authorization determination",
+          "domain": "clinical-um",
+          "description": "Evaluate complete evidence against effective criteria and issue an approval or licensed adverse determination.",
+          "trigger": {
+            "type": "event",
+            "event": "Complete PA answer set available"
+          },
+          "owner": "Utilization management",
+          "accountableAuthority": "Medical director",
+          "inputs": [
+            "criteria answer set",
+            "policy version",
+            "clinical evidence"
+          ],
+          "outputs": [
+            "determination",
+            "rationale",
+            "authorization terms",
+            "notice data"
+          ],
+          "sourceOfTruth": [
+            "approved clinical policy",
+            "determination record"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "criteria-engine",
+              "access": "execute",
+              "scope": "evaluate published criteria and record reviewer authority"
+            }
+          ],
+          "evidence": [
+            "criteria path",
+            "reviewer identity",
+            "relied-upon evidence"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Licensed reviewer with jurisdiction-appropriate authority",
+            "conditions": [
+              "denial, partial approval, or clinical exception"
+            ]
+          },
+          "sla": {
+            "target": "Within applicable standard or expedited deadline",
+            "escalation": "Deadline risk to medical director"
+          },
+          "controls": [
+            "Only approved effective criteria; no model-issued adverse decision"
+          ],
+          "metrics": [
+            {
+              "name": "determinations within regulatory turnaround",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Immediate licensed manual review",
+            "escalation": "Overdue case to medical director",
+            "recovery": "Correct notice and remediate access"
+          },
+          "downstreamEvents": [
+            "clinical.pa-determined",
+            "service.determination-notice-required"
+          ],
+          "currentGlassAgents": [
+            "pa-intake",
+            "member-service"
+          ]
+        },
+        {
+          "id": "clinical-um.appeals-grievances",
+          "name": "Clinical appeals and grievances",
+          "domain": "clinical-um",
+          "description": "Triage, independently review, decide, and notify clinical appeals and grievances under due-process rules.",
+          "trigger": {
+            "type": "event",
+            "event": "Appeal or clinical grievance received"
+          },
+          "owner": "Appeals operations",
+          "accountableAuthority": "Appeals medical director",
+          "inputs": [
+            "appeal submission",
+            "original record",
+            "new evidence",
+            "jurisdiction rules"
+          ],
+          "outputs": [
+            "independent decision",
+            "rationale",
+            "notice",
+            "remediation"
+          ],
+          "sourceOfTruth": [
+            "appeal case file",
+            "applicable law and policy"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "appeals-case-system",
+              "access": "write",
+              "scope": "case chronology, evidence, conflicts, and notices"
+            }
+          ],
+          "evidence": [
+            "complete administrative record",
+            "independence check",
+            "signed decision"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Independent licensed appeal reviewer",
+            "conditions": [
+              "final appeal determination"
+            ]
+          },
+          "sla": {
+            "target": "Within applicable appeal deadline",
+            "escalation": "Any deadline risk immediately"
+          },
+          "controls": [
+            "Reviewer independence, complete record, and jurisdiction calendar"
+          ],
+          "metrics": [
+            {
+              "name": "appeals completed timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Manual expedited workflow",
+            "escalation": "Due-process defect to compliance",
+            "recovery": "Reopen with independent review and corrected notice"
+          },
+          "downstreamEvents": [
+            "clinical.appeal-decided",
+            "compliance.case-reportable"
+          ],
+          "currentGlassAgents": [
+            "member-service"
+          ]
+        },
+        {
+          "id": "clinical-um.care-program-outreach",
+          "name": "Clinical program identification and outreach",
+          "domain": "clinical-um",
+          "description": "Identify eligible members for adherence, specialty, safety, and evidence-based clinical support programs.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Daily clinical opportunity scan"
+          },
+          "owner": "Clinical programs",
+          "accountableAuthority": "Chief pharmacy officer",
+          "inputs": [
+            "claims history",
+            "program criteria",
+            "consent and contact preferences"
+          ],
+          "outputs": [
+            "eligible cohort",
+            "prioritized outreach",
+            "program enrollment result"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "approved program protocol",
+            "consent registry"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned clinical cohort rules"
+          },
+          "tools": [
+            {
+              "name": "clinical-program-engine",
+              "access": "write",
+              "scope": "eligible cohort and consent-compliant outreach tasks"
+            }
+          ],
+          "evidence": [
+            "criteria match",
+            "exclusions",
+            "contact history"
+          ],
+          "consequenceClasses": [
+            "care",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Licensed clinical program owner",
+            "conditions": [
+              "clinical recommendation or protocol deviation"
+            ]
+          },
+          "sla": {
+            "target": "Safety cases same day; other cases within 3 days",
+            "escalation": "Urgent safety signal to pharmacist"
+          },
+          "controls": [
+            "Consent, do-not-contact, approved scripts, and licensed escalation"
+          ],
+          "metrics": [
+            {
+              "name": "eligible high-risk cases contacted timely",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Create pharmacist work item",
+            "escalation": "Potential immediate harm urgently",
+            "recovery": "Correct cohort and suppress inappropriate outreach"
+          },
+          "downstreamEvents": [
+            "clinical.outreach-created",
+            "clinical.program-enrolled"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "member-service"
+          ]
+        },
+        {
+          "id": "clinical-um.safety-surveillance",
+          "name": "Drug utilization and safety surveillance",
+          "domain": "clinical-um",
+          "description": "Detect duplicate therapy, interaction, dose, misuse, and emerging safety patterns for clinical review.",
+          "trigger": {
+            "type": "threshold",
+            "event": "Claim-level edit or population signal threshold met"
+          },
+          "owner": "Drug utilization review",
+          "accountableAuthority": "Chief pharmacy officer",
+          "inputs": [
+            "claims",
+            "clinical reference rules",
+            "prescriber and pharmacy patterns"
+          ],
+          "outputs": [
+            "real-time edit",
+            "retrospective signal",
+            "review case"
+          ],
+          "sourceOfTruth": [
+            "approved DUR rules",
+            "claim ledger",
+            "case record"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned DUR and signal scoring rules"
+          },
+          "tools": [
+            {
+              "name": "safety-surveillance-engine",
+              "access": "execute",
+              "scope": "approved edits and review signals"
+            }
+          ],
+          "evidence": [
+            "matched rule",
+            "supporting fill timeline",
+            "signal score"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Licensed pharmacist",
+            "conditions": [
+              "case closure, provider contact, or access restriction"
+            ]
+          },
+          "sla": {
+            "target": "Real-time edits under claim SLA; severe retrospective signals same day",
+            "escalation": "Imminent harm to clinical incident lead"
+          },
+          "controls": [
+            "Validated rules, false-positive monitoring, and licensed consequential action"
+          ],
+          "metrics": [
+            {
+              "name": "severe safety signals reviewed timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Route to pharmacist without automated conclusion",
+            "escalation": "Rule defect to clinical governance",
+            "recovery": "Suppress defective rule and re-evaluate affected cases"
+          },
+          "downstreamEvents": [
+            "integrity.signal-created",
+            "clinical.safety-case-created"
+          ],
+          "currentGlassAgents": [
+            "integrity-triage",
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "formulary",
+      "name": "Formulary management",
+      "commercialPurpose": "Design and govern clinically sound, commercially competitive drug coverage.",
+      "processes": [
+        {
+          "id": "formulary.strategy-design",
+          "name": "Formulary strategy design",
+          "domain": "formulary",
+          "description": "Design tiering and management strategy against clinical, cost, rebate, and disruption objectives.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Annual strategy cycle or material market change"
+          },
+          "owner": "Formulary strategy",
+          "accountableAuthority": "Pharmacy and therapeutics committee",
+          "inputs": [
+            "clinical evidence",
+            "utilization",
+            "net-cost scenarios"
+          ],
+          "outputs": [
+            "strategy proposal",
+            "impact analysis"
+          ],
+          "sourceOfTruth": [
+            "approved evidence dossier",
+            "claims ledger"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "whole-book replay and net-cost engine"
+          },
+          "tools": [
+            {
+              "name": "formulary-modeler",
+              "access": "execute",
+              "scope": "versioned scenarios only"
+            }
+          ],
+          "evidence": [
+            "replay results and evidence grading"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "P&T committee and client authority",
+            "conditions": [
+              "coverage strategy adoption"
+            ]
+          },
+          "sla": {
+            "target": "Before benefit-year deadlines",
+            "escalation": "Chief pharmacy officer"
+          },
+          "controls": [
+            "Clinical evidence precedes economics; count disruption"
+          ],
+          "metrics": [
+            {
+              "name": "modeled-to-realized net cost",
+              "target": "within 5%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Retain approved formulary",
+            "escalation": "Unsafe or incomplete evidence to P&T",
+            "recovery": "Rerun and reapprove"
+          },
+          "downstreamEvents": [
+            "formulary.strategy-approved"
+          ],
+          "currentGlassAgents": [
+            "plan-design",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "formulary.evidence-review",
+          "name": "Drug evidence review",
+          "domain": "formulary",
+          "description": "Assess comparative efficacy, safety, guidelines, and population relevance for formulary decisions.",
+          "trigger": {
+            "type": "event",
+            "event": "New drug, indication, evidence, or safety signal"
+          },
+          "owner": "Clinical formulary",
+          "accountableAuthority": "P&T committee chair",
+          "inputs": [
+            "peer-reviewed evidence",
+            "labels",
+            "guidelines"
+          ],
+          "outputs": [
+            "evidence dossier",
+            "clinical recommendation"
+          ],
+          "sourceOfTruth": [
+            "controlled evidence library"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "evidence-workbench",
+              "access": "write",
+              "scope": "cited synthesis without autonomous conclusions"
+            }
+          ],
+          "evidence": [
+            "source citations and quality ratings"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "P&T committee",
+            "conditions": [
+              "clinical policy decision"
+            ]
+          },
+          "sla": {
+            "target": "By scheduled P&T meeting",
+            "escalation": "P&T chair"
+          },
+          "controls": [
+            "Conflict disclosure and reproducible search"
+          ],
+          "metrics": [
+            {
+              "name": "dossiers with complete citations",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Defer decision or use current policy",
+            "escalation": "Conflicting evidence to specialist",
+            "recovery": "Issue revised dossier"
+          },
+          "downstreamEvents": [
+            "formulary.dossier-ready"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "formulary.pt-governance",
+          "name": "P&T decision governance",
+          "domain": "formulary",
+          "description": "Conduct independent committee review and record coverage, tier, restriction, and exception decisions.",
+          "trigger": {
+            "type": "schedule",
+            "event": "P&T agenda convened"
+          },
+          "owner": "P&T governance",
+          "accountableAuthority": "P&T committee chair",
+          "inputs": [
+            "evidence dossier",
+            "conflict disclosures",
+            "impact analysis"
+          ],
+          "outputs": [
+            "signed decision",
+            "minutes",
+            "policy directive"
+          ],
+          "sourceOfTruth": [
+            "P&T decision register"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "pt-governance-system",
+              "access": "write",
+              "scope": "agenda, votes, recusals, and signed minutes"
+            }
+          ],
+          "evidence": [
+            "quorum, votes, recusals, rationale"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Quorate P&T committee",
+            "conditions": [
+              "all formulary clinical decisions"
+            ]
+          },
+          "sla": {
+            "target": "Effective-date calendar met",
+            "escalation": "Committee chair"
+          },
+          "controls": [
+            "Independence, quorum, conflicts, and minutes"
+          ],
+          "metrics": [
+            {
+              "name": "decisions with complete governance record",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Retain current policy",
+            "escalation": "Governance defect to compliance",
+            "recovery": "Reconvene and supersede"
+          },
+          "downstreamEvents": [
+            "formulary.decision-approved"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "formulary.publication-maintenance",
+          "name": "Formulary publication and maintenance",
+          "domain": "formulary",
+          "description": "Translate approved decisions into synchronized effective-dated claims rules, search, files, and notices.",
+          "trigger": {
+            "type": "event",
+            "event": "Approved formulary decision received"
+          },
+          "owner": "Formulary operations",
+          "accountableAuthority": "Director formulary operations",
+          "inputs": [
+            "signed decision",
+            "effective date",
+            "client elections"
+          ],
+          "outputs": [
+            "rules version",
+            "published formulary",
+            "change notices"
+          ],
+          "sourceOfTruth": [
+            "formulary master and decision register"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "formulary-publisher",
+              "access": "write",
+              "scope": "compile approved decisions across channels"
+            }
+          ],
+          "evidence": [
+            "decision-to-rule diff and release manifest"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Formulary release manager",
+            "conditions": [
+              "production publication"
+            ]
+          },
+          "sla": {
+            "target": "By approved effective date",
+            "escalation": "Operations director"
+          },
+          "controls": [
+            "Single source compilation and channel reconciliation"
+          ],
+          "metrics": [
+            {
+              "name": "cross-channel formulary consistency",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep prior version active",
+            "escalation": "Mismatch to release incident",
+            "recovery": "Rollback and republish"
+          },
+          "downstreamEvents": [
+            "formulary.version-published"
+          ],
+          "currentGlassAgents": [
+            "member-service",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "formulary.exception-management",
+          "name": "Formulary exception management",
+          "domain": "formulary",
+          "description": "Evaluate member-specific exception requests with clinical due process and timely access protections.",
+          "trigger": {
+            "type": "event",
+            "event": "Formulary exception request received"
+          },
+          "owner": "Clinical exceptions",
+          "accountableAuthority": "Medical director",
+          "inputs": [
+            "exception request",
+            "clinical evidence",
+            "policy"
+          ],
+          "outputs": [
+            "determination",
+            "authorization or notice"
+          ],
+          "sourceOfTruth": [
+            "exception case and effective policy"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "exception-case-system",
+              "access": "write",
+              "scope": "evidence, review, and notice chronology"
+            }
+          ],
+          "evidence": [
+            "relied-upon evidence and signed rationale"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Licensed reviewer",
+            "conditions": [
+              "all determinations"
+            ]
+          },
+          "sla": {
+            "target": "Applicable standard or expedited deadline",
+            "escalation": "Medical director"
+          },
+          "controls": [
+            "Licensed authority and appeal rights"
+          ],
+          "metrics": [
+            {
+              "name": "timely exception determinations",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Expedited manual review",
+            "escalation": "Deadline risk immediately",
+            "recovery": "Correct decision and access"
+          },
+          "downstreamEvents": [
+            "formulary.exception-decided"
+          ],
+          "currentGlassAgents": [
+            "pa-intake",
+            "member-service"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pharmacy-network",
+      "name": "Pharmacy network management",
+      "commercialPurpose": "Contract, credential, monitor, and support pharmacies while preserving member access.",
+      "processes": [
+        {
+          "id": "pharmacy-network.strategy-access",
+          "name": "Network strategy and access",
+          "domain": "pharmacy-network",
+          "description": "Design national, regional, specialty, mail, and preferred networks against access and unit-cost goals.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Annual design or access threshold breach"
+          },
+          "owner": "Network strategy",
+          "accountableAuthority": "Chief network officer",
+          "inputs": [
+            "pharmacy locations",
+            "member geography",
+            "contract economics"
+          ],
+          "outputs": [
+            "network design",
+            "access analysis"
+          ],
+          "sourceOfTruth": [
+            "network master",
+            "geospatial access model"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "network access and economics engine"
+          },
+          "tools": [
+            {
+              "name": "network-modeler",
+              "access": "execute",
+              "scope": "approved scenarios"
+            }
+          ],
+          "evidence": [
+            "distance, capacity, and cost calculations"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "contract"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Network governance and client authority",
+            "conditions": [
+              "network adoption"
+            ]
+          },
+          "sla": {
+            "target": "Before benefit-year lock",
+            "escalation": "Chief network officer"
+          },
+          "controls": [
+            "Regulatory access standards and disruption limits"
+          ],
+          "metrics": [
+            {
+              "name": "members meeting access standard",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Retain broader network",
+            "escalation": "Access gap to contracting",
+            "recovery": "Add pharmacy or revise design"
+          },
+          "downstreamEvents": [
+            "network.design-approved"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "pharmacy-network.contracting",
+          "name": "Pharmacy contracting",
+          "domain": "pharmacy-network",
+          "description": "Negotiate and execute reimbursement, dispensing, audit, data, and service terms with pharmacies.",
+          "trigger": {
+            "type": "event",
+            "event": "Network need or contract renewal"
+          },
+          "owner": "Network contracting",
+          "accountableAuthority": "Chief network officer",
+          "inputs": [
+            "approved strategy",
+            "rate authority",
+            "pharmacy proposal"
+          ],
+          "outputs": [
+            "executed agreement",
+            "configured terms"
+          ],
+          "sourceOfTruth": [
+            "contract lifecycle repository"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "contract economics model"
+          },
+          "tools": [
+            {
+              "name": "network-contract-system",
+              "access": "write",
+              "scope": "negotiation, approvals, obligations"
+            }
+          ],
+          "evidence": [
+            "redlines, economics, signatures"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Authorized contracting and legal signatories",
+            "conditions": [
+              "execution or amendment"
+            ]
+          },
+          "sla": {
+            "target": "Before current term expiry",
+            "escalation": "Executive contracting sponsor"
+          },
+          "controls": [
+            "Delegated rate limits and legal playbook"
+          ],
+          "metrics": [
+            {
+              "name": "contracts renewed before expiry",
+              "target": ">= 99%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Approved continuity extension",
+            "escalation": "Access-impacting impasse",
+            "recovery": "Execute amendment and reconfigure"
+          },
+          "downstreamEvents": [
+            "network.contract-executed"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "pharmacy-network.credentialing",
+          "name": "Credentialing and enrollment",
+          "domain": "pharmacy-network",
+          "description": "Verify licensure, ownership, sanctions, insurance, capabilities, and identifiers before network activation.",
+          "trigger": {
+            "type": "event",
+            "event": "Pharmacy applies or periodic recredentialing due"
+          },
+          "owner": "Network credentialing",
+          "accountableAuthority": "Credentialing committee",
+          "inputs": [
+            "application",
+            "licenses",
+            "sanctions data",
+            "ownership"
+          ],
+          "outputs": [
+            "credential decision",
+            "network status"
+          ],
+          "sourceOfTruth": [
+            "credential file",
+            "primary-source verification"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "credentialing-system",
+              "access": "write",
+              "scope": "verification and committee workflow"
+            }
+          ],
+          "evidence": [
+            "primary-source checks and decision"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "contract",
+            "credentialing",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Credentialing committee",
+            "conditions": [
+              "activation, denial, or termination"
+            ]
+          },
+          "sla": {
+            "target": "Within 30 calendar days",
+            "escalation": "Credentialing director"
+          },
+          "controls": [
+            "Primary-source verification and exclusion screening"
+          ],
+          "metrics": [
+            {
+              "name": "active pharmacies fully credentialed",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Do not activate",
+            "escalation": "Sanction hit to compliance",
+            "recovery": "Correct file and re-review"
+          },
+          "downstreamEvents": [
+            "network.pharmacy-status-changed"
+          ],
+          "currentGlassAgents": [
+            "integrity-triage"
+          ]
+        },
+        {
+          "id": "pharmacy-network.performance-monitoring",
+          "name": "Pharmacy performance monitoring",
+          "domain": "pharmacy-network",
+          "description": "Monitor access, quality, reversals, dispensing patterns, complaints, and contract performance.",
+          "trigger": {
+            "type": "threshold",
+            "event": "Performance metric or integrity signal breaches threshold"
+          },
+          "owner": "Network performance",
+          "accountableAuthority": "Director network operations",
+          "inputs": [
+            "claims",
+            "complaints",
+            "quality measures",
+            "contract terms"
+          ],
+          "outputs": [
+            "scorecard",
+            "corrective-action case"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "network case system"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned network measure service"
+          },
+          "tools": [
+            {
+              "name": "network-monitor",
+              "access": "write",
+              "scope": "scorecards and review cases"
+            }
+          ],
+          "evidence": [
+            "recomputable measures and case chronology"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "contract",
+            "credentialing"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Network review committee",
+            "conditions": [
+              "sanction, recoupment, or termination"
+            ]
+          },
+          "sla": {
+            "target": "Critical signals same day",
+            "escalation": "Network director"
+          },
+          "controls": [
+            "Peer comparison and human consequential action"
+          ],
+          "metrics": [
+            {
+              "name": "critical signals reviewed timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Open manual review",
+            "escalation": "Potential fraud or harm",
+            "recovery": "Correct score and remedy action"
+          },
+          "downstreamEvents": [
+            "network.performance-case-opened"
+          ],
+          "currentGlassAgents": [
+            "integrity-triage",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "pharmacy-network.pharmacy-support",
+          "name": "Pharmacy support and disputes",
+          "domain": "pharmacy-network",
+          "description": "Resolve enrollment, claim, remittance, contract, and operational inquiries from network pharmacies.",
+          "trigger": {
+            "type": "request",
+            "event": "Pharmacy inquiry or dispute received"
+          },
+          "owner": "Pharmacy help desk",
+          "accountableAuthority": "Director network operations",
+          "inputs": [
+            "authenticated inquiry",
+            "claim or contract context"
+          ],
+          "outputs": [
+            "resolution",
+            "case record",
+            "specialist handoff"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "network contract",
+            "case system"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims and remittance systems"
+          },
+          "tools": [
+            {
+              "name": "pharmacy-support-console",
+              "access": "write",
+              "scope": "authorized inquiry and case routing"
+            }
+          ],
+          "evidence": [
+            "source-linked response"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Network or finance specialist",
+            "conditions": [
+              "payment, contract, or status change"
+            ]
+          },
+          "sla": {
+            "target": "80% first-contact resolution",
+            "escalation": "Access-impacting issue immediately"
+          },
+          "controls": [
+            "Authenticate pharmacy; no off-ledger adjustment"
+          ],
+          "metrics": [
+            {
+              "name": "first-contact resolution",
+              "target": ">= 80%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Open specialist case",
+            "escalation": "Systemic issue to incident lead",
+            "recovery": "Correct and notify"
+          },
+          "downstreamEvents": [
+            "network.pharmacy-case-resolved"
+          ],
+          "currentGlassAgents": [
+            "member-service"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pricing-mac",
+      "name": "Pricing and MAC",
+      "commercialPurpose": "Maintain defensible ingredient-cost benchmarks and reimbursement ceilings with transparent appeal rights.",
+      "processes": [
+        {
+          "id": "pricing-mac.benchmark-ingestion",
+          "name": "Drug benchmark ingestion",
+          "domain": "pricing-mac",
+          "description": "Ingest, validate, effective-date, and reconcile AWP, WAC, NADAC, acquisition, and availability feeds.",
+          "trigger": {
+            "type": "event",
+            "event": "Pricing source publishes update"
+          },
+          "owner": "Pricing operations",
+          "accountableAuthority": "Chief pricing officer",
+          "inputs": [
+            "licensed benchmark feeds",
+            "wholesaler data"
+          ],
+          "outputs": [
+            "validated pricing master",
+            "exceptions"
+          ],
+          "sourceOfTruth": [
+            "versioned drug pricing master"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "pricing feed validation service"
+          },
+          "tools": [
+            {
+              "name": "pricing-ingestion",
+              "access": "write",
+              "scope": "licensed sources and validation"
+            }
+          ],
+          "evidence": [
+            "source lineage and control totals"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Pricing analyst",
+            "conditions": [
+              "outlier override or source substitution"
+            ]
+          },
+          "sla": {
+            "target": "By source effective date",
+            "escalation": "Pricing director"
+          },
+          "controls": [
+            "License enforcement, effective dating, outlier checks"
+          ],
+          "metrics": [
+            {
+              "name": "pricing records with source lineage",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Retain last valid price per policy",
+            "escalation": "Material stale source",
+            "recovery": "Reload and reprice impacted claims"
+          },
+          "downstreamEvents": [
+            "pricing.benchmark-published"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "pricing-mac.mac-calculation",
+          "name": "MAC calculation and publication",
+          "domain": "pricing-mac",
+          "description": "Calculate product-group ceilings from available acquisition evidence and approved pricing methodology.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Scheduled MAC cycle or market threshold"
+          },
+          "owner": "MAC pricing",
+          "accountableAuthority": "Chief pricing officer",
+          "inputs": [
+            "acquisition data",
+            "availability",
+            "product groups",
+            "methodology"
+          ],
+          "outputs": [
+            "MAC list",
+            "effective dates",
+            "change report"
+          ],
+          "sourceOfTruth": [
+            "approved MAC methodology",
+            "versioned MAC master"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned MAC calculation engine"
+          },
+          "tools": [
+            {
+              "name": "mac-engine",
+              "access": "execute",
+              "scope": "approved formula and eligible products"
+            }
+          ],
+          "evidence": [
+            "input snapshot, formula version, output diff"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "contract"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Pricing release authority",
+            "conditions": [
+              "production MAC publication"
+            ]
+          },
+          "sla": {
+            "target": "Per published update cadence",
+            "escalation": "Chief pricing officer"
+          },
+          "controls": [
+            "Available-product proof, change thresholds, dual approval"
+          ],
+          "metrics": [
+            {
+              "name": "MAC products with available source at or below ceiling",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep prior ceiling or remove unsupported item",
+            "escalation": "Market dislocation",
+            "recovery": "Recalculate, publish, and adjust"
+          },
+          "downstreamEvents": [
+            "pricing.mac-published"
+          ],
+          "currentGlassAgents": [
+            "appeal-drafter",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "pricing-mac.market-surveillance",
+          "name": "Generic market surveillance",
+          "domain": "pricing-mac",
+          "description": "Detect acquisition, shortage, launch, discontinuation, and availability changes requiring pricing action.",
+          "trigger": {
+            "type": "threshold",
+            "event": "Market movement breaches approved threshold"
+          },
+          "owner": "Pricing analytics",
+          "accountableAuthority": "Director MAC pricing",
+          "inputs": [
+            "wholesaler prices",
+            "availability",
+            "dispensing patterns"
+          ],
+          "outputs": [
+            "market alert",
+            "recommended repricing population"
+          ],
+          "sourceOfTruth": [
+            "licensed market feeds",
+            "claim ledger"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned market threshold service"
+          },
+          "tools": [
+            {
+              "name": "generic-market-monitor",
+              "access": "read",
+              "scope": "authorized market and claims data"
+            }
+          ],
+          "evidence": [
+            "threshold result and source records"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "MAC pricing manager",
+            "conditions": [
+              "repricing action"
+            ]
+          },
+          "sla": {
+            "target": "Severe shortage same day",
+            "escalation": "Pricing director"
+          },
+          "controls": [
+            "Source freshness and minimum market evidence"
+          ],
+          "metrics": [
+            {
+              "name": "material market events assessed timely",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Flag affected products for manual review",
+            "escalation": "Availability risk",
+            "recovery": "Refresh sources and rescore"
+          },
+          "downstreamEvents": [
+            "pricing.mac-review-requested"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "pricing-mac.appeal-intake-analysis",
+          "name": "MAC appeal intake and analysis",
+          "domain": "pricing-mac",
+          "description": "Validate statutory appeal content and identify a currently available product at or below the ceiling or concede.",
+          "trigger": {
+            "type": "event",
+            "event": "Pharmacy MAC appeal received"
+          },
+          "owner": "MAC appeals",
+          "accountableAuthority": "Network contracting pharmacist",
+          "inputs": [
+            "appeal",
+            "claim",
+            "MAC history",
+            "wholesaler availability"
+          ],
+          "outputs": [
+            "timeliness status",
+            "evidence packet",
+            "draft disposition"
+          ],
+          "sourceOfTruth": [
+            "appeal case",
+            "MAC master",
+            "availability source"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claim pricing and MAC history services"
+          },
+          "tools": [
+            {
+              "name": "mac-appeal-workbench",
+              "access": "write",
+              "scope": "evidence-backed draft only"
+            }
+          ],
+          "evidence": [
+            "specific NDC, wholesaler, price, date"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Network contracting pharmacist",
+            "conditions": [
+              "every appeal response"
+            ]
+          },
+          "sla": {
+            "target": "Draft within 2 business days",
+            "escalation": "Statutory deadline risk"
+          },
+          "controls": [
+            "No uphold without available product proof"
+          ],
+          "metrics": [
+            {
+              "name": "drafts ready within two days",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Concede or route to pharmacist",
+            "escalation": "Missing evidence",
+            "recovery": "Correct response and adjustment"
+          },
+          "downstreamEvents": [
+            "pricing.mac-appeal-ready"
+          ],
+          "currentGlassAgents": [
+            "appeal-drafter"
+          ]
+        },
+        {
+          "id": "pricing-mac.appeal-decision-remediation",
+          "name": "MAC appeal decision and remediation",
+          "domain": "pricing-mac",
+          "description": "Issue authorized appeal decisions and execute required MAC, claim, and pharmacy payment corrections.",
+          "trigger": {
+            "type": "event",
+            "event": "Appeal evidence packet complete"
+          },
+          "owner": "MAC appeals",
+          "accountableAuthority": "Chief network officer",
+          "inputs": [
+            "evidence packet",
+            "draft disposition",
+            "jurisdiction rules"
+          ],
+          "outputs": [
+            "signed response",
+            "MAC or payment adjustment"
+          ],
+          "sourceOfTruth": [
+            "appeal decision register",
+            "financial ledgers"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims repricing and payable engines"
+          },
+          "tools": [
+            {
+              "name": "mac-remediation-console",
+              "access": "execute",
+              "scope": "approved decision and affected claims"
+            }
+          ],
+          "evidence": [
+            "signed decision and balanced adjustment"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Authorized pharmacist and finance authority",
+            "conditions": [
+              "decision and monetary remediation"
+            ]
+          },
+          "sla": {
+            "target": "Within statutory deadline",
+            "escalation": "Chief network officer"
+          },
+          "controls": [
+            "Separation of analysis, decision, and payment"
+          ],
+          "metrics": [
+            {
+              "name": "appeals decided timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold denial and protect timeliness",
+            "escalation": "Deadline breach to compliance",
+            "recovery": "Correct, pay, and notify"
+          },
+          "downstreamEvents": [
+            "pricing.mac-appeal-decided",
+            "finance.adjustment-posted"
+          ],
+          "currentGlassAgents": [
+            "appeal-drafter",
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manufacturer-rebates",
+      "name": "Manufacturer rebates",
+      "commercialPurpose": "Contract, accrue, invoice, collect, validate, and allocate manufacturer value transparently.",
+      "processes": [
+        {
+          "id": "manufacturer-rebates.contract-strategy",
+          "name": "Rebate contract strategy",
+          "domain": "manufacturer-rebates",
+          "description": "Model formulary position, utilization, guarantees, exclusions, and net value for manufacturer negotiations.",
+          "trigger": {
+            "type": "event",
+            "event": "Therapeutic class negotiation opens"
+          },
+          "owner": "Trade strategy",
+          "accountableAuthority": "Chief trade relations officer",
+          "inputs": [
+            "utilization forecast",
+            "clinical options",
+            "manufacturer offers"
+          ],
+          "outputs": [
+            "negotiation mandate",
+            "scenario economics"
+          ],
+          "sourceOfTruth": [
+            "trade contract repository",
+            "certified utilization"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "rebate scenario engine"
+          },
+          "tools": [
+            {
+              "name": "trade-modeler",
+              "access": "execute",
+              "scope": "approved scenarios and contract formulas"
+            }
+          ],
+          "evidence": [
+            "assumptions, formula version, scenario output"
+          ],
+          "consequenceClasses": [
+            "care",
+            "money",
+            "contract"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Trade committee and P&T for clinical position",
+            "conditions": [
+              "negotiation mandate"
+            ]
+          },
+          "sla": {
+            "target": "Before bid calendar deadline",
+            "escalation": "Chief trade officer"
+          },
+          "controls": [
+            "Clinical independence and net-value sensitivity"
+          ],
+          "metrics": [
+            {
+              "name": "realized-to-modeled rebate value",
+              "target": "within 5%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Use approved baseline position",
+            "escalation": "Clinical-economic conflict",
+            "recovery": "Remodel and reapprove"
+          },
+          "downstreamEvents": [
+            "rebates.negotiation-authorized"
+          ],
+          "currentGlassAgents": [
+            "plan-design",
+            "data-agent"
+          ]
+        },
+        {
+          "id": "manufacturer-rebates.contracting",
+          "name": "Manufacturer contracting",
+          "domain": "manufacturer-rebates",
+          "description": "Negotiate and execute eligible products, formulary conditions, rates, guarantees, data, and payment terms.",
+          "trigger": {
+            "type": "event",
+            "event": "Approved negotiation mandate"
+          },
+          "owner": "Trade relations",
+          "accountableAuthority": "Authorized trade signatory",
+          "inputs": [
+            "mandate",
+            "manufacturer proposal",
+            "legal terms"
+          ],
+          "outputs": [
+            "executed agreement",
+            "obligation model"
+          ],
+          "sourceOfTruth": [
+            "contract lifecycle repository"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "contract economics model"
+          },
+          "tools": [
+            {
+              "name": "trade-contract-system",
+              "access": "write",
+              "scope": "redlines, approvals, and obligations"
+            }
+          ],
+          "evidence": [
+            "redlines, economics, signatures"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Legal and authorized trade signatory",
+            "conditions": [
+              "execution or amendment"
+            ]
+          },
+          "sla": {
+            "target": "Before contract effective date",
+            "escalation": "Executive trade sponsor"
+          },
+          "controls": [
+            "Signing authority, antitrust controls, clause playbook"
+          ],
+          "metrics": [
+            {
+              "name": "contract obligations machine-configured",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Do not activate unexecuted terms",
+            "escalation": "Material exception",
+            "recovery": "Amend and reconfigure"
+          },
+          "downstreamEvents": [
+            "rebates.contract-executed"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "manufacturer-rebates.accrual",
+          "name": "Rebate accrual",
+          "domain": "manufacturer-rebates",
+          "description": "Calculate claim-level and period-level expected receivables under effective contract terms.",
+          "trigger": {
+            "type": "event",
+            "event": "Eligible paid claim or contract adjustment"
+          },
+          "owner": "Rebate accounting",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "eligible claims",
+            "contract terms",
+            "formulary status"
+          ],
+          "outputs": [
+            "claim accruals",
+            "period receivable"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "executed contract model",
+            "rebate subledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned rebate accrual engine"
+          },
+          "tools": [
+            {
+              "name": "rebate-accrual-engine",
+              "access": "execute",
+              "scope": "effective contracts and eligible claims"
+            }
+          ],
+          "evidence": [
+            "claim eligibility trace and formula result"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Rebate accounting manager",
+            "conditions": [
+              "manual accrual adjustment"
+            ]
+          },
+          "sla": {
+            "target": "Daily accrual; month close by schedule",
+            "escalation": "Controller"
+          },
+          "controls": [
+            "Exact formula versions, duplicate prevention, ledger balance"
+          ],
+          "metrics": [
+            {
+              "name": "accrual-to-final invoice variance",
+              "target": "<= 2%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold uncertain accrual separately",
+            "escalation": "Material variance",
+            "recovery": "Post approved true-up"
+          },
+          "downstreamEvents": [
+            "rebates.accrual-posted"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "rebate-protection"
+          ]
+        },
+        {
+          "id": "manufacturer-rebates.invoicing-collection",
+          "name": "Rebate invoicing and collection",
+          "domain": "manufacturer-rebates",
+          "description": "Produce contract-compliant invoices, exchange utilization support, track disputes, and collect receivables.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Contract invoice period closes"
+          },
+          "owner": "Rebate operations",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "final eligible utilization",
+            "contract formula",
+            "prior adjustments"
+          ],
+          "outputs": [
+            "invoice",
+            "support file",
+            "receivable and collection status"
+          ],
+          "sourceOfTruth": [
+            "rebate subledger",
+            "invoice archive"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "rebate invoice engine"
+          },
+          "tools": [
+            {
+              "name": "rebate-billing",
+              "access": "write",
+              "scope": "approved contract invoices and receivables"
+            }
+          ],
+          "evidence": [
+            "recomputed invoice and delivery receipt"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Rebate finance approver",
+            "conditions": [
+              "invoice release or dispute settlement"
+            ]
+          },
+          "sla": {
+            "target": "By contract invoice date",
+            "escalation": "Past due to trade leadership"
+          },
+          "controls": [
+            "Control totals, minimum-necessary data, dual release"
+          ],
+          "metrics": [
+            {
+              "name": "rebate invoices issued timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold invoice, preserve deadline notice",
+            "escalation": "Data or formula variance",
+            "recovery": "Correct and reissue with audit"
+          },
+          "downstreamEvents": [
+            "rebates.invoice-issued",
+            "rebates.cash-received"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "rebate-protection"
+          ]
+        },
+        {
+          "id": "manufacturer-rebates.client-allocation",
+          "name": "Client rebate allocation",
+          "domain": "manufacturer-rebates",
+          "description": "Reconcile 100% attributable rebate receipts to plan entitlements, member credits where elected, sponsor or issuer remittances, and unpaid balances with zero retained rebates.",
+          "trigger": {
+            "type": "event",
+            "event": "Rebate cash, guarantee, or settlement period available"
+          },
+          "owner": "Client finance",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "collections",
+            "client claims",
+            "client contract allocation rules"
+          ],
+          "outputs": [
+            "client allocation",
+            "remittance detail",
+            "residual reconciliation"
+          ],
+          "sourceOfTruth": [
+            "cash ledger",
+            "rebate subledger",
+            "client contract"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "client rebate allocation engine"
+          },
+          "tools": [
+            {
+              "name": "rebate-allocator",
+              "access": "execute",
+              "scope": "contract-authorized client allocation"
+            }
+          ],
+          "evidence": [
+            "cash-to-client lineage and formula trace",
+            "Drug-level receipt-to-entitlement-to-remittance lineage, member credits, and outstanding payable reconciliation"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Client finance approver",
+            "conditions": [
+              "settlement release or manual adjustment"
+            ]
+          },
+          "sla": {
+            "target": "By client contract settlement date",
+            "escalation": "Controller"
+          },
+          "controls": [
+            "No allocation above collected or guaranteed pool; balance to zero",
+            "Pass through 100% of attributable rebates and covered remuneration, including affiliate/GPO flows; retention must be zero",
+            "Reconcile actual receipts and true-ups; distinguish estimates and guarantees from cash",
+            "Count member point-of-sale credits once against plan entitlement; never subtract service fees from rebates"
+          ],
+          "metrics": [
+            {
+              "name": "unreconciled allocation balance",
+              "target": "$0"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold disputed portion",
+            "escalation": "Contract interpretation to legal",
+            "recovery": "Post approved true-up"
+          },
+          "downstreamEvents": [
+            "finance.client-rebate-settled"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "rebate-protection"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "finance-settlement",
+      "name": "Finance and settlement",
+      "commercialPurpose": "Settle claims, bill clients, recognize revenue, manage cash, and close books with ledger-grade controls.",
+      "processes": [
+        {
+          "id": "finance-settlement.pharmacy-payables",
+          "name": "Pharmacy payable settlement",
+          "domain": "finance-settlement",
+          "description": "Aggregate paid claims and adjustments into validated remittances and pharmacy payments.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Pharmacy payment cycle closes"
+          },
+          "owner": "Treasury operations",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "claim liabilities",
+            "adjustments",
+            "payment terms"
+          ],
+          "outputs": [
+            "remittance advice",
+            "payment instruction",
+            "payable posting"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "accounts payable subledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "pharmacy settlement engine"
+          },
+          "tools": [
+            {
+              "name": "pharmacy-settlement",
+              "access": "execute",
+              "scope": "approved cycle and bank instruction"
+            }
+          ],
+          "evidence": [
+            "claim-to-payment lineage and control totals"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Treasury payment approver",
+            "conditions": [
+              "payment release"
+            ]
+          },
+          "sla": {
+            "target": "Per network contract calendar",
+            "escalation": "Controller"
+          },
+          "controls": [
+            "Positive pay, dual approval, sanctions, balanced batch"
+          ],
+          "metrics": [
+            {
+              "name": "payments accurate and timely",
+              "target": ">= 99.99%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold affected payment batch",
+            "escalation": "Material variance or bank failure",
+            "recovery": "Correct and reissue"
+          },
+          "downstreamEvents": [
+            "finance.pharmacy-paid"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "finance-settlement.client-billing",
+          "name": "Client billing and funding",
+          "domain": "finance-settlement",
+          "description": "Calculate claim funding, administrative fees, credits, taxes, and invoice support under client terms.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Client billing cycle closes"
+          },
+          "owner": "Client billing",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "claims",
+            "fees",
+            "credits",
+            "contract terms"
+          ],
+          "outputs": [
+            "invoice",
+            "funding request",
+            "billing detail"
+          ],
+          "sourceOfTruth": [
+            "claim ledger",
+            "client contract",
+            "billing subledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "client billing engine"
+          },
+          "tools": [
+            {
+              "name": "client-billing-engine",
+              "access": "execute",
+              "scope": "contract-authorized billable items"
+            }
+          ],
+          "evidence": [
+            "line-item formula and ledger lineage"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Billing approver",
+            "conditions": [
+              "invoice release or manual credit"
+            ]
+          },
+          "sla": {
+            "target": "Per contract billing date",
+            "escalation": "Controller"
+          },
+          "controls": [
+            "Contract version pinning, control totals, dual release"
+          ],
+          "metrics": [
+            {
+              "name": "invoices issued accurately and timely",
+              "target": ">= 99.9%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Hold disputed line, not fabricate estimate",
+            "escalation": "Material variance",
+            "recovery": "Issue corrected invoice or credit"
+          },
+          "downstreamEvents": [
+            "finance.client-invoiced"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "finance-settlement.cash-reconciliation",
+          "name": "Cash application and reconciliation",
+          "domain": "finance-settlement",
+          "description": "Match receipts and disbursements to invoices, payments, clients, pharmacies, and manufacturer obligations.",
+          "trigger": {
+            "type": "event",
+            "event": "Bank transaction or remittance received"
+          },
+          "owner": "Treasury accounting",
+          "accountableAuthority": "Treasurer",
+          "inputs": [
+            "bank activity",
+            "open receivables",
+            "payment files"
+          ],
+          "outputs": [
+            "cash application",
+            "unmatched exception",
+            "bank reconciliation"
+          ],
+          "sourceOfTruth": [
+            "bank ledger",
+            "general ledger",
+            "subledgers"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "cash matching and reconciliation service"
+          },
+          "tools": [
+            {
+              "name": "cash-reconciler",
+              "access": "write",
+              "scope": "rule-based matches and exception queue"
+            }
+          ],
+          "evidence": [
+            "bank-to-ledger match lineage"
+          ],
+          "consequenceClasses": [
+            "money"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Treasury accountant",
+            "conditions": [
+              "manual match or write-off"
+            ]
+          },
+          "sla": {
+            "target": "Daily; exceptions within 2 business days",
+            "escalation": "Treasurer"
+          },
+          "controls": [
+            "Segregation of duties and no direct deletion"
+          ],
+          "metrics": [
+            {
+              "name": "unreconciled cash",
+              "target": "< 0.1% after two days"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep cash unapplied",
+            "escalation": "Aged material item",
+            "recovery": "Reverse match and reapply"
+          },
+          "downstreamEvents": [
+            "finance.cash-applied"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "finance-settlement.guarantee-settlement",
+          "name": "Performance guarantee settlement",
+          "domain": "finance-settlement",
+          "description": "Calculate contract guarantees, exclusions, credits, and final client settlement from certified measures.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Guarantee measurement period closes"
+          },
+          "owner": "Client finance",
+          "accountableAuthority": "Chief financial officer",
+          "inputs": [
+            "contract definitions",
+            "certified measures",
+            "approved exclusions"
+          ],
+          "outputs": [
+            "guarantee result",
+            "credit or invoice",
+            "attestation"
+          ],
+          "sourceOfTruth": [
+            "executed contract",
+            "certified reporting mart",
+            "general ledger"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "contract guarantee engine"
+          },
+          "tools": [
+            {
+              "name": "guarantee-calculator",
+              "access": "execute",
+              "scope": "effective client guarantee schedule"
+            }
+          ],
+          "evidence": [
+            "population, formula, exclusions, approver"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Finance and client contract owners",
+            "conditions": [
+              "final settlement"
+            ]
+          },
+          "sla": {
+            "target": "By contractual due date",
+            "escalation": "Chief client officer and CFO"
+          },
+          "controls": [
+            "Certified data and independent recalculation"
+          ],
+          "metrics": [
+            {
+              "name": "guarantees settled timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Disclose delay and hold final settlement",
+            "escalation": "Definition dispute to legal",
+            "recovery": "Restate and true up"
+          },
+          "downstreamEvents": [
+            "finance.guarantee-settled"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "finance-settlement.close-reporting",
+          "name": "Financial close and reporting",
+          "domain": "finance-settlement",
+          "description": "Reconcile subledgers, post approved journals, close periods, and produce management and statutory reporting.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Monthly, quarterly, or annual close"
+          },
+          "owner": "Corporate accounting",
+          "accountableAuthority": "Controller",
+          "inputs": [
+            "all financial subledgers",
+            "bank balances",
+            "accruals"
+          ],
+          "outputs": [
+            "closed ledger",
+            "financial statements",
+            "variance package"
+          ],
+          "sourceOfTruth": [
+            "general ledger"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "general ledger and consolidation engine"
+          },
+          "tools": [
+            {
+              "name": "financial-close-platform",
+              "access": "write",
+              "scope": "reconciliations and approved journals"
+            }
+          ],
+          "evidence": [
+            "reconciliations, journal approvals, close checklist"
+          ],
+          "consequenceClasses": [
+            "money",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Controller",
+            "conditions": [
+              "journal posting and period close"
+            ]
+          },
+          "sla": {
+            "target": "Per approved close calendar",
+            "escalation": "CFO"
+          },
+          "controls": [
+            "Segregation, journal approval, locked periods"
+          ],
+          "metrics": [
+            {
+              "name": "material unreconciled balances",
+              "target": "0 at close"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep period open with disclosed exception",
+            "escalation": "Material misstatement risk",
+            "recovery": "Post approved correcting entry"
+          },
+          "downstreamEvents": [
+            "finance.period-closed"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stakeholder-service",
+      "name": "Stakeholder service",
+      "commercialPurpose": "Resolve member, prescriber, pharmacy, and client needs accurately through connected service channels.",
+      "processes": [
+        {
+          "id": "stakeholder-service.member-self-service",
+          "name": "Member self-service",
+          "domain": "stakeholder-service",
+          "description": "Answer authenticated questions about coverage, cost, claims, accumulators, PA status, and pharmacies.",
+          "trigger": {
+            "type": "request",
+            "event": "Member starts authenticated inquiry"
+          },
+          "owner": "Member services",
+          "accountableAuthority": "Member services supervisor",
+          "inputs": [
+            "member identity",
+            "question",
+            "benefit and claim context"
+          ],
+          "outputs": [
+            "source-backed answer",
+            "transaction or handoff"
+          ],
+          "sourceOfTruth": [
+            "claims rules engine",
+            "member and case records"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "claims, benefit, and cost-estimate services"
+          },
+          "tools": [
+            {
+              "name": "member-service-assistant",
+              "access": "read",
+              "scope": "authenticated member minimum-necessary data"
+            }
+          ],
+          "evidence": [
+            "tool results and cited records"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": false,
+            "authority": null,
+            "conditions": []
+          },
+          "sla": {
+            "target": "Immediate answer or warm handoff",
+            "escalation": "Urgent access issue"
+          },
+          "controls": [
+            "Never compute dollars; no clinical advice; authenticated scope"
+          ],
+          "metrics": [
+            {
+              "name": "resolved without handoff",
+              "target": ">= 80%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Warm handoff with context",
+            "escalation": "Potential harm or defect",
+            "recovery": "Correct answer and outreach"
+          },
+          "downstreamEvents": [
+            "service.member-inquiry-completed"
+          ],
+          "currentGlassAgents": [
+            "member-service"
+          ]
+        },
+        {
+          "id": "stakeholder-service.contact-center-casework",
+          "name": "Contact center case management",
+          "domain": "stakeholder-service",
+          "description": "Authenticate, classify, resolve, document, and route multi-channel stakeholder contacts with ownership.",
+          "trigger": {
+            "type": "event",
+            "event": "Call, chat, message, or correspondence received"
+          },
+          "owner": "Contact center operations",
+          "accountableAuthority": "VP service",
+          "inputs": [
+            "authenticated contact",
+            "interaction history",
+            "knowledge"
+          ],
+          "outputs": [
+            "resolution",
+            "case",
+            "handoff and commitment"
+          ],
+          "sourceOfTruth": [
+            "CRM case record",
+            "authoritative operating systems"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "service-desktop",
+              "access": "write",
+              "scope": "case notes, workflows, and authorized transactions"
+            }
+          ],
+          "evidence": [
+            "interaction transcript and source links"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Service specialist",
+            "conditions": [
+              "financial, coverage, or identity-sensitive change"
+            ]
+          },
+          "sla": {
+            "target": "Channel SLA and committed callback",
+            "escalation": "Aged case to supervisor"
+          },
+          "controls": [
+            "Authentication, quality monitoring, and no silent transfer"
+          ],
+          "metrics": [
+            {
+              "name": "cases resolved by commitment",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Create owned specialist case",
+            "escalation": "Urgent access or threat",
+            "recovery": "Supervisor review and correction"
+          },
+          "downstreamEvents": [
+            "service.case-opened",
+            "service.case-resolved"
+          ],
+          "currentGlassAgents": [
+            "member-service"
+          ]
+        },
+        {
+          "id": "stakeholder-service.prescriber-support",
+          "name": "Prescriber support",
+          "domain": "stakeholder-service",
+          "description": "Support coverage checks, PA submission, status, alternatives, and peer-review routing for prescribers.",
+          "trigger": {
+            "type": "request",
+            "event": "Authenticated prescriber inquiry"
+          },
+          "owner": "Provider services",
+          "accountableAuthority": "Clinical operations director",
+          "inputs": [
+            "prescriber identity",
+            "member authorization",
+            "drug inquiry"
+          ],
+          "outputs": [
+            "coverage information",
+            "PA action",
+            "clinical handoff"
+          ],
+          "sourceOfTruth": [
+            "formulary",
+            "criteria",
+            "PA case"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "prescriber-support-console",
+              "access": "write",
+              "scope": "authorized case and published policy"
+            }
+          ],
+          "evidence": [
+            "identity, consent, cited policy"
+          ],
+          "consequenceClasses": [
+            "care",
+            "coverage",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Licensed clinician",
+            "conditions": [
+              "clinical interpretation or peer discussion"
+            ]
+          },
+          "sla": {
+            "target": "Urgent clinical handoff under 30 minutes",
+            "escalation": "Clinical operations lead"
+          },
+          "controls": [
+            "No prescribing advice by model; verified authority"
+          ],
+          "metrics": [
+            {
+              "name": "complete PA submissions after support",
+              "target": ">= 90%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Route to clinical staff",
+            "escalation": "Urgent therapy interruption",
+            "recovery": "Correct case and notify"
+          },
+          "downstreamEvents": [
+            "clinical.pa-submitted"
+          ],
+          "currentGlassAgents": [
+            "pa-intake",
+            "member-service"
+          ]
+        },
+        {
+          "id": "stakeholder-service.client-service-requests",
+          "name": "Client service request management",
+          "domain": "stakeholder-service",
+          "description": "Intake, prioritize, fulfill, and evidence sponsor requests, issues, changes, and escalations.",
+          "trigger": {
+            "type": "request",
+            "event": "Authorized client request received"
+          },
+          "owner": "Account service",
+          "accountableAuthority": "Account executive",
+          "inputs": [
+            "client request",
+            "contract",
+            "operating context"
+          ],
+          "outputs": [
+            "answer",
+            "work order",
+            "resolution report"
+          ],
+          "sourceOfTruth": [
+            "client CRM",
+            "contract",
+            "change system"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "certified reporting and operating services"
+          },
+          "tools": [
+            {
+              "name": "client-service-hub",
+              "access": "write",
+              "scope": "authorized client cases and work orders"
+            }
+          ],
+          "evidence": [
+            "request, source-backed response, approvals"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "external_communication"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Account or functional owner",
+            "conditions": [
+              "configuration, financial, or contractual action"
+            ]
+          },
+          "sla": {
+            "target": "Contract-specific service level",
+            "escalation": "Account executive"
+          },
+          "controls": [
+            "Entitlement check and change governance"
+          ],
+          "metrics": [
+            {
+              "name": "requests completed within SLA",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Assign named human owner",
+            "escalation": "Contract SLA risk",
+            "recovery": "Correct delivery and document remediation"
+          },
+          "downstreamEvents": [
+            "service.client-request-completed"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "plan-design"
+          ]
+        },
+        {
+          "id": "stakeholder-service.complaints-escalations",
+          "name": "Complaints and executive escalations",
+          "domain": "stakeholder-service",
+          "description": "Investigate complaints across channels, protect urgent access, determine root cause, and deliver accountable resolution.",
+          "trigger": {
+            "type": "event",
+            "event": "Complaint, regulator referral, or executive escalation received"
+          },
+          "owner": "Service recovery",
+          "accountableAuthority": "Chief client officer",
+          "inputs": [
+            "complaint",
+            "interaction and operating records",
+            "jurisdiction"
+          ],
+          "outputs": [
+            "acknowledgment",
+            "resolution",
+            "root cause and remediation"
+          ],
+          "sourceOfTruth": [
+            "complaint case file"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "complaint-case-system",
+              "access": "write",
+              "scope": "chronology, evidence, commitments, reporting"
+            }
+          ],
+          "evidence": [
+            "complete case record and signed outcome"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "external_communication",
+            "phi_disclosure",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Service recovery leader or compliance",
+            "conditions": [
+              "final response and remediation"
+            ]
+          },
+          "sla": {
+            "target": "Acknowledge same day; resolve per jurisdiction",
+            "escalation": "Urgent access immediately"
+          },
+          "controls": [
+            "Non-retaliation, deadline calendar, root-cause closure"
+          ],
+          "metrics": [
+            {
+              "name": "complaints resolved timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Executive owner assigned",
+            "escalation": "Regulatory or harm risk",
+            "recovery": "Reopen, correct, and report"
+          },
+          "downstreamEvents": [
+            "compliance.complaint-reportable",
+            "quality.corrective-action-opened"
+          ],
+          "currentGlassAgents": [
+            "member-service",
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-analytics",
+      "name": "Data and analytics",
+      "commercialPurpose": "Provide governed, reproducible operational and client intelligence without exposing protected data.",
+      "processes": [
+        {
+          "id": "data-analytics.data-ingestion-quality",
+          "name": "Data ingestion and quality",
+          "domain": "data-analytics",
+          "description": "Ingest source data with lineage, contracts, validation, reconciliation, and quarantine of defects.",
+          "trigger": {
+            "type": "event",
+            "event": "Source batch or stream arrives"
+          },
+          "owner": "Data engineering",
+          "accountableAuthority": "Chief data officer",
+          "inputs": [
+            "source data",
+            "data contract",
+            "control totals"
+          ],
+          "outputs": [
+            "validated data",
+            "quality exceptions",
+            "lineage"
+          ],
+          "sourceOfTruth": [
+            "raw immutable zone",
+            "data catalog"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "data validation and reconciliation pipeline"
+          },
+          "tools": [
+            {
+              "name": "data-platform",
+              "access": "write",
+              "scope": "contracted pipelines and quarantines"
+            }
+          ],
+          "evidence": [
+            "checks, lineage, control totals"
+          ],
+          "consequenceClasses": [],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Data steward",
+            "conditions": [
+              "contract exception or manual correction"
+            ]
+          },
+          "sla": {
+            "target": "Per source freshness SLA",
+            "escalation": "Data product owner"
+          },
+          "controls": [
+            "Schema, completeness, balance, and PHI classification"
+          ],
+          "metrics": [
+            {
+              "name": "critical data checks passed",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Quarantine, preserve last certified dataset",
+            "escalation": "Downstream materiality",
+            "recovery": "Reload idempotently"
+          },
+          "downstreamEvents": [
+            "data.dataset-certified"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "data-analytics.semantic-metrics",
+          "name": "Semantic model and metric governance",
+          "domain": "data-analytics",
+          "description": "Define reusable business entities, measures, dimensions, attribution, and contract-specific metric versions.",
+          "trigger": {
+            "type": "event",
+            "event": "Metric created or definition changed"
+          },
+          "owner": "Analytics governance",
+          "accountableAuthority": "Chief data officer",
+          "inputs": [
+            "business definition",
+            "source lineage",
+            "contract terms"
+          ],
+          "outputs": [
+            "certified semantic model",
+            "metric specification"
+          ],
+          "sourceOfTruth": [
+            "metric registry",
+            "data catalog"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "certified semantic calculation layer"
+          },
+          "tools": [
+            {
+              "name": "metric-registry",
+              "access": "write",
+              "scope": "versioned definitions and approvals"
+            }
+          ],
+          "evidence": [
+            "owner, formula, tests, lineage"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract"
+          ],
+          "riskTier": "high",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Metric owner and data governance council",
+            "conditions": [
+              "certification or breaking change"
+            ]
+          },
+          "sla": {
+            "target": "Before dependent report release",
+            "escalation": "Data governance council"
+          },
+          "controls": [
+            "One certified definition per context and version"
+          ],
+          "metrics": [
+            {
+              "name": "published KPIs using certified definitions",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Mark metric uncertified",
+            "escalation": "Definition dispute",
+            "recovery": "Version and restate"
+          },
+          "downstreamEvents": [
+            "data.metric-certified"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "data-analytics.client-reporting",
+          "name": "Client and regulatory reporting",
+          "domain": "data-analytics",
+          "description": "Deliver small-employer reports separating drug costs, service fees, estimated and received rebates, member credits, plan remittances, and auditable net cost.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Report calendar due"
+          },
+          "owner": "Reporting operations",
+          "accountableAuthority": "Reporting product owner",
+          "inputs": [
+            "certified datasets",
+            "report specification",
+            "recipient entitlements"
+          ],
+          "outputs": [
+            "report package",
+            "delivery receipt"
+          ],
+          "sourceOfTruth": [
+            "certified marts",
+            "report archive"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned reporting pipeline"
+          },
+          "tools": [
+            {
+              "name": "reporting-platform",
+              "access": "execute",
+              "scope": "approved report and entitled recipient"
+            }
+          ],
+          "evidence": [
+            "data version, checks, delivery log"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "external_communication",
+            "phi_disclosure",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Report owner",
+            "conditions": [
+              "external regulatory or first-time release"
+            ]
+          },
+          "sla": {
+            "target": "By contract or filing deadline",
+            "escalation": "Reporting leader"
+          },
+          "controls": [
+            "Certified data, recipient check, suppression, reconciliation"
+          ],
+          "metrics": [
+            {
+              "name": "reports accurate and timely",
+              "target": ">= 99.9%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Issue delay notice, not unverified data",
+            "escalation": "Deadline or privacy risk",
+            "recovery": "Correct, restate, and notify"
+          },
+          "downstreamEvents": [
+            "data.report-delivered"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "data-analytics.ad-hoc-insight",
+          "name": "Ad hoc analytics and briefing",
+          "domain": "data-analytics",
+          "description": "Answer authorized business questions with reproducible queries, governed measures, citations, and safe aggregation.",
+          "trigger": {
+            "type": "request",
+            "event": "Authorized analyst or client asks a data question"
+          },
+          "owner": "Analytics",
+          "accountableAuthority": "Analytics director",
+          "inputs": [
+            "question",
+            "entitlement",
+            "certified data"
+          ],
+          "outputs": [
+            "answer",
+            "query lineage",
+            "briefing"
+          ],
+          "sourceOfTruth": [
+            "certified semantic layer",
+            "query audit log"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "governed query and metric services"
+          },
+          "tools": [
+            {
+              "name": "data-agent-tools",
+              "access": "read",
+              "scope": "approved aggregate and claim-detail queries"
+            }
+          ],
+          "evidence": [
+            "tool outputs, query, citations"
+          ],
+          "consequenceClasses": [
+            "money",
+            "external_communication",
+            "phi_disclosure"
+          ],
+          "riskTier": "high",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": true,
+            "authority": "Data owner",
+            "conditions": [
+              "export, claim-level disclosure, or uncertified metric"
+            ]
+          },
+          "sla": {
+            "target": "Immediate standard answer; scoped SLA otherwise",
+            "escalation": "Analytics lead"
+          },
+          "controls": [
+            "No invented totals; minimum necessary; export controls"
+          ],
+          "metrics": [
+            {
+              "name": "figures backed by tool result",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "State limitation and route to analyst",
+            "escalation": "Conflicting totals",
+            "recovery": "Correct briefing with source notice"
+          },
+          "downstreamEvents": [
+            "data.briefing-composed"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "data-analytics.forecasting-optimization",
+          "name": "Forecasting and optimization",
+          "domain": "data-analytics",
+          "description": "Forecast trend, utilization, cash, and program impacts with backtesting, uncertainty, and scenario governance.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Planning cycle or material variance"
+          },
+          "owner": "Decision science",
+          "accountableAuthority": "Chief financial officer",
+          "inputs": [
+            "certified history",
+            "approved assumptions",
+            "scenario controls"
+          ],
+          "outputs": [
+            "forecast",
+            "intervals",
+            "drivers and scenarios"
+          ],
+          "sourceOfTruth": [
+            "model registry",
+            "certified feature sets"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "versioned forecast calculation pipeline"
+          },
+          "tools": [
+            {
+              "name": "forecast-platform",
+              "access": "execute",
+              "scope": "approved models and scenarios"
+            }
+          ],
+          "evidence": [
+            "model version, inputs, backtest, uncertainty"
+          ],
+          "consequenceClasses": [
+            "money",
+            "contract"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Finance or business planning owner",
+            "conditions": [
+              "budget or operational commitment"
+            ]
+          },
+          "sla": {
+            "target": "Per planning calendar",
+            "escalation": "CFO"
+          },
+          "controls": [
+            "Model validation, drift tests, and scenario labeling"
+          ],
+          "metrics": [
+            {
+              "name": "forecast error",
+              "target": "within approved tolerance"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Use approved baseline with wider uncertainty",
+            "escalation": "Drift or instability",
+            "recovery": "Revalidate and reforecast"
+          },
+          "downstreamEvents": [
+            "data.forecast-approved"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "plan-design"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compliance-security",
+      "name": "Compliance, privacy, and security",
+      "commercialPurpose": "Meet legal, fiduciary, privacy, security, and audit obligations across all PBM operations.",
+      "processes": [
+        {
+          "id": "compliance-security.regulatory-change",
+          "name": "Regulatory change management",
+          "domain": "compliance-security",
+          "description": "Track CAA and FTC obligations separately by applicable entity, plan, funding arrangement, status, effective date, and approved controls; distinguish law from launch product policy.",
+          "trigger": {
+            "type": "regulatory",
+            "event": "Law, rule, guidance, or contract obligation changes"
+          },
+          "owner": "Compliance",
+          "accountableAuthority": "Chief compliance officer",
+          "inputs": [
+            "authoritative legal sources",
+            "products and jurisdictions"
+          ],
+          "outputs": [
+            "impact assessment",
+            "obligation and implementation plan"
+          ],
+          "sourceOfTruth": [
+            "regulatory obligations register"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "compliance-management-system",
+              "access": "write",
+              "scope": "obligations, owners, evidence"
+            }
+          ],
+          "evidence": [
+            "source citation, legal interpretation, closure proof"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Legal or compliance authority",
+            "conditions": [
+              "applicability and closure"
+            ]
+          },
+          "sla": {
+            "target": "Before effective date",
+            "escalation": "Chief compliance officer"
+          },
+          "controls": [
+            "Authoritative source and accountable owner"
+          ],
+          "metrics": [
+            {
+              "name": "obligations implemented by effective date",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Apply conservative manual control",
+            "escalation": "Readiness gap to executive risk committee",
+            "recovery": "Remediate and validate"
+          },
+          "downstreamEvents": [
+            "compliance.obligation-opened"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "compliance-security.privacy-rights",
+          "name": "Privacy rights and data governance",
+          "domain": "compliance-security",
+          "description": "Manage consent, minimum necessary use, access, amendment, accounting, retention, and data-subject requests.",
+          "trigger": {
+            "type": "request",
+            "event": "Privacy request or governed data-use proposal"
+          },
+          "owner": "Privacy office",
+          "accountableAuthority": "Privacy officer",
+          "inputs": [
+            "verified request",
+            "data inventory",
+            "legal basis"
+          ],
+          "outputs": [
+            "fulfilled request",
+            "data-use decision",
+            "audit record"
+          ],
+          "sourceOfTruth": [
+            "privacy case system",
+            "data inventory"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "privacy-operations",
+              "access": "write",
+              "scope": "verified requests and governed data assets"
+            }
+          ],
+          "evidence": [
+            "identity proof, search scope, approvals, delivery"
+          ],
+          "consequenceClasses": [
+            "external_communication",
+            "phi_disclosure",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Privacy officer",
+            "conditions": [
+              "disclosure, denial, or novel use"
+            ]
+          },
+          "sla": {
+            "target": "Applicable legal deadline",
+            "escalation": "Privacy officer"
+          },
+          "controls": [
+            "Identity verification, legal basis, minimum necessary"
+          ],
+          "metrics": [
+            {
+              "name": "privacy requests completed timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Pause disclosure",
+            "escalation": "Potential breach or deadline risk",
+            "recovery": "Correct response and document"
+          },
+          "downstreamEvents": [
+            "privacy.request-closed"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "compliance-security.access-security",
+          "name": "Identity, access, and security operations",
+          "domain": "compliance-security",
+          "description": "Provision least-privilege access, monitor threats, remediate vulnerabilities, and maintain security controls.",
+          "trigger": {
+            "type": "event",
+            "event": "Access lifecycle event, alert, or vulnerability"
+          },
+          "owner": "Information security",
+          "accountableAuthority": "Chief information security officer",
+          "inputs": [
+            "identity event",
+            "policy",
+            "security telemetry"
+          ],
+          "outputs": [
+            "access decision",
+            "incident or remediation case"
+          ],
+          "sourceOfTruth": [
+            "identity provider",
+            "SIEM",
+            "asset inventory"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "policy engine and approved risk scoring"
+          },
+          "tools": [
+            {
+              "name": "security-operations-platform",
+              "access": "execute",
+              "scope": "approved containment and access workflows"
+            }
+          ],
+          "evidence": [
+            "policy evaluation and immutable security logs"
+          ],
+          "consequenceClasses": [
+            "legal_compliance",
+            "security"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Security duty officer",
+            "conditions": [
+              "privileged access or high-impact containment"
+            ]
+          },
+          "sla": {
+            "target": "Per severity response target",
+            "escalation": "CISO"
+          },
+          "controls": [
+            "Least privilege, MFA, segregation, monitored break-glass"
+          ],
+          "metrics": [
+            {
+              "name": "critical alerts handled within SLA",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Fail closed or isolate safely",
+            "escalation": "Confirmed incident immediately",
+            "recovery": "Restore from approved secure state"
+          },
+          "downstreamEvents": [
+            "security.incident-opened"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "compliance-security.investigations-reporting",
+          "name": "Compliance investigations and reporting",
+          "domain": "compliance-security",
+          "description": "Investigate allegations, preserve evidence, determine findings, remediate, and make required disclosures.",
+          "trigger": {
+            "type": "event",
+            "event": "Hotline, monitoring alert, or reportable event"
+          },
+          "owner": "Compliance investigations",
+          "accountableAuthority": "Chief compliance officer",
+          "inputs": [
+            "allegation",
+            "logs",
+            "records",
+            "reporting rules"
+          ],
+          "outputs": [
+            "investigation report",
+            "corrective action",
+            "filing decision"
+          ],
+          "sourceOfTruth": [
+            "restricted investigation case file"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "investigation-case-system",
+              "access": "write",
+              "scope": "need-to-know evidence and legal holds"
+            }
+          ],
+          "evidence": [
+            "chain of custody, interviews, signed findings"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "legal_compliance"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Chief compliance officer and counsel",
+            "conditions": [
+              "finding, discipline referral, or disclosure"
+            ]
+          },
+          "sla": {
+            "target": "Risk-based plan and filing deadline",
+            "escalation": "Board compliance committee"
+          },
+          "controls": [
+            "Independence, privilege, legal hold, non-retaliation"
+          ],
+          "metrics": [
+            {
+              "name": "required filings timely",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Preserve evidence and restrict access",
+            "escalation": "Obstruction or imminent deadline",
+            "recovery": "Independent supplemental review"
+          },
+          "downstreamEvents": [
+            "compliance.corrective-action-opened"
+          ],
+          "currentGlassAgents": [
+            "integrity-triage"
+          ]
+        },
+        {
+          "id": "compliance-security.audit-monitoring",
+          "name": "Control monitoring and audit",
+          "domain": "compliance-security",
+          "description": "Test control design and operation, track findings, validate remediation, and support independent audits.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Monitoring plan, audit cycle, or control failure"
+          },
+          "owner": "Internal audit and compliance monitoring",
+          "accountableAuthority": "Audit committee",
+          "inputs": [
+            "risk assessment",
+            "control evidence",
+            "population data"
+          ],
+          "outputs": [
+            "test results",
+            "finding",
+            "validated closure"
+          ],
+          "sourceOfTruth": [
+            "GRC system",
+            "immutable evidence repository"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "approved sampling and control-test calculations"
+          },
+          "tools": [
+            {
+              "name": "grc-platform",
+              "access": "write",
+              "scope": "plans, evidence, findings, remediation"
+            }
+          ],
+          "evidence": [
+            "population, sample, test steps, reviewer"
+          ],
+          "consequenceClasses": [
+            "contract",
+            "legal_compliance"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Independent audit or compliance owner",
+            "conditions": [
+              "finding rating and closure"
+            ]
+          },
+          "sla": {
+            "target": "Per approved audit plan",
+            "escalation": "Audit committee"
+          },
+          "controls": [
+            "Tester independence and evidence retention"
+          ],
+          "metrics": [
+            {
+              "name": "high findings remediated by due date",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep finding open",
+            "escalation": "Overdue critical issue",
+            "recovery": "Retest after remediation"
+          },
+          "downstreamEvents": [
+            "quality.corrective-action-opened"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quality-resilience",
+      "name": "Quality and resilience",
+      "commercialPurpose": "Keep services accurate, available, recoverable, and continuously improving under normal and stressed conditions.",
+      "processes": [
+        {
+          "id": "quality-resilience.operational-monitoring",
+          "name": "Operational monitoring and incident detection",
+          "domain": "quality-resilience",
+          "description": "Monitor service health, transaction quality, queues, dependencies, and business impact against thresholds.",
+          "trigger": {
+            "type": "threshold",
+            "event": "Technical or business SLO threshold breached"
+          },
+          "owner": "Operations command center",
+          "accountableAuthority": "Chief operations officer",
+          "inputs": [
+            "telemetry",
+            "business control totals",
+            "SLOs"
+          ],
+          "outputs": [
+            "alert",
+            "impact assessment",
+            "incident"
+          ],
+          "sourceOfTruth": [
+            "observability platform",
+            "incident system"
+          ],
+          "executionMode": "deterministic",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "SLO and business-control monitoring"
+          },
+          "tools": [
+            {
+              "name": "operations-observability",
+              "access": "write",
+              "scope": "alerts and incident creation"
+            }
+          ],
+          "evidence": [
+            "telemetry, threshold, timestamps"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "security"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-reversible",
+          "approval": {
+            "required": false,
+            "authority": null,
+            "conditions": []
+          },
+          "sla": {
+            "target": "Detect critical incidents within 5 minutes",
+            "escalation": "Incident commander"
+          },
+          "controls": [
+            "Business and technical signals; deduplicated alerts"
+          ],
+          "metrics": [
+            {
+              "name": "critical mean time to detect",
+              "target": "< 5 minutes"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Independent synthetic and manual controls",
+            "escalation": "Monitoring blind spot",
+            "recovery": "Restore telemetry and reconcile period"
+          },
+          "downstreamEvents": [
+            "quality.incident-opened"
+          ],
+          "currentGlassAgents": [
+            "data-agent"
+          ]
+        },
+        {
+          "id": "quality-resilience.incident-management",
+          "name": "Incident response and recovery",
+          "domain": "quality-resilience",
+          "description": "Contain, communicate, recover, reconcile, and close operational, clinical, financial, and security incidents.",
+          "trigger": {
+            "type": "event",
+            "event": "Incident declared"
+          },
+          "owner": "Incident management",
+          "accountableAuthority": "Incident commander",
+          "inputs": [
+            "incident record",
+            "runbooks",
+            "impact data"
+          ],
+          "outputs": [
+            "containment",
+            "status communications",
+            "recovery validation"
+          ],
+          "sourceOfTruth": [
+            "incident timeline"
+          ],
+          "executionMode": "human-authority",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "incident-command-platform",
+              "access": "write",
+              "scope": "timeline, tasks, communications, decisions"
+            }
+          ],
+          "evidence": [
+            "decision log, validation, reconciliations"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "external_communication",
+            "security"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Incident commander",
+            "conditions": [
+              "major containment, failover, or closure"
+            ]
+          },
+          "sla": {
+            "target": "Severity-specific restore target",
+            "escalation": "Executive crisis team"
+          },
+          "controls": [
+            "Named command, change freeze, stakeholder cadence"
+          ],
+          "metrics": [
+            {
+              "name": "critical mean time to restore",
+              "target": "within SLO"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Invoke continuity plan",
+            "escalation": "Uncontained impact",
+            "recovery": "Validate and reconcile all affected work"
+          },
+          "downstreamEvents": [
+            "quality.incident-resolved"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "quality-resilience.business-continuity",
+          "name": "Business continuity and disaster recovery",
+          "domain": "quality-resilience",
+          "description": "Maintain, test, and invoke continuity for people, facilities, technology, vendors, and critical PBM processes.",
+          "trigger": {
+            "type": "schedule",
+            "event": "Exercise calendar or disruptive event"
+          },
+          "owner": "Business resilience",
+          "accountableAuthority": "Chief risk officer",
+          "inputs": [
+            "business impact analysis",
+            "recovery plans",
+            "dependency inventory"
+          ],
+          "outputs": [
+            "tested plan",
+            "recovery evidence",
+            "improvement actions"
+          ],
+          "sourceOfTruth": [
+            "continuity management system"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": true,
+            "authority": "deterministic-system",
+            "system": "recovery objective measurement service"
+          },
+          "tools": [
+            {
+              "name": "continuity-platform",
+              "access": "write",
+              "scope": "plans, exercises, dependencies, results"
+            }
+          ],
+          "evidence": [
+            "exercise timeline and measured RTO/RPO"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "contract",
+            "security"
+          ],
+          "riskTier": "critical",
+          "autonomy": "human-only",
+          "approval": {
+            "required": true,
+            "authority": "Crisis management leader",
+            "conditions": [
+              "plan invocation and return to normal"
+            ]
+          },
+          "sla": {
+            "target": "Meet approved RTO and RPO",
+            "escalation": "Executive crisis team"
+          },
+          "controls": [
+            "Independent exercises and critical vendor participation"
+          ],
+          "metrics": [
+            {
+              "name": "critical processes meeting recovery objectives",
+              "target": "100%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Manual continuity procedures",
+            "escalation": "Objective breach",
+            "recovery": "Remediate and retest"
+          },
+          "downstreamEvents": [
+            "quality.continuity-invoked"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "quality-resilience.change-release",
+          "name": "Change and release assurance",
+          "domain": "quality-resilience",
+          "description": "Risk-assess, test, approve, deploy, observe, and roll back application, rule, data, and configuration changes.",
+          "trigger": {
+            "type": "event",
+            "event": "Change proposed for controlled environment"
+          },
+          "owner": "Change management",
+          "accountableAuthority": "Change authority",
+          "inputs": [
+            "change record",
+            "tests",
+            "impact and rollback plan"
+          ],
+          "outputs": [
+            "approval",
+            "release evidence",
+            "post-change validation"
+          ],
+          "sourceOfTruth": [
+            "change and deployment systems"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "change-control-platform",
+              "access": "execute",
+              "scope": "approved deployment gates and rollback"
+            }
+          ],
+          "evidence": [
+            "diff, tests, approvals, deployment logs"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "money",
+            "security"
+          ],
+          "riskTier": "critical",
+          "autonomy": "act-with-review",
+          "approval": {
+            "required": true,
+            "authority": "Risk-appropriate change authority",
+            "conditions": [
+              "production deployment"
+            ]
+          },
+          "sla": {
+            "target": "Per release calendar or emergency policy",
+            "escalation": "Technology and business owner"
+          },
+          "controls": [
+            "Segregation, automated gates, rollback, observation window"
+          ],
+          "metrics": [
+            {
+              "name": "change failure rate",
+              "target": "< 5%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Block or roll back change",
+            "escalation": "Member or financial impact",
+            "recovery": "Restore prior approved version"
+          },
+          "downstreamEvents": [
+            "quality.change-deployed"
+          ],
+          "currentGlassAgents": []
+        },
+        {
+          "id": "quality-resilience.root-cause-improvement",
+          "name": "Root cause and corrective action",
+          "domain": "quality-resilience",
+          "description": "Determine systemic causes, assign durable corrective actions, verify effectiveness, and share learning.",
+          "trigger": {
+            "type": "event",
+            "event": "Major incident, audit finding, complaint trend, or defect"
+          },
+          "owner": "Quality management",
+          "accountableAuthority": "Chief quality officer",
+          "inputs": [
+            "case evidence",
+            "process data",
+            "control failures"
+          ],
+          "outputs": [
+            "root-cause analysis",
+            "CAPA",
+            "effectiveness result"
+          ],
+          "sourceOfTruth": [
+            "quality management system"
+          ],
+          "executionMode": "hybrid",
+          "authoritativeCalculation": {
+            "required": false,
+            "authority": "not-applicable",
+            "system": null
+          },
+          "tools": [
+            {
+              "name": "quality-management-system",
+              "access": "write",
+              "scope": "RCA, CAPA, owners, validation"
+            }
+          ],
+          "evidence": [
+            "causal evidence and effectiveness test"
+          ],
+          "consequenceClasses": [
+            "coverage",
+            "legal_compliance",
+            "security"
+          ],
+          "riskTier": "high",
+          "autonomy": "recommend",
+          "approval": {
+            "required": true,
+            "authority": "Independent quality owner",
+            "conditions": [
+              "root cause, action acceptance, and closure"
+            ]
+          },
+          "sla": {
+            "target": "Critical RCA within 10 business days",
+            "escalation": "Executive risk committee"
+          },
+          "controls": [
+            "No closure on activity alone; verify effectiveness"
+          ],
+          "metrics": [
+            {
+              "name": "corrective actions effective at validation",
+              "target": ">= 95%"
+            }
+          ],
+          "failureHandling": {
+            "fallback": "Keep issue open with interim control",
+            "escalation": "Overdue or ineffective action",
+            "recovery": "Redesign and revalidate"
+          },
+          "downstreamEvents": [
+            "quality.corrective-action-closed"
+          ],
+          "currentGlassAgents": [
+            "data-agent",
+            "integrity-triage"
+          ]
+        }
+      ]
+    }
+  ]
+}

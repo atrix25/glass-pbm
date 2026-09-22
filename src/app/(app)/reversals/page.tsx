@@ -34,7 +34,7 @@ export default async function ReversalsPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`A fill that never left the counter is not a fill. ${formatNumber(rev.reversals)} reversals have come back so far this year, and ${formatNumber(rec.claims)} more claims were paid for people whose employer had not yet told anyone they had left.`}
+        description={`${formatNumber(rev.reversals)} reversals · ${formatNumber(rec.claims)} claims flagged after coverage ended.`}
         action={
           <Link
             href="/claims"

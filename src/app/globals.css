@@ -1,29 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceef2;
-  --color-ink-200: #d5dae3;
-  --color-ink-300: #b0b9c9;
-  --color-ink-400: #8493ab;
-  --color-ink-500: #647590;
-  --color-ink-600: #4e5d76;
-  --color-ink-700: #404b60;
-  --color-ink-800: #374051;
-  --color-ink-900: #1d2432;
-  --color-ink-950: #12161f;
+  --color-ink-50: #f6f8f7;
+  --color-ink-100: #edf1ef;
+  --color-ink-200: #dce4df;
+  --color-ink-300: #b5c2ba;
+  --color-ink-400: #82938a;
+  --color-ink-500: #667a6e;
+  --color-ink-600: #506659;
+  --color-ink-700: #405649;
+  --color-ink-800: #334b3d;
+  --color-ink-900: #24392e;
+  --color-ink-950: #18291f;
 
-  --color-glass-50: #eefbfa;
-  --color-glass-100: #d3f5f3;
-  --color-glass-200: #ace9e8;
-  --color-glass-300: #74d8d8;
-  --color-glass-400: #38bec1;
-  --color-glass-500: #1ca2a7;
-  --color-glass-600: #148187;
-  --color-glass-700: #14676d;
-  --color-glass-800: #155259;
-  --color-glass-900: #16454b;
-  --color-glass-950: #072a2f;
+  --color-glass-50: #f0f6f2;
+  --color-glass-100: #e2eee6;
+  --color-glass-200: #c6dece;
+  --color-glass-300: #9fc5ad;
+  --color-glass-400: #72a789;
+  --color-glass-500: #4e8c69;
+  --color-glass-600: #397653;
+  --color-glass-700: #2d6043;
+  --color-glass-800: #274e39;
+  --color-glass-900: #234231;
+  --color-glass-950: #12291c;
 
   --color-amber-signal: #b45309;
   --color-positive: #0f766e;
@@ -37,8 +37,8 @@
 }
 
 :root {
-  --background: #f8f9fb;
-  --foreground: #12161f;
+  --background: #f6f8f9;
+  --foreground: #18291f;
 }
 
 * {
@@ -127,3 +127,10 @@ body {
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
 }
+
+/* Shared interaction treatment for every workspace. */
+a, button, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid #40745c; outline-offset: 3px; }
+:where(table) tbody tr:hover { background: #f8faf9; }
+:where(input, select, textarea) { accent-color: #397653; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .animate-fade-up, .animate-pulse-ring { animation: none; } }

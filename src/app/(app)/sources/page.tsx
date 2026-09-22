@@ -51,7 +51,7 @@ export default async function SourcesPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="Every rate, copay, formulary tier, criteria step and regulatory deadline in this system was read out of one of the documents below. All of them are public. None of them were paraphrased from memory. The counts say how much was loaded from each and how many stored decisions point back at it, so a document that is doing no work is visible as such.">
+      <SectionTitle description={"Source documents and the rates, rules and decisions that reference them."}>
         Source documents
       </SectionTitle>
 

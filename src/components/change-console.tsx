@@ -349,7 +349,7 @@ export function ChangeConsole({
       {recommendations.length > 0 ? (
         <Card className="border-glass-500/25 bg-glass-50/30">
           <CardHeader
-            title="What members are complaining about"
+            title="Member concerns"
             description="Drawn from the modelled member experience: the edits sitting on the largest numbers of turned-away members. Picking one loads it into the levers and projects it."
             action={
               <Link
@@ -732,7 +732,7 @@ function Results({
     <>
       <Card>
         <CardHeader
-          title="What this change does"
+          title="Change impact"
           description={`${formatNumber(result.claimsEvaluated)} claims re-adjudicated in ${(result.elapsedMs / 1000).toFixed(1)} seconds. ${formatNumber(result.claimsChanged)} of them came out differently.`}
           action={
             committed ? (
@@ -1408,7 +1408,7 @@ function MemberExperiencePanel({
   return (
     <Card>
       <CardHeader
-        title="What it does to members"
+        title="Member impact"
         description="Every member's full plan year, scored against the published schedule, before and after the change. Nobody was surveyed."
         action={
           <Link

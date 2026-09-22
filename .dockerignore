@@ -20,3 +20,8 @@ prisma/dev.db
 prisma/dev.db-*
 prisma/*.db.backup*
 prisma/*.db.bak*
+
+# Local credentials must never enter a production image.
+.env
+.env.*
+!.env.example

@@ -18,7 +18,7 @@ import {
   type AdjudicationContext,
   type PriorFill,
 } from "./adjudicate";
-import { loadWorld } from "./replay";
+import { loadEffectiveWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
   screenFill,
@@ -73,6 +73,7 @@ export interface PosResponse {
     memberName: string;
     cardholderId: string;
     planName: string;
+    benefitReleaseId: string | null;
     drugName: string;
     ndc11: string;
     pharmacyName: string;
@@ -87,7 +88,7 @@ export interface PosResponse {
 }
 
 export async function simulateFill(req: PosRequest): Promise<PosResponse> {
-  const world = await loadWorld();
+  const world = await loadEffectiveWorld(new Date(`${req.dateOfService}T00:00:00.000Z`));
 
   const drug = world.drugs.get(req.drugId);
   const pharmacy = world.pharmacies.get(req.pharmacyId);
@@ -328,6 +329,7 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
       memberName: `${member.firstName} ${member.lastName}`,
       cardholderId: member.cardholderId,
       planName: plan.name,
+      benefitReleaseId: world.releaseId,
       drugName: drug.name,
       ndc11: drug.ndc11,
       pharmacyName: pharmacy.name,

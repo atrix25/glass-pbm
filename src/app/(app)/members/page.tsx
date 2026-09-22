@@ -33,7 +33,7 @@ export default async function MembersPage({
   return (
     <div className="space-y-5">
       <SectionTitle
-        description={`A synthetic population of ${formatNumber(total)} covered lives, generated to match the age, utilization, and spend distribution published in the ET-8933 pharmacy benefits fact sheet. Every claim on every member ran through the same engine. Spend is year to date, through the simulation clock.`}
+        description={`${formatNumber(total)} simulated members. Coverage and spending through the selected date.`}
       >
         Membership
       </SectionTitle>

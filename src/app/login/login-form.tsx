@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginForm() {
+export default function LoginForm({ demo = false }: { demo?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -26,7 +26,12 @@ export default function LoginForm() {
         setError(data.error ?? "Login failed");
         return;
       }
-      router.replace(params.get("next") || "/");
+      const next = params.get("next") || "/";
+      router.replace(
+        next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")
+          ? next
+          : "/",
+      );
       router.refresh();
     } catch {
       setError("Network error");
@@ -42,7 +47,7 @@ export default function LoginForm() {
         display: "grid",
         placeItems: "center",
         fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        background: "linear-gradient(160deg, #f7f4ef 0%, #e8eef5 100%)",
+        background: "#f6f8f9",
       }}
     >
       <form
@@ -50,25 +55,42 @@ export default function LoginForm() {
         style={{
           width: "min(380px, 92vw)",
           display: "grid",
-          gap: 12,
-          padding: 28,
-          background: "rgba(255,255,255,0.85)",
+          gap: 18,
+          padding: 32,
+          background: "#fff",
+          border: "1px solid #dce4df",
           borderRadius: 12,
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 28, letterSpacing: "-0.02em" }}>Glass</h1>
-        <p style={{ margin: 0, color: "#556", fontSize: 14 }}>
-          Sign in to this plan&apos;s Glass instance.
+        <h1 style={{ margin: 0, fontSize: 28, letterSpacing: "-0.02em" }}>
+          glass{" "}
+          <span
+            style={{
+              fontSize: 11,
+              color: "#b51e3b",
+              letterSpacing: 0,
+              marginLeft: 14,
+            }}
+          >
+            CVS Caremark
+          </span>
+        </h1>
+        <p style={{ margin: 0, color: "#667a6e", fontSize: 14 }}>
+          Sign in to your plan.
         </p>
         <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
-          Email
+          {demo ? "Username" : "Email"}
           <input
-            type="email"
+            type={demo ? "text" : "email"}
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #ccd" }}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 8,
+              border: "1px solid #dce4df",
+            }}
           />
         </label>
         <label style={{ display: "grid", gap: 4, fontSize: 13 }}>
@@ -79,7 +101,11 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #ccd" }}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 8,
+              border: "1px solid #dce4df",
+            }}
           />
         </label>
         {error ? (
@@ -95,7 +121,7 @@ export default function LoginForm() {
             padding: "12px 14px",
             borderRadius: 8,
             border: 0,
-            background: "#1a2b3c",
+            background: "#315e45",
             color: "#fff",
             fontWeight: 600,
             cursor: "pointer",

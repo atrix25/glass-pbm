@@ -21,7 +21,7 @@ export default async function PosPage() {
 
   return (
     <div className="space-y-5">
-      <SectionTitle description="A pharmacy transmits a claim and gets an answer back in under a second, and the member finds out what they owe when the pharmacist says a number out loud. This is that transaction, run live against the real engine, with the derivation attached.">
+      <SectionTitle description={"Submit a pharmacy claim and inspect the pricing response."}>
         Pharmacy point of sale
       </SectionTitle>
 

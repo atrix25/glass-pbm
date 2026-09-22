@@ -39,7 +39,7 @@ export default async function ProofPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="Anyone can build a system that produces numbers. This page is the argument that these particular numbers are right, and an honest account of where the argument runs out.">
+      <SectionTitle description={"Test results, book validation and coverage limits."}>
         Correctness
       </SectionTitle>
 
@@ -158,7 +158,7 @@ export default async function ProofPage() {
       {/* What the invariants cover */}
       <Card>
         <CardHeader
-          title="What the invariants are checked against"
+          title="Validation scope"
           description="An invariant over ten claims proves nothing. These are the sizes involved."
         />
         <div className="grid divide-x divide-ink-200/70 sm:grid-cols-2 lg:grid-cols-4">
@@ -249,7 +249,7 @@ export default async function ProofPage() {
       {/* Population reconciliation */}
       <Card>
         <CardHeader
-          title="Does the simulated book resemble the real one?"
+          title="Book validation"
           description="The State of Wisconsin publishes utilisation statistics for this contract. A simulation that adjudicates perfectly against a population nobody recognises proves nothing about the real program."
         />
         <Table>

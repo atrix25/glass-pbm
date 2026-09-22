@@ -33,7 +33,7 @@ export default async function PharmacistReviewConsole() {
         Prior authorization queue
       </Link>
 
-      <SectionTitle description="The work that automation could not finish, and the one kind it is not permitted to finish. A traversal that reaches an approve edge is recorded on the spot and never appears here. A traversal that reaches a deny edge stops, unrecorded, and waits on this screen for a licensed reviewer to sign it or overturn it.">
+      <SectionTitle description={"Cases awaiting a licensed reviewer. Proposed denials require review before recording."}>
         Pharmacist review
       </SectionTitle>
 

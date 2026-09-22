@@ -39,7 +39,7 @@ export default async function TrendsPage() {
   if (!overview) {
     return (
       <div className="space-y-6">
-        <SectionTitle description="Trend is a rate of change, so it needs two comparable stretches of the year to measure between.">
+        <SectionTitle description="Cost and utilization across comparable periods.">
           Trend management
         </SectionTitle>
         <Card>
@@ -68,7 +68,7 @@ export default async function TrendsPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Steel Potatoes LLC, ${formatNumber(overview.members)} covered lives. Every figure compares ${describe(periods.current)} against ${describe(periods.prior)}, the equally long stretch before it, and is stated per member per month so the two are comparable.`}
+        description={`${formatNumber(overview.members)} covered lives · ${describe(periods.current)} vs. ${describe(periods.prior)}. Costs per member per month.`}
         action={
           <Link
             href="/sponsor"
@@ -111,7 +111,7 @@ export default async function TrendsPage() {
       {/* 1. The bridge. */}
       <Card>
         <CardHeader
-          title="What moved the number"
+          title="Cost drivers"
           description="Net plan cost per member per month is utilisation times price per script, less what members paid at the counter and less rebates. Each row below is the change in one of those terms holding the others still, so the five add to the whole move with nothing left over."
         />
         <Table>
@@ -193,7 +193,7 @@ export default async function TrendsPage() {
 
         <Card>
           <CardHeader
-            title="Who the cost sits with"
+            title="Cost by relationship"
             description="The same net cost, per covered life within each group."
           />
           <Table>
@@ -233,7 +233,7 @@ export default async function TrendsPage() {
       {/* 3. Therapeutic class. */}
       <Card>
         <CardHeader
-          title="Which therapeutic classes moved"
+          title="Therapeutic class drivers"
           description="Each class measured against the whole covered population rather than against the members who used it, so the rows are additive: every class on the book sums to the net change above."
           action={
             <Badge tone="neutral">{classes.length} classes on the book</Badge>
@@ -251,7 +251,7 @@ export default async function TrendsPage() {
       {/* 4. Drug level. */}
       <Card>
         <CardHeader
-          title="Which individual drugs moved"
+          title="Drug cost drivers"
           description="The same cut one level down. A class can look quiet while two drugs inside it move in opposite directions."
         />
         <DriverTable
@@ -266,7 +266,7 @@ export default async function TrendsPage() {
       {/* 5. Concentration. */}
       <Card>
         <CardHeader
-          title="How concentrated the spend is"
+          title="Spend concentration"
           description="Members banded by what the plan paid for them, net of rebates, over the current period. A trend carried by a handful of members is managed differently from one spread across the population."
         />
         <Table>

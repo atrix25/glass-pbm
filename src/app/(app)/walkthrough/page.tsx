@@ -688,13 +688,13 @@ export default async function WalkthroughPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="Twenty-three stops across the whole system, in the order that makes them make sense. Every figure on this page was read out of the database a moment ago, and every stop asks you to check something rather than to look at something.">
+      <SectionTitle description={"A guided tour of plan benefits, operations and evidence."}>
         Guided walkthrough
       </SectionTitle>
 
       <Card>
         <CardHeader
-          title="What you are looking at"
+          title="Demo scope"
           description="One paragraph of orientation, for anyone who has not spent a career in pharmacy benefits."
         />
         <div className="max-w-4xl space-y-3 px-5 py-4 text-[13.5px] leading-relaxed text-ink-700">
@@ -984,7 +984,7 @@ export default async function WalkthroughPage() {
 
       <Card className="border-ink-300/70 bg-ink-50/50">
         <CardHeader
-          title="How to break it"
+          title="Validation scenarios"
           description="The most useful thing a sceptical reader can do is try to make the system contradict itself. These four are the easiest attempts, and all of them are meant to fail."
         />
         <ul className="space-y-2.5 px-5 py-4 text-[13px] leading-relaxed text-ink-700">

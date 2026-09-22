@@ -1,239 +1,41 @@
+import { demoFeaturesEnabled } from "@/lib/config";
+import { simulation } from "@/lib/rebate-protection/service";
+import { RebateHistory, RebateExceptions } from "@/components/rebate-protection-view";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Badge,
-  Card,
-  CardHeader,
-  SectionTitle,
-  Stat,
-} from "@/components/ui";
-import { getRun, type StepRow } from "@/lib/queries/agents";
-import { formatDateTime, formatNumber } from "@/lib/utils";
-
+import { getClock } from "@/lib/session";
+import { getWorkDetail } from "@/lib/queries/agent-work";
+import { AGENTS } from "@/lib/agents/registry";
+import { nextStep, proposalStatus, workDestination } from "@/lib/agents/work";
+import { AgentRefresh } from "@/components/agent-refresh";
+import styles from "../../agents.module.css";
 export const dynamic = "force-dynamic";
-
-const KIND_TONE: Record<string, "neutral" | "accent" | "warn" | "positive" | "negative"> =
-  {
-    Think: "accent",
-    Tool: "neutral",
-    Evidence: "positive",
-    Proposal: "positive",
-    Gate: "warn",
-    Refusal: "negative",
-  };
-
-const KIND_LABEL: Record<string, string> = {
-  Think: "Judgement",
-  Tool: "Tool call",
-  Evidence: "Evidence",
-  Proposal: "Proposal",
-  Gate: "Held for a person",
-  Refusal: "Declined",
-};
-
-export default async function RunPage({
-  params,
-}: {
-  params: Promise<{ runId: string }>;
-}) {
-  const { runId } = await params;
-  const run = await getRun(runId);
-  if (!run) notFound();
-
-  const subjectHref = subjectLink(run.subjectType, run.subjectId);
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href={`/agents/${run.agent.id}`}
-          className="text-[12.5px] text-glass-700 hover:text-glass-900"
-        >
-          ← {run.agent.name}
-        </Link>
-      </div>
-
-      <SectionTitle description={run.goal}>
-        Run {run.id.slice(0, 8)}
-      </SectionTitle>
-
-      <Card>
-        <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">
-          <Stat
-            label="Outcome"
-            value={
-              <Badge
-                tone={
-                  run.outcome === "Completed"
-                    ? "positive"
-                    : run.outcome === "Escalated"
-                      ? "warn"
-                      : "neutral"
-                }
-              >
-                {run.outcome}
-              </Badge>
-            }
-            sub={formatDateTime(run.startedAt)}
-          />
-          <Stat
-            label="Took"
-            value={`${formatNumber(run.elapsedMs)} ms`}
-            sub={`${run.steps.length} steps`}
-          />
-          <Stat
-            label="Reasoned by"
-            value={run.brain === "model" ? (run.modelName ?? "model") : run.brain}
-            sub={
-              run.brain === "deterministic"
-                ? "The agent's scripted planner. No model call was made."
-                : `${formatNumber(run.inputTokens + run.outputTokens)} tokens`
-            }
-          />
-          <Stat
-            label="Autonomy in force"
-            value={run.autonomy}
-            sub="Copied onto the run, so later policy changes cannot rewrite it"
-          />
-        </div>
-        <div className="px-5 py-4">
-          <p className="text-[13px] leading-relaxed text-ink-700">{run.summary}</p>
-          {subjectHref ? (
-            <p className="mt-2 text-[12.5px] text-ink-600">
-              About{" "}
-              <Link href={subjectHref} className="text-glass-700 hover:text-glass-900">
-                {run.subjectType} {run.subjectId}
-              </Link>
-              .
-            </p>
-          ) : null}
-        </div>
-      </Card>
-
-      {run.proposals.map((p) => (
-        <Card key={p.id}>
-          <CardHeader
-            title={p.consequential ? "Held for a person" : "Proposal"}
-            description={
-              p.consequential
-                ? "This action would move money or deny care, so the runtime refused to apply it automatically at any autonomy level."
-                : p.autoApplied
-                  ? "Applied under the autonomy in force at the time, and reversible by a person."
-                  : "Written for a person to decide."
-            }
-            action={
-              <Badge tone={p.consequential ? "warn" : p.autoApplied ? "positive" : "neutral"}>
-                {p.status}
-              </Badge>
-            }
-          />
-          <div className="px-5 py-4">
-            <p className="text-[13.5px] font-medium text-ink-900">{p.headline}</p>
-            <p className="mt-2 max-w-4xl text-[13px] leading-relaxed text-ink-700">
-              {p.rationale}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-ink-600">
-              <span>
-                Action <code className="rounded bg-ink-100 px-1 py-0.5">{p.action}</code>
-              </span>
-              <span>Confidence {(p.confidenceBps / 100).toFixed(0)}%</span>
-            </div>
-            {p.overrideNote ? (
-              <div className="mt-3 rounded-lg border border-rose-300/60 bg-rose-50/60 px-4 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-rose-900">
-                  Reversed by a person
-                </div>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-rose-950">
-                  {p.overrideNote}
-                </p>
-              </div>
-            ) : null}
-            <Payload json={p.payload} />
-          </div>
-        </Card>
-      ))}
-
-      <Card>
-        <CardHeader
-          title="What it did, in order"
-          description="Every step records why it happened before it happened, what came back, and which brain produced it. A step marked as a tool call can be re-run by hand from the arguments below."
-        />
-        <ol className="divide-y divide-ink-100">
-          {run.steps.map((s) => (
-            <Step key={s.ordinal} step={s} />
-          ))}
-        </ol>
-      </Card>
-    </div>
-  );
-}
-
-function Step({ step }: { step: StepRow }) {
-  return (
-    <li className="px-5 py-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="tnum inline-flex h-5 w-5 items-center justify-center rounded bg-ink-100 text-[11px] font-semibold text-ink-700">
-          {step.ordinal}
-        </span>
-        <Badge tone={KIND_TONE[step.kind] ?? "neutral"}>
-          {KIND_LABEL[step.kind] ?? step.kind}
-        </Badge>
-        {step.tool ? (
-          <code className="rounded bg-ink-100 px-1.5 py-0.5 text-[11.5px] text-ink-800">
-            {step.tool}
-          </code>
-        ) : null}
-        {step.elapsedMs > 0 ? (
-          <span className="tnum text-[11.5px] text-ink-500">{step.elapsedMs} ms</span>
-        ) : null}
-        {step.brain === "model" ? (
-          <Badge tone="accent">model</Badge>
-        ) : null}
-      </div>
-      <p className="mt-2 max-w-4xl text-[12.5px] leading-relaxed text-ink-600">
-        {step.because}
-      </p>
-      <p className="mt-1.5 text-[13px] font-medium text-ink-900">{step.summary}</p>
-      <Payload json={step.detail} />
-    </li>
-  );
-}
-
-function Payload({ json }: { json: string }) {
-  if (!json || json === "{}") return null;
-  let pretty = json;
-  try {
-    pretty = JSON.stringify(JSON.parse(json), null, 2);
-  } catch {
-    /* leave as-is */
+const stamp=(d:Date)=>d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZone:"UTC"})+" UTC";
+export default async function RunPage({params}:{params:Promise<{runId:string}>}) {
+  const clock=await getClock(); const runId=(await params).runId;
+  if(runId.startsWith("rbp_")) {
+    if(!demoFeaturesEnabled())notFound();
+    const sandbox=await simulation(runId,clock.now);if(!sandbox)notFound();
+    return <div className="space-y-6"><Link href={`/rebate-protection?run=${runId}`}>← Rebate protection</Link><header><h1 className="text-3xl font-semibold">Work detail</h1><p className="mt-3 text-sm text-ink-500">Rebate protection · Synthetic simulation · Rebate operations · Finance</p><p className="mt-2">{sandbox.snapshot.scenario.title}</p></header><RebateExceptions run={sandbox}/><RebateHistory run={sandbox}/></div>;
   }
-  if (pretty.length < 3) return null;
-  return (
-    <details className="mt-2 group">
-      <summary className="cursor-pointer text-[12px] text-ink-500 transition hover:text-ink-700">
-        Raw data
-      </summary>
-      <pre className="scroll-thin mt-2 max-h-80 overflow-auto rounded-lg bg-ink-50 p-3 text-[11.5px] leading-relaxed text-ink-700">
-        {pretty}
-      </pre>
-    </details>
-  );
-}
-
-function subjectLink(type: string | null, id: string | null): string | null {
-  if (!type || !id) return null;
-  switch (type) {
-    case "PriorAuthorization":
-      return `/pa/${id}`;
-    case "IntegritySignal":
-      return "/integrity";
-    case "EligibilityTransaction":
-      return "/eligibility";
-    case "MacAppeal":
-      return "/mac";
-    case "PlanDesign":
-      return "/trends";
-    default:
-      return null;
+  const data=await getWorkDetail(runId,clock);if(!data)notFound();
+  const {run,def,related}=data;const destination=workDestination(run.agentId,run.subjectType,run.subjectId);
+  const statuses=run.proposals.map(p=>proposalStatus(p,clock.now));
+  const events: {key:string;at:Date;title:string;text:string;note?:string}[]=[];
+  for(const p of run.proposals){
+    events.push({key:`proposal-${p.id}`,at:p.createdAt,title:"Proposal recorded",text:p.headline,note:p.rationale});
+    if(p.reviewedAt&&p.reviewedAt<=clock.now)events.push({key:`review-${p.id}`,at:p.reviewedAt,title:"Employee review recorded",text:p.reviewedBy||"Reviewer not recorded",note: p.overrideNote??"Decision details are limited to the recorded proposal status."});
+    if(p.appliedAt&&p.appliedAt<=clock.now)events.push({key:`applied-${p.id}`,at:p.appliedAt,title:"Application recorded",text:p.headline,note:p.autoApplied?"Recorded as automatically applied under the run's policy.":"Application actor is not recorded in this ledger."});
   }
+  events.sort((a,b)=>a.at.getTime()-b.at.getTime());
+  return <div className={styles.page}>
+    <Link className={styles.link} href="/agents?tab=work">← Work</Link>
+    <header className={styles.heading}><div><p className={styles.eyebrow}>{def?.name??run.agentId}</p><h1>Work detail</h1><p className={styles.muted}>{stamp(run.startedAt)}</p></div><AgentRefresh/></header>
+    <section className={styles.panel}><div className={styles.detailHeader}><div><span className={styles.label}>Task</span><h2>{run.goal}</h2><p>{run.summary}</p><div className="mt-4 flex flex-wrap gap-2"><span className={styles.pill}>Run: {run.outcome}</span>{[...new Set(statuses)].map(s=><span key={s} className={`${styles.pill} ${s.startsWith("Awaiting")?styles.warm:""}`}>{s}</span>)}</div>{run.proposals.length===0&&<p>No proposals recorded. Employee follow-through is not recorded here.</p>}</div><aside><span className={styles.label}>Responsible team</span><p>{def?.owner??"Owner not recorded"}</p><p className={styles.note}>Responsible role, not an employee assignment.</p><Link className={styles.link} href={destination.href}>{destination.label} →</Link><p className={styles.note}>{run.subjectType??"Subject not recorded"}</p></aside></div></section>
+    {run.proposals.map(p=>{const status=proposalStatus(p,clock.now);const reviewVisible=p.reviewedAt&&p.reviewedAt<=clock.now;const target=workDestination(p.agentId,p.subjectType,p.subjectId);return <section id={`proposal-${p.id}`} key={p.id} className={styles.panel}><div className={styles.detailHeader}><div><span className={styles.label}>Proposal · {status}</span><h2>{p.headline}</h2><p>{p.rationale}</p><span className={styles.label}>Next step</span><p>{nextStep(status)}</p>{status==="Awaiting review"&&<p>{p.consequential?"The runtime requires human review because this action affects money or care.":"This proposal was recorded for a person to decide."}</p>}{status==="Status unavailable"&&<p>The ledger has no complete status history. A past state cannot be reliably reconstructed.</p>}</div><aside><span className={styles.label}>Employee review</span><p>{reviewVisible?(p.reviewedBy||"Reviewer not recorded"):"No review recorded by this cutoff."}</p>{reviewVisible&&p.overrideNote&&<p>{p.overrideNote}</p>}<Link className={styles.link} href={target.href}>{target.label} →</Link></aside></div><details className={styles.details}><summary>Proposal data</summary><pre className={styles.payload}>{JSON.stringify({action:p.action,confidenceBps:p.confidenceBps,consequential:p.consequential,payload:p.payload},null,2)}</pre></details></section>})}
+    <section className={styles.panel}><h2>Work history</h2><ol className={styles.timeline}><li className={styles.event}><h3>Request recorded</h3><time>{stamp(run.startedAt)}</time><p>{run.goal}</p></li><li className={styles.event}><h3>Agent actions & evidence</h3><p>Recorded step order. Individual step timestamps are not available.</p><ol>{run.steps.map(s=><li key={s.id}><strong>{s.kind === "Gate"?"Review gate":s.kind === "Tool"?"Action":s.kind === "Think"?"Recorded rationale":s.kind}</strong> · {s.summary}</li>)}</ol></li><li className={styles.event}><h3>Run {run.outcome.toLowerCase()}</h3><time>{stamp(run.endedAt)}</time><p>{run.summary}</p><p>{nextStep(run.outcome)}</p></li>{events.map(e=><li className={styles.event} key={e.key}><h3>{e.title}</h3><time>{stamp(e.at)}</time><p>{e.text}</p>{e.note&&<p>{e.note}</p>}</li>)}</ol></section>
+    <details className={`${styles.panel} ${styles.details}`}><summary>Execution, permissions & technical trace</summary><p className="mt-4">{run.brain === "model"?"Model-driven":run.brain === "deterministic"?"Scripted":run.brain} · {run.autonomy} at execution · {run.elapsedMs} ms · Model spend ${(run.costMillicents/100000).toFixed(4)}</p><p className="mt-2">{run.modelName??"Model name not recorded"} · {run.inputTokens+run.outputTokens} tokens</p><p className="mt-2">Registry tools: {def?.tools.join(", ")??"Not recorded"}. The run records its autonomy; the registry describes current permissions.</p><ul className="my-3 list-disc pl-5">{def?.mayNot.map(m=><li key={m}>{m}</li>)}</ul>{run.steps.map(s=><details key={s.id} className="border-t border-ink-100 py-3"><summary>{s.ordinal}. {s.tool??s.kind} · {s.brain}</summary><p className="mt-2">{s.because}</p><pre className={styles.payload}>{s.detail}</pre></details>)}</details>
+    <section className={styles.panel}><h2>Related runs</h2><p className="px-6 py-3 text-xs text-ink-500">Same recorded subject. This does not establish a handoff between agents.</p>{related.length?related.map(r=><div className={styles.related} key={r.id}><Link href={`/agents/runs/${r.id}`}>{AGENTS.find(a=>a.id===r.agentId)?.name??r.agentId} · {r.summary}</Link><p className={styles.note}>{stamp(r.endedAt)}</p></div>):<p className={styles.empty}>{run.subjectId&&run.subjectType?"No other runs recorded for this subject.":"No subject reference available to match related runs."}</p>}</section>
+    <p className={styles.note}>Data cutoff {stamp(clock.now)} · Updated {stamp(new Date())}. Recorded activity only.</p>
+  </div>;
 }

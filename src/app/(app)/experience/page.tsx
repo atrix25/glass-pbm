@@ -64,7 +64,7 @@ export default async function ExperiencePage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Every one of the ${formatNumber(c.scored)} members who filled a prescription this year, scored against a published schedule for how they would answer the recommendation question. Nobody was surveyed, because there is nobody to survey.`}
+        description={`Modeled experience for ${formatNumber(c.scored)} members. Estimates, not survey responses.`}
         action={
           <Link
             href="/methodology"
@@ -160,7 +160,7 @@ export default async function ExperiencePage() {
 
         <Card>
           <CardHeader
-            title="What a survey would have reported"
+            title="Modeled survey results"
             description="The same members, filtered by who would actually have replied to a questionnaire."
           />
           <div className="px-5 py-5">
@@ -260,7 +260,7 @@ export default async function ExperiencePage() {
 
       <Card>
         <CardHeader
-          title="Where the points go"
+          title="Score drivers"
           description="Total points each term took off, or put on, across the whole book. This is the part worth acting on: it says where the benefit hurts, not just how much."
         />
         <Table>
@@ -353,7 +353,7 @@ export default async function ExperiencePage() {
 
       <Card>
         <CardHeader
-          title="What members would say"
+          title="Modeled member feedback"
           description="The free-text box, rendered from the record. Only members the response model has replying are quoted, matching the surveyed figure rather than the census."
         />
         <div className="border-b border-ink-200/70 bg-amber-50/40 px-5 py-3.5">
@@ -412,7 +412,7 @@ export default async function ExperiencePage() {
 
       <Card>
         <CardHeader
-          title="What they would complain about"
+          title="Modeled concerns"
           description="Members counted against the single worst thing that happened to them, which is what the top of a support queue looks like."
         />
         <div className="border-b border-ink-200/70 px-5 py-4">
@@ -469,7 +469,7 @@ export default async function ExperiencePage() {
 
       <Card className="border-glass-500/25">
         <CardHeader
-          title="What to do about it"
+          title="Recommended actions"
           description="Each of these names the edit, the drug or tier behind it, and how many members it would stop hurting. Every figure is counted from the book."
         />
         <div className="border-b border-ink-200/70 px-5 py-4">
@@ -758,7 +758,7 @@ export default async function ExperiencePage() {
       </Card>
 
       <Card>
-        <CardHeader title="What this does not tell you" />
+        <CardHeader title="Model limits" />
         <div className="space-y-2.5 px-5 py-4 text-[13px] leading-relaxed text-ink-700">
           <p>
             It is not sentiment. It is an argument about experience, built from

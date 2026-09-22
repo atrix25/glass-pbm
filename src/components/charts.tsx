@@ -19,13 +19,13 @@ import {
 } from "recharts";
 
 const AXIS = {
-  stroke: "#8493ab",
+  stroke: "#82938a",
   fontSize: 11,
   tickLine: false,
   axisLine: false,
 } as const;
 
-const GRID = "#eceef2";
+const GRID = "#edf1ef";
 
 function money(cents: number) {
   const d = cents / 100;
@@ -45,12 +45,12 @@ function moneyExact(cents: unknown) {
 const tooltipStyle = {
   contentStyle: {
     borderRadius: 10,
-    border: "1px solid #d5dae3",
+    border: "1px solid #dce4df",
     boxShadow: "0 12px 32px -16px rgba(18,22,31,0.35)",
     fontSize: 12,
     padding: "8px 10px",
   },
-  labelStyle: { color: "#404b60", fontWeight: 600, marginBottom: 2 },
+  labelStyle: { color: "#405649", fontWeight: 600, marginBottom: 2 },
 } as const;
 
 export function SpendTrendChart({
@@ -69,8 +69,8 @@ export function SpendTrendChart({
       <AreaChart data={shaped} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
         <defs>
           <linearGradient id="planGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1ca2a7" stopOpacity={0.28} />
-            <stop offset="100%" stopColor="#1ca2a7" stopOpacity={0.02} />
+            <stop offset="0%" stopColor="#4e8c69" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#4e8c69" stopOpacity={0.02} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={GRID} vertical={false} />
@@ -80,14 +80,14 @@ export function SpendTrendChart({
         <Area
           type="monotone"
           dataKey="Plan"
-          stroke="#148187"
+          stroke="#397653"
           strokeWidth={2}
           fill="url(#planGrad)"
         />
         <Area
           type="monotone"
           dataKey="Member"
-          stroke="#8493ab"
+          stroke="#82938a"
           strokeWidth={1.5}
           fill="none"
         />
@@ -118,7 +118,7 @@ export function DailyVolumeChart({
           {...tooltipStyle}
           formatter={(v, name) => [Number(v ?? 0).toLocaleString(), name]}
         />
-        <Bar dataKey="paid" name="Paid" stackId="a" fill="#1ca2a7" radius={[0, 0, 0, 0]} />
+        <Bar dataKey="paid" name="Paid" stackId="a" fill="#4e8c69" radius={[0, 0, 0, 0]} />
         <Bar dataKey="rejected" name="Rejected" stackId="a" fill="#e6a3a3" radius={[2, 2, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -220,13 +220,13 @@ export function ChannelBarChart({
         <Tooltip
           {...tooltipStyle}
           formatter={(v) => moneyExact(v)}
-          cursor={{ fill: "#f6f7f9" }}
+          cursor={{ fill: "#f6f8f7" }}
         />
         <Bar dataKey="billedCents" name="Plan cost" radius={[0, 4, 4, 0]}>
           {data.map((d, i) => (
             <Cell
               key={i}
-              fill={d.channel === "Specialty" ? "#7c3aed" : "#1ca2a7"}
+              fill={d.channel === "Specialty" ? "#7c3aed" : "#4e8c69"}
             />
           ))}
         </Bar>
@@ -346,7 +346,7 @@ export function OopCurveChart({
         <Line
           type="stepAfter"
           dataKey="Total out of pocket"
-          stroke="#8493ab"
+          stroke="#82938a"
           strokeWidth={1.75}
           dot={false}
         />
@@ -372,7 +372,7 @@ export function OopCurveChart({
 }
 
 const WATERFALL_FILL = {
-  total: "#1d2432",
+  total: "#24392e",
   in: "#0f766e",
   out: "#b45309",
 } as const;
@@ -406,7 +406,7 @@ export function WaterfallChart({
         />
         <Tooltip
           {...tooltipStyle}
-          cursor={{ fill: "#f6f7f9" }}
+          cursor={{ fill: "#f6f8f7" }}
           formatter={(v, name) => (name === "value" ? moneyExact(v) : null)}
         />
         <Bar dataKey="base" stackId="w" fill="transparent" />
@@ -415,7 +415,7 @@ export function WaterfallChart({
             dataKey="value"
             position="top"
             formatter={(v: unknown) => money(Number(v ?? 0))}
-            style={{ fontSize: 11, fontWeight: 600, fill: "#404b60" }}
+            style={{ fontSize: 11, fontWeight: 600, fill: "#405649" }}
           />
           {data.map((d, i) => (
             <Cell key={i} fill={WATERFALL_FILL[d.kind]} />

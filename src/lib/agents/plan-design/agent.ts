@@ -262,7 +262,7 @@ export async function runPlanDesign(opts: {
       "countDisruption",
       "A saving without a disruption count is half a sentence. Count the members who pay more and the fills that would have rejected.",
       async () => ({
-        membersPayingMore: paidMore.length,
+        membersPayingMore: r.membersPayingMore,
         worstIncreaseCents: Math.max(0, ...paidMore.map((m) => m.deltaCents)),
         fillsThatWouldReject: r.newRejects,
       }),
@@ -282,10 +282,10 @@ export async function runPlanDesign(opts: {
       fillsThatWouldReject: disruption.fillsThatWouldReject,
       rebateChangeCents: annualise(r.rebateAfterCents - r.rebateBeforeCents),
       costPerDisruptedMember:
-        disruption.membersPayingMore + disruption.fillsThatWouldReject === 0
+        r.membersAffected === 0
           ? 0
           : annualise(planSaving) /
-            (disruption.membersPayingMore + disruption.fillsThatWouldReject),
+            r.membersAffected,
     });
   }
 

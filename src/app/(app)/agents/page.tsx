@@ -1,298 +1,36 @@
+import { demoFeaturesEnabled } from "@/lib/config";
 import Link from "next/link";
-import {
-  Badge,
-  Card,
-  CardHeader,
-  SectionTitle,
-  Stat,
-  Table,
-  Td,
-  Th,
-} from "@/components/ui";
-import { getFleet, type AgentSummary } from "@/lib/queries/agents";
-import { AUTONOMY_MEANING, type Autonomy } from "@/lib/agents/registry";
+import { AgentRefresh } from "@/components/agent-refresh";
 import { getClock } from "@/lib/session";
-import { formatDate, formatNumber } from "@/lib/utils";
-
+import { AGENTS, AUTONOMY_MEANING, type Autonomy } from "@/lib/agents/registry";
+import { nextStep, parseWorkFilters, QUEUES, WORK_STATUSES } from "@/lib/agents/work";
+import { getAgentWork, getWorkOverview } from "@/lib/queries/agent-work";
+import { getFleet } from "@/lib/queries/agents";
+import styles from "./agents.module.css";
 export const dynamic = "force-dynamic";
-
-const TONE: Record<Autonomy, "neutral" | "warn" | "positive" | "negative"> = {
-  Propose: "neutral",
-  ActWithReview: "warn",
-  Act: "positive",
-  Suspended: "negative",
-};
-
-function dollars(millicents: number): string {
-  const dollarsValue = millicents / 100_000;
-  if (dollarsValue < 1) return `${(millicents / 1000).toFixed(1)}¢`;
-  return `$${dollarsValue.toFixed(2)}`;
-}
-
-export default async function AgentsPage() {
-  const clock = await getClock();
-  const fleet = await getFleet(clock);
-  const active = fleet.agents.filter((a) => a.runs > 0);
-
-  return (
-    <div className="space-y-6">
-      <SectionTitle
-        description={`Six agents, ${formatNumber(fleet.totalRuns)} runs against this book, ${formatNumber(fleet.totalProposals)} proposals written and ${formatNumber(fleet.totalHeld)} of them held for a person because they would have moved money or denied care. Every run below is a real invocation against the real database, recorded as it happened.`}
-      >
-        Agent operations
-      </SectionTitle>
-
-      <Card>
-        <div className="grid grid-cols-2 divide-x divide-ink-200/70 border-b border-ink-200/70 md:grid-cols-4">
-          <Stat
-            label="Runs recorded"
-            value={formatNumber(fleet.totalRuns)}
-            sub={`Across ${active.length} agents in production`}
-          />
-          <Stat
-            label="Held for a person"
-            value={formatNumber(fleet.totalHeld)}
-            sub="Actions that move money or deny care. Never auto-applied."
-            tone="accent"
-          />
-          <Stat
-            label="Human hours displaced"
-            value={formatNumber(Math.round(fleet.hoursDisplaced))}
-            sub="At the per-task times published in each agent's register entry"
-          />
-          <Stat
-            label="Model spend"
-            value={fleet.totalCostMillicents > 0 ? dollars(fleet.totalCostMillicents) : "$0.00"}
-            sub={
-              fleet.modelConfigured
-                ? `${formatNumber(fleet.modelRuns)} runs used a language model`
-                : "No API key configured: the scripted planners ran"
-            }
-          />
-        </div>
-
-        <div className="px-5 py-4 text-[13px] leading-relaxed text-ink-600">
-          {fleet.modelConfigured ? (
-            <>
-              A language model is configured on this deployment, and the runs
-              that used it say so on their own trace. Where a model was
-              unreachable or returned something off-schema, the scripted planner
-              answered instead and the step records that too.
-            </>
-          ) : (
-            <>
-              No language model is configured on this deployment, so every run
-              below was reasoned by the scripted planner that each agent ships
-              with. That is deliberate rather than a limitation: an agent whose
-              tools return structured, cited data does most of its work in the
-              tool layer, and several of these tasks — reading a templated fax,
-              answering a 21-day appeal against a price file — do not need a
-              model at all. Set an <code className="rounded bg-ink-100 px-1 py-0.5 text-[12px]">ANTHROPIC_API_KEY</code>{" "}
-              and the same agents run the same tools with a model doing the
-              judgement, and every step is labelled with which one ran.
-            </>
-          )}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="The register"
-          description="What each agent is allowed to do, who decided that, and how often a person reverses it. Click through for the run log and the policy history."
-        />
-        <Table>
-          <thead>
-            <tr>
-              <Th>Agent</Th>
-              <Th>Autonomy</Th>
-              <Th align="right">Runs</Th>
-              <Th align="right">Escalated</Th>
-              <Th align="right">Held</Th>
-              <Th align="right">Overridden</Th>
-              <Th align="right">Median</Th>
-              <Th>Reasoned by</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {fleet.agents.map((a) => (
-              <tr key={a.def.id} className="hover:bg-ink-50/60">
-                <Td>
-                  <Link
-                    href={`/agents/${a.def.id}`}
-                    className="font-medium text-glass-700 hover:text-glass-900"
-                  >
-                    {a.def.name}
-                  </Link>
-                  <div className="mt-0.5 max-w-md text-[12px] leading-snug text-ink-500">
-                    {a.def.purpose}
-                  </div>
-                </Td>
-                <Td>
-                  <Badge tone={TONE[a.autonomy]}>{a.autonomy}</Badge>
-                  <div className="mt-0.5 text-[11.5px] text-ink-500">
-                    {a.autonomySince
-                      ? `since ${formatDate(a.autonomySince)}`
-                      : "registry default"}
-                  </div>
-                </Td>
-                {a.runs === 0 ? (
-                  /*
-                   * An agent with nothing to show yet says why, rather than
-                   * five dashes that read like a wiring fault. Program
-                   * integrity screens a subject across the whole span of its
-                   * fills, so its cases do not exist until that span closes,
-                   * and on this date most of them have not.
-                   */
-                  <Td colSpan={6}>
-                    <span className="text-[12px] text-ink-500">
-                      {a.firstCaseAt
-                        ? `No cases on this date. The first one clears its detection window on ${formatDate(a.firstCaseAt)}; advance the clock past it to see the run log fill.`
-                        : "No cases on this date."}
-                    </span>
-                  </Td>
-                ) : (
-                  <>
-                    <Td align="right">{formatNumber(a.runs)}</Td>
-                    <Td align="right">
-                      {(((a.escalated + a.refused) / a.runs) * 100).toFixed(1)}%
-                    </Td>
-                    <Td align="right">{formatNumber(a.held)}</Td>
-                    <Td align="right">
-                      {a.overrideRate === 0 && a.overridden === 0
-                        ? "—"
-                        : `${(a.overrideRate * 100).toFixed(1)}%`}
-                    </Td>
-                    <Td align="right">
-                      {a.medianMs < 1 ? "under 1 ms" : `${formatNumber(a.medianMs)} ms`}
-                    </Td>
-                    <Td>
-                      <span className="text-[12px] text-ink-600">{a.brain}</span>
-                    </Td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {(Object.keys(AUTONOMY_MEANING) as Autonomy[])
-          .filter((k) => k !== "Suspended")
-          .map((level) => {
-            const at = fleet.agents.filter((a) => a.autonomy === level);
-            return (
-              <Card key={level}>
-                <CardHeader
-                  title={
-                    <span className="flex items-center gap-2">
-                      <Badge tone={TONE[level]}>{level}</Badge>
-                    </span>
-                  }
-                  description={AUTONOMY_MEANING[level]}
-                />
-                <div className="px-5 py-4">
-                  {at.length === 0 ? (
-                    <p className="text-[13px] text-ink-500">
-                      Nothing runs at this level.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {at.map((a) => (
-                        <li key={a.def.id} className="text-[13px] text-ink-700">
-                          <Link
-                            href={`/agents/${a.def.id}`}
-                            className="font-medium text-glass-700 hover:text-glass-900"
-                          >
-                            {a.def.name}
-                          </Link>
-                          <p className="mt-0.5 text-[12px] leading-snug text-ink-500">
-                            {a.autonomyRationale}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-      </div>
-
-      <Card>
-        <CardHeader
-          title="The line nothing crosses"
-          description="Some actions are held for a person at every autonomy level, including the highest. This is enforced in the runtime rather than in a policy document, and the invariant suite checks the table afterwards to confirm no run ever got around it."
-        />
-        <Table>
-          <thead>
-            <tr>
-              <Th>Agent</Th>
-              <Th>Never, whatever the policy says</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {fleet.agents.map((a) => (
-              <tr key={a.def.id}>
-                <Td className="align-top">
-                  <span className="font-medium">{a.def.name}</span>
-                </Td>
-                <Td>
-                  <ul className="space-y-1">
-                    {a.def.mayNot.map((m) => (
-                      <li key={m} className="text-[12.5px] leading-snug text-ink-700">
-                        {m}
-                      </li>
-                    ))}
-                  </ul>
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="What each one replaces"
-          description="Priced against what an incumbent charges for the same work, from the same benchmarks used elsewhere in this build."
-        />
-        <div className="divide-y divide-ink-100">
-          {fleet.agents.map((a) => (
-            <Row key={a.def.id} agent={a} />
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function Row({ agent }: { agent: AgentSummary }) {
-  return (
-    <div className="grid gap-3 px-5 py-4 md:grid-cols-[1fr_1fr_auto]">
-      <div>
-        <Link
-          href={`/agents/${agent.def.id}`}
-          className="text-[13.5px] font-medium text-glass-700 hover:text-glass-900"
-        >
-          {agent.def.name}
-        </Link>
-        <p className="mt-1 max-w-md text-[12.5px] leading-relaxed text-ink-600">
-          {agent.def.purpose}
-        </p>
-      </div>
-      <p className="max-w-md text-[12.5px] leading-relaxed text-ink-600">
-        <span className="font-medium text-ink-800">Today that costs:</span>{" "}
-        {agent.def.incumbent}.
-      </p>
-      <div className="text-right">
-        <div className="tnum text-[13px] font-medium text-ink-900">
-          {formatNumber(agent.runs)} runs
-        </div>
-        <div className="mt-0.5 text-[11.5px] text-ink-500">
-          {agent.def.measure.name.toLowerCase()}, target {agent.def.measure.target}
-        </div>
-      </div>
-    </div>
-  );
+const stamp = (d: Date) => d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"UTC"})+" UTC";
+export default async function AgentsPage({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) {
+  const params=await searchParams; const tab=params.tab === "work" || params.tab === "team" ? params.tab : "overview";
+  const clock=await getClock(); const overview=await getWorkOverview(clock); const filters=parseWorkFilters(params);
+  const work=tab === "work" ? await getAgentWork(clock,filters) : null;
+  const fleet=tab === "overview" ? await getFleet(clock) : null;
+  const teams=[...new Set(AGENTS.map(a=>a.owner))];
+  const workLink=(status:string,agent?:string)=>`/agents?${new URLSearchParams({tab:"work",status,...(agent?{agent}:{})})}`;
+  const pageLink=(page:number)=>`/agents?${new URLSearchParams({tab:"work",...filters,page:String(page)})}`;
+  return <div className={styles.page}>
+    <header className={styles.heading}><div><p className={styles.eyebrow}>PEOPLE & AGENTS</p><h1>Agent operations</h1><p className={styles.muted}>Recorded work, responsible teams and employee handoffs.</p></div><AgentRefresh/></header>
+    {demoFeaturesEnabled()&&<p className={styles.note}><Link className={styles.link} href="/rebate-protection">Rebate protection sandbox →</Link> · Simulated reviews and runs are separate from the operational counts below.</p>}
+    <nav className={styles.tabs} aria-label="Agent views">{["overview","work","team"].map(t=><Link key={t} href={`/agents?tab=${t}`} aria-current={tab===t?"page":undefined}>{t[0].toUpperCase()+t.slice(1)}</Link>)}</nav>
+    <div className={styles.stats}>{[{label:"Awaiting review",count:overview.review,sub:"Proposals for a person"},{label:"Awaiting action",count:overview.action,sub:"Approved, not recorded as applied"},{label:"Failed",count:overview.failed,sub:"Runs that need investigation"}].map(s=><Link key={s.label} href={workLink(s.label)}><span>{s.label === "Failed" ? "Failed runs" : s.label}</span><strong>{s.count.toLocaleString()}</strong><small>{s.sub}</small></Link>)}</div>
+    {overview.unavailable>0&&<p className={styles.note}><Link className={styles.link} href={workLink("Status unavailable")}>{overview.unavailable.toLocaleString()} proposals have unavailable status</Link> · History is incomplete at this cutoff; these are excluded from pending counts.</p>}
+    {tab === "overview" && <section className={styles.panel}><h2>Agents & responsibilities</h2>{overview.agents.map(a=><article key={a.def.id} className={styles.agent}><div><h3><Link href={`/agents/${a.def.id}`}>{a.def.name}</Link></h3><p>{a.def.purpose}</p>{a.latestSummary&&<p className="mt-3! line-clamp-2"><span className="font-medium">Latest: </span>{a.latestSummary}</p>}</div><div><span className={styles.label}>Responsible team</span><p>{a.def.owner || "Owner not recorded"}</p></div><div><span className={styles.pill} title={AUTONOMY_MEANING[a.autonomy as Autonomy]}>{a.autonomy}</span><p className="mt-2!">{a.latest ? `Last run ${stamp(a.latest)}` : "No recorded activity"}</p></div><div><Link className={styles.link} href={workLink("Unresolved",a.def.id)}>{a.review+a.action} outstanding</Link><p>{a.review} review · {a.action} action</p><Link className={styles.link} href={a.def.id==="rebate-protection"?"/rebate-protection":workLink("All",a.def.id)}>{a.def.id==="rebate-protection"?"Sandbox work →":"View work →"}</Link></div></article>)}</section>}
+    {work && <section className={styles.panel}><form className={styles.filters} action="/agents"><input type="hidden" name="tab" value="work"/><label>Search<input name="q" defaultValue={filters.q} placeholder="Task or record" maxLength={200}/></label><label>Agent<select aria-label="Agent" name="agent" defaultValue={filters.agent}><option value="">All agents</option>{AGENTS.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label><label>Team<select aria-label="Team" name="team" defaultValue={filters.team}><option value="">All teams</option>{teams.map(t=><option key={t}>{t}</option>)}</select></label><label>Status<select aria-label="Status" name="status" defaultValue={filters.status}>{WORK_STATUSES.map(s=><option key={s}>{s}</option>)}</select></label><button>Apply</button><Link className={styles.link} href="/agents?tab=work">Reset</Link></form>
+      <p className="px-6 py-3 text-[11px] text-ink-500">{work.total.toLocaleString()} records · Runs and proposals are separate. Age is time since recording.</p>
+      {work.rows.length ? <div className={styles.scroll}><table className={styles.table}><thead><tr><th>Task</th><th>Agent & team</th><th>Status</th><th>Age</th><th>Next step</th></tr></thead><tbody>{work.rows.map(r=>{const def=AGENTS.find(a=>a.id===r.agentId);return <tr key={`${r.kind}:${r.id}`}><td><Link href={`/agents/runs/${r.runId}${r.kind==="Proposal"?`#proposal-${r.id}`:""}`}>{r.task}</Link><small>{r.kind} · {r.subjectType ?? "Subject not recorded"}</small></td><td>{def?.name??r.agentId}<small>{def?.owner??"Owner not recorded"}</small></td><td><span className={`${styles.pill} ${r.status.startsWith("Awaiting")?styles.warm:r.status==="Failed"?styles.bad:""}`}>{r.status}</span>{r.kind==="Proposal"&&<small>Run: {r.outcome}</small>}</td><td className="whitespace-nowrap">{Math.floor((clock.now.getTime()-r.at.getTime())/86400000)}d<small>{stamp(r.at)}</small></td><td>{nextStep(r.status)}</td></tr>})}</tbody></table></div>:<p className={styles.empty}>No work matches these filters.</p>}
+      <nav className={styles.pages} aria-label="Work pages"><span>Page {work.page} of {work.pages}</span><div className="flex gap-5">{work.page>1&&<Link href={pageLink(work.page-1)}>Previous</Link>}{work.page<work.pages&&<Link href={pageLink(work.page+1)}>Next</Link>}</div></nav>
+    </section>}
+    {tab === "team" && <><p className={styles.note}>Responsible roles, not assigned employees. Names appear only when a review is recorded.</p><div className={styles.teams}>{teams.map(team=><section key={team} className={`${styles.panel} ${styles.team}`}><span className={styles.label}>Responsible team</span><h2>{team}</h2>{overview.agents.filter(a=>a.def.owner===team).map(a=><div key={a.def.id}><h3>{a.def.name}</h3><p>{a.def.purpose}</p><span className={styles.label}>Employee handoff</span><p>{QUEUES[a.def.id]?.handoff??"Handoff not documented."}</p><div className="flex flex-wrap gap-5"><Link className={styles.link} href={workLink("Unresolved",a.def.id)}>{a.review+a.action} outstanding</Link><Link className={styles.link} href={QUEUES[a.def.id]?.href??"/agents"}>{QUEUES[a.def.id]?.label??"Work queue"} →</Link></div></div>)}</section>)}</div></>}
+    {fleet&&<details className={`${styles.panel} ${styles.details}`}><summary>Execution & estimates</summary><p className="mt-4">{fleet.totalRuns.toLocaleString()} recorded runs · {fleet.modelRuns.toLocaleString()} model-driven. Each run distinguishes model and scripted execution.</p><p className="mt-2">Model spend ${(fleet.totalCostMillicents/100000).toFixed(2)} · Estimated staff time equivalent {Math.round(fleet.hoursDisplaced).toLocaleString()} hours. Based on per-task assumptions, not measured savings.</p><p className="mt-2">{fleet.totalHeld.toLocaleString()} historical consequential proposals. This is not the outstanding review count.</p></details>}
+    <footer className={styles.note}>Data cutoff {stamp(clock.now)} · Updated {stamp(new Date())}. Refreshed on load or request; no live execution tracking.</footer>
+  </div>;
 }

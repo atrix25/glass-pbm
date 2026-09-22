@@ -1,3 +1,4 @@
+import { activeEntries } from "@/lib/benefit-release";
 /**
  * Formulary utilization management for sponsor analytics.
  *
@@ -117,7 +118,7 @@ export async function getHighCostDrugUtilizationManagement(
       criteriaTree: { select: { name: true } },
     },
   });
-  const byDrug = new Map(entries.map((e) => [e.drugId, e]));
+  const byDrug = new Map((await activeEntries(entries, clock.now)).map((e) => [e.drugId, e]));
 
   const drugs: DrugUmRow[] = top.map((d) => {
     const e = byDrug.get(d.drugId);
@@ -192,33 +193,6 @@ export interface FormularyUmSearchResult {
   drugs: FormularyUmSearchRow[];
 }
 
-function umWhereForFlag(flag: UmSearchFlag) {
-  const base = { formularyId: FORMULARY_ID };
-  switch (flag) {
-    case "step":
-      return { ...base, requiresStep: true };
-    case "pa":
-      return { ...base, requiresPA: true };
-    case "ql":
-      return { ...base, hasQuantityLimit: true };
-    case "specialty":
-      return { ...base, mandatorySpecialty: true };
-    case "any":
-      return {
-        ...base,
-        OR: [
-          { requiresStep: true },
-          { requiresPA: true },
-          { hasQuantityLimit: true },
-          { diagnosisRestricted: true },
-          { specialistRestricted: true },
-          { mandatorySpecialty: true },
-          { limitedDistribution: true },
-        ],
-      };
-  }
-}
-
 /** Search the published formulary index by UM flag, optionally filtering by drug name. */
 export async function searchFormularyUtilizationManagement(
   clock: SimulationClock,
@@ -226,26 +200,14 @@ export async function searchFormularyUtilizationManagement(
 ): Promise<FormularyUmSearchResult> {
   const flag = opts.flag ?? "any";
   const limit = opts.limit ?? 25;
-  const where = umWhereForFlag(flag);
-
-  const [totalMatching, entries] = await Promise.all([
-    prisma.formularyEntry.count({ where }),
-    prisma.formularyEntry.findMany({
-      where,
-      include: {
-        drug: { select: { id: true, name: true } },
-        criteriaTree: { select: { name: true } },
-      },
-      orderBy: { drug: { name: "asc" } },
-      take: opts.query ? 500 : limit,
-    }),
-  ]);
-
-  let rows = entries;
-  if (opts.query?.trim()) {
-    const q = opts.query.trim().toLowerCase();
-    rows = rows.filter((e) => e.drug.name.toLowerCase().includes(q));
-  }
+  const entries = await prisma.formularyEntry.findMany({
+    where: { formularyId: FORMULARY_ID },
+    include: { drug: { select: { id: true, name: true } }, criteriaTree: { select: { name: true } } },
+    orderBy: { drug: { name: "asc" } },
+  });
+  let rows = (await activeEntries(entries, clock.now)).filter(e => flag === "pa" ? e.requiresPA : flag === "step" ? e.requiresStep : flag === "ql" ? e.hasQuantityLimit : flag === "specialty" ? e.mandatorySpecialty : e.requiresPA || e.requiresStep || e.hasQuantityLimit || e.diagnosisRestricted || e.specialistRestricted || e.mandatorySpecialty || e.limitedDistribution);
+  if (opts.query?.trim()) rows = rows.filter(e => e.drug.name.toLowerCase().includes(opts.query!.trim().toLowerCase()));
+  const totalMatching = rows.length;
   rows = rows.slice(0, limit);
 
   const drugs: FormularyUmSearchRow[] = rows.map((e) => {

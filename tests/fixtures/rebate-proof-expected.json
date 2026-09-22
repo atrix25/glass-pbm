@@ -1,0 +1,9 @@
+{
+  "omitted": { "baselineReceipts":60000,"glassReceipts":100000,"baselineLoss":40000,"glassLoss":0,"baselineTopup":40000,"glassTopup":0,"benefit":40000,"unexpected":0 },
+  "eligibility": { "baselineReceipts":80000,"glassReceipts":80000,"baselineLoss":0,"glassLoss":0,"baselineTopup":20000,"glassTopup":20000,"benefit":0,"unexpected":20000 },
+  "benefit": { "baselineReceipts":60000,"glassReceipts":100000,"baselineLoss":40000,"glassLoss":0,"baselineTopup":40000,"glassTopup":0,"benefit":40000,"unexpected":0 },
+  "duplicate": { "baselineReceipts":100000,"glassReceipts":100000,"baselineLoss":10000,"glassLoss":0,"baselineTopup":0,"glassTopup":0,"benefit":10000,"unexpected":0 },
+  "underpayment": { "baselineReceipts":70000,"glassReceipts":100000,"baselineLoss":30000,"glassLoss":0,"baselineTopup":30000,"glassTopup":0,"benefit":30000,"unexpected":0 },
+  "timing": { "baselineReceipts":100000,"glassReceipts":100000,"baselineLoss":0,"glassLoss":0,"baselineTopup":0,"glassTopup":0,"benefit":0,"unexpected":0 },
+  "unfavorable": { "baselineReceipts":60000,"glassReceipts":60000,"baselineLoss":0,"glassLoss":0,"baselineTopup":40000,"glassTopup":40000,"benefit":0,"unexpected":0 }
+}

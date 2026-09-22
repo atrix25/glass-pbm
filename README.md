@@ -1,6 +1,8 @@
 # Glass
 
-Transparent PBM proof of concept (Wisconsin ETF / Navitus ETG0013), evolving into a **single-tenant production** deploy.
+Glass is an initiative within **CVS Caremark** to sell a highly automated, more transparent pharmacy benefit offering to **small group employers**. The target supports **CVS Caremark TrueCost or Caremark drug-level rebate pricing**, with **100% rebate pass-through** and separately disclosed service fees.
+
+The current application remains a single-tenant demo / production foundation using historical Wisconsin ETF / Navitus ETG0013 fixtures. Those fixtures are not Caremark contracts or a representation of the target product. See the [initiative context](docs/ai-native-pbm/initiative-context.md) and [AI-native PBM blueprint](docs/ai-native-pbm/README.md) for the current direction.
 
 ## Codebase map
 

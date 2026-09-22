@@ -51,6 +51,26 @@ export interface AgentDef {
 
 export const AGENTS: AgentDef[] = [
   {
+    id: "rebate-protection", name: "Rebate protection",
+    purpose: "Checks rebate obligations, repairs sandbox submission errors and prepares recovery evidence. Synthetic proof only.",
+    owner: "Rebate operations · Finance", surface: "Rebate protection sandbox",
+    autonomy: "Propose", tools: ["evaluateRebateTerms", "reconcileRebateLedger", "prepareRebateCorrection"],
+    mayNot: ["Change employer entitlements or care access to create savings.", "Submit external claims or move real money.", "Count uncollected recoveries as savings.", "Insert simulated reviews into operational queues."],
+    consequential: ["interpret-contract", "write-off", "correct-payment", "activate-benefit"],
+    incumbent: "Rebate operations and Finance review",
+    measure: { name: "Attributable loss prevention", target: "Settled evidence only; synthetic results" },
+  },
+  {
+    id: "account-management", name: "Account management",
+    purpose: "Finds benefit options that meet the savings goal with the fewest affected members, then coordinates approved activation.",
+    owner: "Account management · Benefits lead", surface: "Account management",
+    autonomy: "Propose", tools: ["evaluateBenefits", "coordinateRollout"],
+    mayNot: ["Activate a change without recorded approval.", "Treat claim rejections or member cost shifts as proven clinical savings.", "Claim that downstream follow-up is complete without evidence."],
+    consequential: ["activate-benefit-design"],
+    incumbent: "Account management and benefit-design review",
+    measure: { name: "Savings goal met within member-impact limits", target: "Measured on full-book replay" },
+  },
+  {
     id: "pa-intake",
     name: "Prior authorisation intake",
     purpose:
@@ -250,5 +270,5 @@ export function agent(id: string): AgentDef {
 }
 
 export function isConsequential(agentId: string, action: string): boolean {
-  return agent(agentId).consequential.includes(action);
+  return action === "review-benefit-release" || agent(agentId).consequential.includes(action);
 }

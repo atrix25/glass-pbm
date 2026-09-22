@@ -1,0 +1,15 @@
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
+const service=vi.hoisted(()=>({createSimulation:vi.fn(),advanceSimulation:vi.fn(),reviewSimulation:vi.fn(),simulation:vi.fn()}));
+const session=vi.hoisted(()=>({getRole:vi.fn(),getClock:vi.fn(),getSessionUser:vi.fn()}));
+vi.mock("@/lib/rebate-protection/service",()=>service);
+vi.mock("@/lib/session",()=>session);
+import { GET, POST } from "@/app/api/rebate-protection/route";
+const req=(body:unknown,origin="http://localhost")=>new Request("http://localhost/api/rebate-protection",{method:"POST",headers:{origin},body:JSON.stringify(body)});
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv("DEMO_FEATURES","1");session.getRole.mockResolvedValue("sponsor");session.getClock.mockResolvedValue({now:new Date("2026-09-01")});session.getSessionUser.mockResolvedValue(null);});
+afterEach(()=>vi.unstubAllEnvs());
+it("gates both methods behind demo mode",async()=>{vi.stubEnv("DEMO_FEATURES","0");expect((await GET(new Request("http://localhost/api/rebate-protection?id=rbp_x"))).status).toBe(404);expect((await POST(req({}))).status).toBe(404);});
+it("blocks foreign-origin and non-staff mutations",async()=>{expect((await POST(req({},"http://elsewhere"))).status).toBe(403);session.getRole.mockResolvedValue("member");expect((await POST(req({}))).status).toBe(403);expect(service.createSimulation).not.toHaveBeenCalled();});
+it("rejects malformed actions and cutoffs",async()=>{expect((await POST(req({action:"create",scenarioId:"unknown"}))).status).toBe(400);expect((await GET(new Request("http://localhost/api/rebate-protection?id=rbp_x&cutoff=invalid"))).status).toBe(400);});
+it("labels demo review identity instead of inventing an assigned employee",async()=>{expect((await POST(req({action:"review",id:"rbp_x",decision:"Approved"}))).status).toBe(200);expect(service.reviewSimulation).toHaveBeenCalledWith("rbp_x","Approved","Simulated Finance reviewer",new Date("2026-09-01"));});
+it("returns a conflict for missing review and hides internal failures",async()=>{service.advanceSimulation.mockRejectedValueOnce(Error("Record a simulated review before advancing."));expect((await POST(req({action:"advance",id:"rbp_x",stage:1}))).status).toBe(409);service.advanceSimulation.mockRejectedValueOnce(Error("database secret"));const r=await POST(req({action:"advance",id:"rbp_x",stage:1}));expect(r.status).toBe(503);expect(JSON.stringify(await r.json())).not.toContain("secret");});
+it("returns not found for another tenant or missing run",async()=>{service.simulation.mockResolvedValue(null);expect((await GET(new Request("http://localhost/api/rebate-protection?id=rbp_x"))).status).toBe(404);});

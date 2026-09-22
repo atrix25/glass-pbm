@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma";
 
-export type JobType = "replay" | "nps_snapshot" | "rollup_refresh" | "enrich_batch";
+export type JobType = "account_management" | "replay" | "nps_snapshot" | "rollup_refresh" | "enrich_batch";
 
 export type EnqueueJobInput = {
   type: JobType | string;

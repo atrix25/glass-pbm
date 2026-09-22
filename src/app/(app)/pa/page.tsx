@@ -41,7 +41,7 @@ export default async function PriorAuthQueue({
   return (
     <div className="space-y-5">
       <SectionTitle
-        description="Requests arrive, wait, and turn into determinations as the clock runs. Where a Navitus criteria form has been transcribed, the engine walks it question by question and records the numbered step that decided it, so a reviewer can open the PDF and check step 7 against step 7. Where no form has been transcribed, a pharmacist decides and the row says so."
+        description={"Requests, decisions and supporting criteria. Cases without transcribed criteria require pharmacist review."}
         action={
           <Link
             href="/pa/review"

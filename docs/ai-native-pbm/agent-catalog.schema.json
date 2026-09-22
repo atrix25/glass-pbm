@@ -1,0 +1,784 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://glass.health/schemas/ai-native-pbm/agent-catalog.schema.json",
+  "title": "Glass AI-native PBM agent catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "catalogId",
+    "title",
+    "domainIds",
+    "currentGlassAgentIds",
+    "domains"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./agent-catalog.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "catalogId": {
+      "const": "ai-native-pbm-commercial-full-service"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domainIds": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "commercial-client"
+        },
+        {
+          "const": "implementation-eligibility"
+        },
+        {
+          "const": "claims-benefit"
+        },
+        {
+          "const": "clinical-um"
+        },
+        {
+          "const": "formulary"
+        },
+        {
+          "const": "pharmacy-network"
+        },
+        {
+          "const": "pricing-mac"
+        },
+        {
+          "const": "manufacturer-rebates"
+        },
+        {
+          "const": "finance-settlement"
+        },
+        {
+          "const": "stakeholder-service"
+        },
+        {
+          "const": "data-analytics"
+        },
+        {
+          "const": "compliance-security"
+        },
+        {
+          "const": "quality-resilience"
+        }
+      ],
+      "items": false,
+      "minItems": 13,
+      "maxItems": 13
+    },
+    "currentGlassAgentIds": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "pa-intake"
+        },
+        {
+          "const": "plan-design"
+        },
+        {
+          "const": "integrity-triage"
+        },
+        {
+          "const": "eligibility-resolver"
+        },
+        {
+          "const": "appeal-drafter"
+        },
+        {
+          "const": "member-service"
+        },
+        {
+          "const": "data-agent"
+        }
+      ],
+      "items": false,
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {
+        "$ref": "#/$defs/domain"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "commercial-client"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "implementation-eligibility"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "claims-benefit"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "clinical-um"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "formulary"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "pharmacy-network"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "pricing-mac"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "manufacturer-rebates"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "finance-settlement"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "stakeholder-service"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "data-analytics"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "compliance-security"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "properties": {
+              "id": {
+                "const": "quality-resilience"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "domainId": {
+      "enum": [
+        "commercial-client",
+        "implementation-eligibility",
+        "claims-benefit",
+        "clinical-um",
+        "formulary",
+        "pharmacy-network",
+        "pricing-mac",
+        "manufacturer-rebates",
+        "finance-settlement",
+        "stakeholder-service",
+        "data-analytics",
+        "compliance-security",
+        "quality-resilience"
+      ]
+    },
+    "agentId": {
+      "enum": [
+        "pa-intake",
+        "plan-design",
+        "integrity-triage",
+        "eligibility-resolver",
+        "appeal-drafter",
+        "member-service",
+        "data-agent"
+      ]
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "commercialPurpose",
+        "processes"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/domainId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commercialPurpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "processes": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/process"
+          }
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "domain",
+        "description",
+        "trigger",
+        "owner",
+        "accountableAuthority",
+        "inputs",
+        "outputs",
+        "sourceOfTruth",
+        "executionMode",
+        "authoritativeCalculation",
+        "tools",
+        "evidence",
+        "consequenceClasses",
+        "riskTier",
+        "autonomy",
+        "approval",
+        "sla",
+        "controls",
+        "metrics",
+        "failureHandling",
+        "downstreamEvents",
+        "currentGlassAgents"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(commercial-client|implementation-eligibility|claims-benefit|clinical-um|formulary|pharmacy-network|pricing-mac|manufacturer-rebates|finance-settlement|stakeholder-service|data-analytics|compliance-security|quality-resilience)\\.[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "$ref": "#/$defs/domainId"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 12
+        },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "event"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "event",
+                "schedule",
+                "request",
+                "threshold",
+                "regulatory"
+              ]
+            },
+            "event": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accountableAuthority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "outputs": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "sourceOfTruth": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "executionMode": {
+          "enum": [
+            "deterministic",
+            "model",
+            "hybrid",
+            "human-authority"
+          ]
+        },
+        "authoritativeCalculation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "authority",
+            "system"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "authority": {
+              "enum": [
+                "deterministic-system",
+                "not-applicable"
+              ]
+            },
+            "system": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "required": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "required"
+                ],
+                "type": "object"
+              },
+              "then": {
+                "properties": {
+                  "authority": {
+                    "const": "deterministic-system"
+                  },
+                  "system": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "type": "object"
+              },
+              "else": {
+                "properties": {
+                  "authority": {
+                    "const": "not-applicable"
+                  },
+                  "system": {
+                    "type": "null"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "access",
+              "scope"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "access": {
+                "enum": [
+                  "read",
+                  "write",
+                  "execute"
+                ]
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "consequenceClasses": {
+          "type": "array",
+          "minItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "care",
+              "coverage",
+              "money",
+              "contract",
+              "external_communication",
+              "phi_disclosure",
+              "credentialing",
+              "legal_compliance",
+              "security"
+            ]
+          }
+        },
+        "riskTier": {
+          "enum": [
+            "low",
+            "moderate",
+            "high",
+            "critical"
+          ]
+        },
+        "autonomy": {
+          "enum": [
+            "observe",
+            "recommend",
+            "act-reversible",
+            "act-with-review",
+            "human-only"
+          ]
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "authority",
+            "conditions"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "authority": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "required": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "required"
+                ],
+                "type": "object"
+              },
+              "then": {
+                "properties": {
+                  "authority": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "minItems": 1
+                  }
+                },
+                "type": "object"
+              },
+              "else": {
+                "properties": {
+                  "authority": {
+                    "type": "null"
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "maxItems": 0
+                  }
+                },
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "sla": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target",
+            "escalation"
+          ],
+          "properties": {
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "escalation": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "controls": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "metrics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "target"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "target": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "failureHandling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fallback",
+            "escalation",
+            "recovery"
+          ],
+          "properties": {
+            "fallback": {
+              "type": "string",
+              "minLength": 1
+            },
+            "escalation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "recovery": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "downstreamEvents": {
+          "$ref": "#/$defs/nonEmptyStrings"
+        },
+        "currentGlassAgents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/agentId"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authoritativeCalculation": {
+                "properties": {
+                  "required": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "required"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "authoritativeCalculation"
+            ],
+            "type": "object"
+          },
+          "then": {
+            "properties": {
+              "executionMode": {
+                "enum": [
+                  "deterministic",
+                  "hybrid"
+                ]
+              }
+            },
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ export function Card({
   return (
     <Tag
       className={cn(
-        "rounded-xl border border-ink-200/80 bg-white shadow-[0_1px_2px_rgba(18,22,31,0.04),0_8px_24px_-16px_rgba(18,22,31,0.18)]",
+        "rounded-xl border border-ink-200/80 bg-white [&>div:first-child]:rounded-t-xl [&>div:last-child]:rounded-b-xl",
         className,
       )}
     >
@@ -37,12 +37,12 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 border-b border-ink-200/70 px-5 py-4",
+        "flex flex-wrap items-start justify-between gap-4 border-b border-ink-100 px-6 py-5",
         className,
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold tracking-tight text-ink-900">
+        <h2 className="text-[15px] font-medium tracking-tight text-ink-900">
           {title}
         </h2>
         {description ? (
@@ -84,15 +84,15 @@ export function Stat({
   }[tone];
 
   return (
-    <div className={cn("px-5 py-4", className)}>
-      <div className="text-[11px] font-medium uppercase tracking-[0.07em] text-ink-500">
+    <div className={cn("bg-white px-6 py-6", className)}>
+      <div className="text-[12px] font-medium text-ink-500">
         {label}
       </div>
-      <div className={cn("tnum mt-1.5 text-2xl font-semibold tracking-tight", toneClass)}>
+      <div className={cn("tnum mt-3 text-[30px] font-medium tracking-[-0.8px]", toneClass)}>
         {value}
       </div>
       {sub ? (
-        <div className="mt-1 text-[12.5px] leading-snug text-ink-500">{sub}</div>
+        <div className="mt-2 text-[12px] leading-relaxed text-ink-500">{sub}</div>
       ) : null}
     </div>
   );
@@ -215,7 +215,7 @@ export function Th({
   return (
     <th
       className={cn(
-        "sticky top-0 z-10 border-b border-ink-200 bg-ink-50/90 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-600 backdrop-blur",
+        "sticky top-0 z-10 border-b border-ink-200 bg-ink-50 px-4 py-3 text-[10px] font-medium uppercase tracking-[0.07em] text-ink-500",
         align === "right" && "text-right",
         align === "center" && "text-center",
         align === "left" && "text-left",
@@ -246,7 +246,7 @@ export function Td({
       title={title}
       colSpan={colSpan}
       className={cn(
-        "border-b border-ink-100 px-3 py-2 align-middle text-ink-800",
+        "border-b border-ink-100 px-4 py-3 align-middle text-ink-800",
         align === "right" && "text-right tnum",
         align === "center" && "text-center",
         className,
@@ -314,13 +314,13 @@ export function SectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-4">
+    <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink-900">
+        <h1 className="text-[30px] font-medium leading-tight tracking-[-1px] text-ink-900 sm:text-[34px]">
           {children}
         </h1>
         {description ? (
-          <p className="mt-1 max-w-3xl text-[13.5px] leading-relaxed text-ink-600">
+          <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-ink-500">
             {description}
           </p>
         ) : null}

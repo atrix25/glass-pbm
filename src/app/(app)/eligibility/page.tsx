@@ -53,7 +53,7 @@ export default async function EligibilityPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Every number in this application rests on knowing who is covered. ${formatNumber(feed.livesOnFile)} lives are on file today, and they got there on ${feed.filesReceived} ANSI X12 834 files from the sponsor's payroll system — ${formatNumber(feed.transactionsApplied)} instructions applied, ${formatNumber(feed.rejected)} sent back.`}
+        description={`${formatNumber(feed.livesOnFile)} covered lives · ${feed.filesReceived} eligibility files received.`}
       >
         Eligibility feed
       </SectionTitle>
@@ -332,7 +332,7 @@ export default async function EligibilityPage() {
 
       <Card>
         <CardHeader
-          title="What the monthly audit caught"
+          title="Audit findings"
           description="A change file can only report changes the sponsor knew to send. The restatement finds the ones it did not: the member is simply absent from the roster, and the absence is the notice."
           action={
             <Link

@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authMode } from "@/lib/config";
-import { hashToken } from "@/lib/auth";
+import {
+  DEMO_SESSION_COOKIE,
+  validBasicHeader,
+  validDemoSession,
+} from "@/lib/demo-auth";
 
 // Production gate: session cookie or API key. Basic auth remains available for
 // DEMO_FEATURES / AUTH_MODE=basic. /api/health and /api/health/live stay open.
 
-const USERNAME = process.env.DEMO_USERNAME ?? "josh";
-const SECOND_USERNAME = process.env.DEMO_USERNAME_2 ?? "test";
-const SECOND_PASSWORD = process.env.DEMO_PASSWORD_2 ?? "glasspba";
-const REALM = 'Basic realm="Glass", charset="UTF-8"';
 const SESSION_COOKIE = "glass_session";
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -20,31 +20,7 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function checkBasic(header: string | null, expected: string): boolean {
-  if (!header?.startsWith("Basic ")) return false;
-  let decoded = "";
-  try {
-    decoded = atob(header.slice(6));
-  } catch {
-    return false;
-  }
-  const split = decoded.indexOf(":");
-  if (split === -1) return false;
-  const username = decoded.slice(0, split);
-  const password = decoded.slice(split + 1);
-  let ok = false;
-  for (const account of [
-    { username: USERNAME, password: expected },
-    { username: SECOND_USERNAME, password: SECOND_PASSWORD },
-  ]) {
-    const nameOk = constantTimeEqual(username, account.username);
-    const passwordOk = constantTimeEqual(password, account.password);
-    ok = (nameOk && passwordOk) || ok;
-  }
-  return ok;
-}
-
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const mode = authMode();
   if (mode === "open") return NextResponse.next();
 
@@ -63,13 +39,24 @@ export function middleware(request: NextRequest) {
   if (mode === "basic") {
     const expected = process.env.DEMO_PASSWORD;
     if (!expected) return NextResponse.next();
-    if (checkBasic(request.headers.get("authorization"), expected)) {
+    if (
+      validBasicHeader(request.headers.get("authorization")) ||
+      validDemoSession(request.cookies.get(DEMO_SESSION_COOKIE)?.value)
+    ) {
       return NextResponse.next();
     }
-    return new NextResponse("Authentication required.", {
-      status: 401,
-      headers: { "WWW-Authenticate": REALM },
-    });
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 },
+      );
+    }
+    const login = new URL("/login", request.url);
+    login.searchParams.set(
+      "next",
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
+    return NextResponse.redirect(login);
   }
 
   // session | oidc — cookie present is enough at the edge; route handlers
@@ -78,7 +65,10 @@ export function middleware(request: NextRequest) {
   if (token) return NextResponse.next();
 
   if (request.nextUrl.pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    return NextResponse.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
   }
 
   const login = new URL("/login", request.url);

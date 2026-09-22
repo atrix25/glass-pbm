@@ -50,7 +50,7 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle description="The four questions a plan sponsor should be able to answer at the end of a contract year, each computed from the claim ledger rather than supplied by the PBM.">
+      <SectionTitle description={"Contract performance, rebate estimates and plan spending."}>
         Contract reporting
       </SectionTitle>
 
@@ -362,7 +362,7 @@ export default async function ReportsPage() {
       {/* Bottom line */}
       <Card>
         <CardHeader
-          title="What the PBM was paid"
+          title="PBM compensation"
           description="The complete answer, which under a spread contract cannot be produced at all."
         />
         <div className="grid divide-x divide-ink-200/70 sm:grid-cols-3">

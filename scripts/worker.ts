@@ -6,6 +6,7 @@
  * On Fly this is the `worker` process group in fly.toml.
  */
 
+import { analyzeBenefits } from "../src/lib/agents/account-management/service";
 import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import {
@@ -24,6 +25,7 @@ const POLL_MS = Number(process.env.WORKER_POLL_MS ?? 2000);
 
 async function handleJob(type: string, payload: Record<string, unknown>, jobId: string) {
   switch (type) {
+    case "account_management": return analyzeBenefits(payload.goals, String(payload.asOf), value => setJobProgress(jobId, value));
     case "replay": {
       await setJobProgress(jobId, 0.05);
       const result = await replay((payload.override as object) ?? {}, {

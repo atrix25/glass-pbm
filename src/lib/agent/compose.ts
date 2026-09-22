@@ -279,14 +279,14 @@ function composePriorAuth(
       const who = humanRole(r.decidedBy);
       const lead = denialFirst
         ? `There is good news attached to this. A later ${r.drug} request was approved`
-        : `Your ${r.drug} prior authorization is approved`;
+        : `Your ${r.drug} prior authorization was approved`;
       out.push(
         `${lead}${r.approvedThrough ? ` through ${r.approvedThrough}` : ""}${r.approvedForDays ? `, an approval of ${r.approvedForDays} days` : ""}.${r.decidingStep ? ` It cleared at step ${r.decidingStep} of the published criteria: "${r.decidingQuestion}"` : ""}${r.decided ? ` The decision was made on ${r.decided}${who ? ` by ${who}` : ""}.` : ""}`,
       );
       out.push(
         denialFirst
-          ? `So the therapy is covered now. The difference between the two requests was documentation, not medicine: the second one recorded why the required alternatives were not options for you.`
-          : `You do not need to do anything before the approval ends. When it does, your prescriber has to submit a continuation request, and the criteria for continuing are different from the criteria for starting.`,
+          ? `The later request recorded why the required alternatives were not options for you. This is an approval history; it does not confirm that authorization is active today.`
+          : `This is the recorded approval period. If it has ended, ask your prescriber about a continuation request. These records alone do not confirm an active authorization today.`,
       );
       if (r.detailUrl) {
         links.push({
