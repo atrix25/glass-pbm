@@ -34,3 +34,5 @@ describe('contract boundaries and financial consequences',()=>{
  it('preserves 100 percent pass-through even if an invalid term is supplied',()=>{const s=newProcess('tennessee');s.source.terms.client[0].values.passThroughBps=5000;playback(s);expect(s.steps.client.status).toBe('Failed');expect(s.steps.client.output!.rebateCreditCents).toBe(300);});
  it('retains an unfavorable guarantee as a PBM payment',()=>{const s=newProcess('tennessee');s.source.terms.guarantees[0].values.rateCents=900;playback(s);expect(s.steps.guarantees.output!.topupCents).toBe(600);expect(s.steps.client.output!.guaranteeCreditCents).toBe(600);});
 });
+
+it('records failed source validation as an execution attempt',()=>{const s=newProcess('tennessee','missing');run(s);expect(s.steps.contract.attempts).toHaveLength(1);expect(s.events[0].kind).toBe('Missing evidence');expect(s.steps.contract.output).toBeNull();});

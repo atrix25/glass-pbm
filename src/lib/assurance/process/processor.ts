@@ -75,7 +75,7 @@ export function execute(state:ProcessState,id:Area){
  if(['Released','Rejected','Awaiting review','Awaiting evidence','Failed','Missing evidence'].includes(s.status))return false;
  if(stage.dependencies.some(d=>state.steps[d].status!=='Released')){s.status='Blocked';return false;}
  const selected=terms(state,id);
- if(selected.length!==1){s.status='Missing evidence';s.checks=[{name:'Effective source requirement',status:'Missing evidence',expected:'One approved effective term',produced:selected.length,detail:'Missing or conflicting terms; no assumption of compliance.'}];return true;}
+ if(selected.length!==1){s.status='Missing evidence';s.checks=[{name:'Effective source requirement',status:'Missing evidence',expected:'One approved effective term',produced:selected.length,detail:'Missing or conflicting terms; no assumption of compliance.'}];s.version++;s.attempts.push({at:new Date().toISOString(),version:s.version,inputs:inputs(state,stage),output:null,checks:structuredClone(s.checks)});state.events.push({at:new Date().toISOString(),step:id,kind:'Missing evidence',actor:'Operational leakage protection · scripted sandbox',detail:'No effective unambiguous requirement; no output released.'});state.tests=null;return true;}
  try{
   const expected=build(state,id),produced={...expected,...state.overrides[id]};
   s.checks=validate(state,id,produced,expected);s.output=produced;s.version++;
