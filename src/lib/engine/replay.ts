@@ -18,6 +18,7 @@ import {
 } from "@/lib/accumulators/medical-feed";
 import {
   adjudicate,
+  attachGenericEquivalentNadac,
   type AdjudicationContext,
   type EngineBenefitPlan,
   type EngineContract,
@@ -232,6 +233,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
         : null,
     });
   }
+  attachGenericEquivalentNadac(drugs.values());
 
   const formulary = new Map<string, EngineFormularyEntry>();
   for (const e of entryRows) {
