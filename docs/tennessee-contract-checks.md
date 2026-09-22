@@ -22,3 +22,11 @@ Each page computes checks on load; Run checks & save records an immutable input/
 This is a bounded test of implemented rules, not proof that all leakage is absent. Exposure metrics are not additive economic savings. Missing manufacturer exhibits prevent verification of actual rebate entitlements. Collections and reduced PBM-funded guarantee payments cannot both be counted as incremental benefit. Legitimate employer credits remain payable. Annual aggregate greater-of arithmetic is illustrative; channel guarantees, actual offsets and settlement calendars require the executed agreement.
 
 Validation: run `npx vitest run tests/contract-checks.test.ts tests/contract-check-api.test.ts tests/sponsor-isolation.test.ts --reporter=default`, then build. Additive schema deployment follows the existing Fly demo process. The demo feature gate must be enabled.
+
+## Test inventory
+
+Rebate protection now opens the same test-first view for both sponsors. Eight implemented checks show population size, exceptions, pending deadlines and blocked evidence. Each links to its rule and claim-level expected/recorded amounts, deadlines, sources and next step. Integrity coverage counts source rows; financial coverage counts claims. Coverage can overlap across tests, and monetary exposures are not added into a savings total.
+
+Four explicit coverage gaps have no pass result: source-file completeness, actual manufacturer entitlements, benefit-change feeds and final guarantee settlement. A clear result only applies to evaluated records, not the full operational book. Legacy seven-scenario simulations remain available under Wisconsin via the Scenario simulations link; their existing run URLs still work. Existing saved contract runs remain accessible. Inventory classifications are derived from the saved findings and evidence using the current catalog, and included in JSON exports.
+
+Validation includes inventory completeness, unique finding attribution, blocked and empty populations, independent amount comparisons, noncash adjustments and future-evidence suppression.

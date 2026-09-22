@@ -1,3 +1,5 @@
+import { LeakageTests } from "./leakage-tests";
+import { testInventory, TESTS, COVERAGE_GAPS } from "@/lib/contract-checks/inventory";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { selectedSponsor } from "@/lib/contract-checks/context";
@@ -9,26 +11,29 @@ import { getClock } from "@/lib/session";
 import { formatCents } from "@/lib/money";
 import { ContractCheckControls } from "./contract-check-controls";
 import styles from "./rebate-protection.module.css";
-export async function ContractCheckPage({runId,tab="findings"}:{runId?:string;tab?:string}){
+export async function ContractCheckPage({runId,tab="tests",testId}:{runId?:string;tab?:string;testId?:string}){
  const sponsor=await selectedSponsor(),profile=PROFILES[sponsor],clock=await getClock();
  const saved=runId?await readCheck(runId,sponsor):null;
  if(runId&&(!saved||saved.cutoff>clock.now))notFound();
  const input=saved?.input??evidenceFor(sponsor),cutoff=saved?.cutoff.toISOString()??new Date(Math.min(Date.parse(DEFAULT_CUTOFF[sponsor]),clock.now.getTime())).toISOString();
  const result=saved?.result??detect(input,cutoff),base=`/contract-checks?${saved?`run=${saved.id}&`:""}`;
- const visibleTab=["findings","evidence","source"].includes(tab)?tab:"findings";
+ const inventory=testInventory(input,result);
+ if(testId&&![...TESTS,...COVERAGE_GAPS].some(t=>t.id===testId))notFound();
+ const visibleTab=["tests","findings","evidence","source"].includes(tab)?tab:"tests";
  const active=result.findings.filter(f=>!["timing","economics"].includes(f.category));
  return <div className={styles.page}>
-  <header className={styles.header}><div><span className={styles.eyebrow}>{profile.name} · Rebate protection</span><h1>Contract checks</h1><p className={styles.muted}>{profile.subtitle}</p></div><span className={styles.badge}>Synthetic transactions · Deterministic checks</span></header>
+  <header className={styles.header}><div><span className={styles.eyebrow}>{profile.name} · Rebate protection</span><h1>Leakage tests</h1><p className={styles.muted}>{profile.subtitle}</p></div><span className={styles.badge}>Synthetic transactions · Deterministic checks</span></header>
   <div className={styles.metrics}>
-   <article className={styles.highlight}><span>Collection exposure</span><strong>{formatCents(result.collectionExposureCents)}</strong><small>Missing or underpaid · No recovery credited</small></article>
-   <article><span>Incorrect credits</span><strong>{formatCents(result.incorrectCreditCents)}</strong><small>Review required · No automatic debits</small></article>
-   <article><span>Employer credits due</span><strong>{formatCents(result.employerOutstandingCents)}</strong><small>Employer entitlement · Not PBM savings</small></article>
-   <article><span>Evidence coverage</span><strong>{result.verified} <span>/ {result.claims}</span></strong><small>{result.complete?"Active claim terms verified; reversals checked separately":"Incomplete · Some terms need review"}</small></article>
+   <article><span>Detection tests</span><strong>{inventory.length}</strong><small>Implemented controls</small></article>
+   <article><span>With exceptions</span><strong>{inventory.filter(t=>t.findings.length>0).length}</strong><small>Open a test for the cause and evidence</small></article>
+   <article><span>Clear</span><strong>{inventory.filter(t=>t.status==="Clear"&&t.blocked===0&&t.pending===0).length}</strong><small>Fully evaluated applicable populations</small></article>
+   <article><span>Not connected</span><strong>{COVERAGE_GAPS.length}</strong><small>Additional sources and controls needed</small></article>
   </div>
+  {sponsor==="wisconsin"&&<Link href="/rebate-protection?tab=scenarios">Scenario simulations →</Link>}
   <ContractCheckControls key={saved?.id??sponsor} cutoff={cutoff} maxDate={clock.now.toISOString().slice(0,10)}/>
   <div className={styles.sectionHeading}><p className={styles.muted}>{active.length} items need attention · Cutoff {cutoff.slice(0,10)}{saved?` · Saved ${saved.createdAt.toISOString().slice(0,19).replace("T"," ")} UTC`:" · Calculated on load"}</p>{saved&&<div className="flex gap-5"><Link href={`/agents/runs/${saved.id}`}>Agent work →</Link><a href={`/api/contract-checks?id=${saved.id}`}>Export run →</a></div>}</div>
-  <nav className={styles.tabs} aria-label="Contract checks">{[["findings","Findings"],["evidence","Evidence"],["source","Source & scope"]].map(([id,name])=><Link key={id} href={`${base}tab=${id}`} aria-current={visibleTab===id?"page":undefined}>{name}</Link>)}</nav>
-  {visibleTab==="findings"?<>
+  <nav className={styles.tabs} aria-label="Contract checks">{[["tests","Tests"],["findings","All findings"],["evidence","Evidence"],["source","Source & scope"]].map(([id,name])=><Link key={id} href={`${base}tab=${id}`} aria-current={visibleTab===id?"page":undefined}>{name}</Link>)}</nav>
+  {visibleTab==="tests"?<LeakageTests input={input} result={result} base={base} testId={testId}/>:visibleTab==="findings"?<>
    <section className={styles.panel}><div className={styles.sectionHeading}><h2>Review queue</h2><span className={styles.badge}>Rebate protection agent · Scripted</span></div>
     {active.length===0?<p>No exceptions detected in the available records. This does not establish complete coverage.</p>:active.map(f=><details key={f.id}><summary className="flex flex-wrap justify-between gap-3"><strong>{f.kind=== "Not verified"?"Eligibility needs review":f.kind}</strong><span>{f.amountCents===null?"Not verified":formatCents(f.amountCents)}</span></summary><p>{f.nextStep}</p><p className={styles.muted}>{f.owner} · {f.claimId}</p><p className={styles.note}>Evidence: {f.evidence.join(", ")}<br/>Term: {f.termId??"Missing or conflicting"} · Review pending</p></details>)}
    </section>

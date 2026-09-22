@@ -1,3 +1,4 @@
+import { testInventory, COVERAGE_GAPS } from "@/lib/contract-checks/inventory";
 import { evidenceAt } from "@/lib/contract-checks/detector";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -20,5 +21,5 @@ export async function GET(request:Request){
  if(!await authenticatedStaff())return NextResponse.json({error:"Access denied"},{status:403});
  const run=await readCheck(new URL(request.url).searchParams.get("id")??"",await selectedSponsor());
  if(!run||run.cutoff>(await getClock()).now)return NextResponse.json({error:"Check not found at this cutoff"},{status:404});
- return NextResponse.json({...run,input:evidenceAt(run.input,run.cutoff.toISOString())},{headers:{"Cache-Control":"no-store","Content-Disposition":`attachment; filename="${run.id}.json"`}});
+ return NextResponse.json({...run,tests:testInventory(run.input,run.result),coverageGaps:COVERAGE_GAPS,input:evidenceAt(run.input,run.cutoff.toISOString())},{headers:{"Cache-Control":"no-store","Content-Disposition":`attachment; filename="${run.id}.json"`}});
 }

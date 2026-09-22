@@ -10,10 +10,10 @@ import { RebateControls } from "@/components/rebate-protection-controls";
 import { RebatePosition, RebateExceptions, RebateProof, RebateCheckpoints, RebateMetrics } from "@/components/rebate-protection-view";
 import styles from "@/components/rebate-protection.module.css";
 export const dynamic="force-dynamic";
-export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string}>}){
+export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string;test?:string}>}){
  if(!demoFeaturesEnabled())notFound();
  const q=await searchParams;
- if(await selectedSponsor()==="tennessee")return <ContractCheckPage runId={q.run} tab={q.tab}/>;
+ if(await selectedSponsor()==="tennessee"||q.run?.startsWith("cck_")||(!q.run&&q.tab!=="scenarios"))return <ContractCheckPage runId={q.run} tab={q.tab} testId={q.test}/>;
  const clock=await getClock();
  const recent=await recentSimulations();
  const id=q.run??recent[0]?.id;
