@@ -1,0 +1,29 @@
+[
+  {
+    "id": "wisconsin-claim-1",
+    "drug": "DRUG-1",
+    "units": 1,
+    "serviceAt": "2024-01-15T00:00:00.000Z",
+    "recordedAt": "2024-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "wisconsin-claim-2",
+    "drug": "DRUG-2",
+    "units": 1,
+    "serviceAt": "2024-01-15T00:00:00.000Z",
+    "recordedAt": "2024-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "wisconsin-claim-3",
+    "drug": "DRUG-3",
+    "units": 1,
+    "serviceAt": "2024-01-15T00:00:00.000Z",
+    "recordedAt": "2024-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  }
+]

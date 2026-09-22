@@ -2126,3 +2126,23 @@ model RebateSandboxException {
   evidence    String
   @@index([runId])
 }
+
+// Public-contract demo profiles are isolated from the operational employer book.
+model ContractDemoSponsor {
+  id String @id
+  name String
+  source String
+  runs ContractCheckRun[]
+}
+model ContractCheckRun {
+  id String @id
+  key String @unique
+  tenantId String
+  sponsorId String
+  sponsor ContractDemoSponsor @relation(fields: [sponsorId], references: [id])
+  cutoff DateTime
+  input String
+  result String
+  createdAt DateTime @default(now())
+  @@index([tenantId, sponsorId, createdAt])
+}

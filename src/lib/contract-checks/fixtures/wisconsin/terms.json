@@ -1,0 +1,49 @@
+[
+  {
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2024-12-31T23:59:59.999Z",
+    "recordedAt": "2024-01-01T00:00:00.000Z",
+    "guaranteeRateCents": 10000,
+    "invoiceDue": "2024-03-01T00:00:00.000Z",
+    "receiptDue": "2024-03-01T00:00:00.000Z",
+    "creditDue": "2024-03-15T00:00:00.000Z",
+    "citation": "Amendment 7A · page 3 · effective January 2024 · numeric rates and deadlines assumed",
+    "id": "wisconsin-v1-1",
+    "drug": "DRUG-1",
+    "manufacturerRateCents": 10000,
+    "substitution": {
+      "referenceWacCents": 50000,
+      "productWacCents": 20000
+    }
+  },
+  {
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2024-12-31T23:59:59.999Z",
+    "recordedAt": "2024-01-01T00:00:00.000Z",
+    "guaranteeRateCents": 10000,
+    "invoiceDue": "2024-03-01T00:00:00.000Z",
+    "receiptDue": "2024-03-01T00:00:00.000Z",
+    "creditDue": "2024-03-15T00:00:00.000Z",
+    "citation": "Amendment 7A · page 3 · effective January 2024 · numeric rates and deadlines assumed",
+    "id": "wisconsin-v1-2",
+    "drug": "DRUG-2",
+    "manufacturerRateCents": 12000,
+    "substitution": {
+      "referenceWacCents": 45000,
+      "productWacCents": 15000
+    }
+  },
+  {
+    "from": "2024-01-01T00:00:00.000Z",
+    "to": "2024-12-31T23:59:59.999Z",
+    "recordedAt": "2024-01-01T00:00:00.000Z",
+    "guaranteeRateCents": 10000,
+    "invoiceDue": "2024-03-01T00:00:00.000Z",
+    "receiptDue": "2024-03-01T00:00:00.000Z",
+    "creditDue": "2024-03-15T00:00:00.000Z",
+    "citation": "Amendment 7A · page 3 · effective January 2024 · numeric rates and deadlines assumed",
+    "id": "wisconsin-v1-3",
+    "drug": "DRUG-3",
+    "manufacturerRateCents": 8000
+  }
+]

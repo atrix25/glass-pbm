@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { authMode } from "@/lib/config";
+import { authMode, demoFeaturesEnabled } from "@/lib/config";
 import {
   DEMO_SESSION_COOKIE,
   validBasicHeader,
@@ -20,9 +20,21 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+function nextForSponsor(request: NextRequest) {
+  if (demoFeaturesEnabled() && request.cookies.get("glass_demo_sponsor")?.value === "tennessee") {
+    const path=request.nextUrl.pathname;
+    const allowed=["/sponsor","/sponsor/assurance","/rebate-protection","/contract-checks","/api/contract-checks","/api/demo-sponsor"];
+    if (!allowed.includes(path) && !path.startsWith("/api/auth") && !path.startsWith("/_next/") && !path.startsWith("/agents/runs/cck_")) {
+      if(path.startsWith("/api/")) return NextResponse.json({error:"This workflow is unavailable for the Tennessee demo sponsor."},{status:409});
+      return NextResponse.redirect(new URL("/rebate-protection",request.url));
+    }
+  }
+  return NextResponse.next();
+}
+
 export function proxy(request: NextRequest) {
   const mode = authMode();
-  if (mode === "open") return NextResponse.next();
+  if (mode === "open") return nextForSponsor(request);
 
   // Service API key for POS / switch adapters (Bearer or X-Api-Key).
   const apiKey =
@@ -32,18 +44,18 @@ export function proxy(request: NextRequest) {
       : null);
   if (apiKey && process.env.SERVICE_API_KEY) {
     if (constantTimeEqual(apiKey, process.env.SERVICE_API_KEY)) {
-      return NextResponse.next();
+      return nextForSponsor(request);
     }
   }
 
   if (mode === "basic") {
     const expected = process.env.DEMO_PASSWORD;
-    if (!expected) return NextResponse.next();
+    if (!expected) return nextForSponsor(request);
     if (
       validBasicHeader(request.headers.get("authorization")) ||
       validDemoSession(request.cookies.get(DEMO_SESSION_COOKIE)?.value)
     ) {
-      return NextResponse.next();
+      return nextForSponsor(request);
     }
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json(
@@ -62,7 +74,7 @@ export function proxy(request: NextRequest) {
   // session | oidc — cookie present is enough at the edge; route handlers
   // resolve the user against Postgres. Missing cookie → login.
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (token) return NextResponse.next();
+  if (token) return nextForSponsor(request);
 
   if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json(

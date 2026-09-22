@@ -1,3 +1,5 @@
+import { selectedSponsor } from "@/lib/contract-checks/context";
+import { ContractCheckPage } from "@/components/contract-check-page";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { demoFeaturesEnabled } from "@/lib/config";
@@ -10,7 +12,9 @@ import styles from "@/components/rebate-protection.module.css";
 export const dynamic="force-dynamic";
 export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string}>}){
  if(!demoFeaturesEnabled())notFound();
- const q=await searchParams,clock=await getClock();
+ const q=await searchParams;
+ if(await selectedSponsor()==="tennessee")return <ContractCheckPage runId={q.run} tab={q.tab}/>;
+ const clock=await getClock();
  const recent=await recentSimulations();
  const id=q.run??recent[0]?.id;
  if(q.cutoff&&!Number.isFinite(Date.parse(q.cutoff)))notFound();
@@ -18,7 +22,8 @@ export default async function RebatePage({searchParams}:{searchParams:Promise<{r
  const tab=["position","exceptions","proof"].includes(q.tab??"")?q.tab!:"position";
  return <div className={styles.page}>
   <header className={styles.header}><div><span className={styles.eyebrow}>Rebate operations</span><h1>Rebate protection</h1><p className={styles.muted}>Prevent the loss. Preserve the promise.</p></div><span className={styles.badge}>Synthetic proof · No real money movement</span></header>
-  {run&&<RebateMetrics run={run}/>}
+  <Link className={styles.panel} href="/contract-checks">Contract checks · Test published Wisconsin terms against transaction evidence →</Link>
+  {run&&<RebateMetrics run={run}/> }
   <RebateControls key={run?.id??"new"} run={run}/>
   {recent.length>0&&<div className={styles.recent} aria-label="Recent simulations">{recent.slice(0,7).map(r=><Link key={r.id} href={`/rebate-protection?run=${r.id}`} aria-current={r.id===run?.id?"page":undefined}>{SCENARIOS.find(s=>s.id===r.scenarioId)?.title} · {r.createdAt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"UTC"})} UTC</Link>)}</div>}
   {run?<><div className={styles.sectionHeading}><div><h2>{run.snapshot.scenario.title}</h2><p className={styles.muted}>{run.snapshot.scenario.description}</p></div><div className="flex gap-5"><a href={`/api/rebate-protection?id=${run.id}${q.cutoff?`&cutoff=${encodeURIComponent(q.cutoff)}`:""}`} download={`rebate-proof-${run.id}.json`}>Export evidence</a><Link href={`/agents/runs/${run.id}`}>Agent work →</Link></div></div>

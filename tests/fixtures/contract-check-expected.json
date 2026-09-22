@@ -1,0 +1,35 @@
+{
+  "tennessee": {
+    "cutoff": "2023-03-31T00:00:00.000Z",
+    "collectionExposureCents": 17000,
+    "incorrectCreditCents": 10000,
+    "employerOutstandingCents": 7000,
+    "cashCents": 33000,
+    "employerCreditsCents": 26000,
+    "guaranteeExpenseCents": null,
+    "complete": false,
+    "findings": [
+      ["tennessee-claim-1", "Missing submission amount", 12000],
+      ["tennessee-claim-2", "Manufacturer underpayment", 5000],
+      ["tennessee-claim-3", "Credit on a reversed claim", 10000],
+      ["tennessee-claim-4", "Within collection terms", 9000],
+      ["tennessee-claim-6", "Guarantee without manufacturer entitlement", 10000],
+      ["tennessee-claim-7", "Not verified", null],
+      ["tennessee-claim-8", "Employer credit outstanding", 7000]
+    ]
+  },
+  "wisconsin": {
+    "cutoff": "2024-06-30T00:00:00.000Z",
+    "collectionExposureCents": 0,
+    "incorrectCreditCents": 0,
+    "employerOutstandingCents": 0,
+    "cashCents": 30000,
+    "employerCreditsCents": 30000,
+    "guaranteeExpenseCents": 0,
+    "complete": true,
+    "findings": [
+      ["wisconsin-claim-1", "Guarantee credit mismatch", 30000],
+      ["wisconsin-claim-2", "Guarantee credit mismatch", 10000]
+    ]
+  }
+}

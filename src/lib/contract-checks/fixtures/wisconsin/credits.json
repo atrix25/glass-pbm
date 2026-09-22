@@ -1,0 +1,23 @@
+[
+  {
+    "id": "wisconsin-credit-1",
+    "claimId": "wisconsin-claim-1",
+    "amountCents": 10000,
+    "recordedAt": "2024-02-01T00:00:00.000Z",
+    "settledAt": "2024-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "wisconsin-credit-2",
+    "claimId": "wisconsin-claim-2",
+    "amountCents": 12000,
+    "recordedAt": "2024-02-01T00:00:00.000Z",
+    "settledAt": "2024-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "wisconsin-credit-3",
+    "claimId": "wisconsin-claim-3",
+    "amountCents": 8000,
+    "recordedAt": "2024-02-01T00:00:00.000Z",
+    "settledAt": "2024-02-01T00:00:00.000Z"
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "tennessee-receipt-2",
+    "claimId": "tennessee-claim-2",
+    "amountCents": 15000,
+    "recordedAt": "2022-02-01T00:00:00.000Z",
+    "settledAt": "2022-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "tennessee-receipt-3",
+    "claimId": "tennessee-claim-3",
+    "amountCents": 10000,
+    "recordedAt": "2022-02-01T00:00:00.000Z",
+    "settledAt": "2022-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "tennessee-receipt-5",
+    "claimId": "tennessee-claim-5",
+    "amountCents": 11000,
+    "recordedAt": "2022-02-01T00:00:00.000Z",
+    "settledAt": "2022-02-01T00:00:00.000Z"
+  },
+  {
+    "id": "tennessee-receipt-8",
+    "claimId": "tennessee-claim-8",
+    "amountCents": 7000,
+    "recordedAt": "2022-02-01T00:00:00.000Z",
+    "settledAt": "2022-02-01T00:00:00.000Z"
+  }
+]

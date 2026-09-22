@@ -1,3 +1,5 @@
+import { SponsorSelector } from "@/components/sponsor-selector";
+import { selectedSponsor } from "@/lib/contract-checks/context";
 import { demoFeaturesEnabled } from "@/lib/config";
 import Link from "next/link";
 import { getClock, getRole } from "@/lib/session";
@@ -90,12 +92,14 @@ export default async function AppLayout({
     copyIsPersistable(),
   ]);
 
+  const sponsor = await selectedSponsor();
+  const groups = sponsor === "tennessee" ? [{title:"Tennessee",items:[{href:"/sponsor",label:"Overview",icon:"sponsor" as const},{href:"/rebate-protection",label:"Rebate protection",icon:"integrity" as const},{href:"/sponsor/assurance",label:"Assurance",icon:"proof" as const}]}] : GROUPS;
   const sidebar = (
     <>
       <Link href="/sponsor" className="border-b border-ink-100 px-6 py-6 text-2xl font-semibold tracking-[-1px] text-ink-900">glass</Link>
 
       <div className="scroll-thin flex-1 overflow-y-auto">
-        <SideNav groups={GROUPS} />
+        <SideNav groups={groups} />
       </div>
 
       <div className="border-t border-ink-200/70 p-2.5">
@@ -105,11 +109,12 @@ export default async function AppLayout({
   );
 
   return (
-    <AppShell sidebar={sidebar}>
-      <details className="mx-auto mt-3 w-full max-w-[1180px] px-4 text-[11px] text-ink-500" data-operations-chrome>
+    <AppShell sidebar={sidebar} sponsor={sponsor}>
+      {demoFeaturesEnabled() && <SponsorSelector selected={sponsor}/> }
+      {sponsor !== "tennessee" && <details className="mx-auto mt-3 w-full max-w-[1180px] px-4 text-[11px] text-ink-500" data-operations-chrome>
         <summary className="cursor-pointer py-1">Demo controls · {clock.now.toISOString().slice(0, 10)}{clock.pinned ? " · Pinned" : ""}</summary>
         <div className="mt-2 overflow-hidden rounded-lg border border-ink-200 bg-white"><DemoRail /><div className="p-3"><ClockBar clock={clock} /></div></div>
-      </details>
+      </details>}
       <main id="main-content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
         <div className="mx-auto w-full max-w-[1180px]">{children}</div>
       </main>

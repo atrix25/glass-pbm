@@ -1,3 +1,5 @@
+import { selectedSponsor } from "@/lib/contract-checks/context";
+import { TennesseeSponsor } from "@/components/tennessee-sponsor";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { getClock } from "@/lib/session";
@@ -13,6 +15,7 @@ import styles from "./sponsor.module.css";
 export const dynamic = "force-dynamic";
 
 export default async function SponsorDashboard() {
+  if(await selectedSponsor()==="tennessee")return <TennesseeSponsor/>;
   const clock = await getClock();
   const data = await getSponsorOverview(clock);
   const position = await getGuaranteePosition(clock);

@@ -1,0 +1,75 @@
+[
+  {
+    "id": "tennessee-claim-1",
+    "drug": "DRUG-1",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-2",
+    "drug": "DRUG-2",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-3",
+    "drug": "DRUG-3",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true,
+    "reversedAt": "2022-02-15T00:00:00.000Z"
+  },
+  {
+    "id": "tennessee-claim-4",
+    "drug": "DRUG-4",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-5",
+    "drug": "DRUG-5",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-6",
+    "drug": "DRUG-6",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": false,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-7",
+    "drug": "DRUG-7",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": null,
+    "clientEligible": true
+  },
+  {
+    "id": "tennessee-claim-8",
+    "drug": "DRUG-8",
+    "units": 1,
+    "serviceAt": "2022-01-15T00:00:00.000Z",
+    "recordedAt": "2022-01-15T00:00:00.000Z",
+    "manufacturerEligible": true,
+    "clientEligible": true
+  }
+]

@@ -1,3 +1,5 @@
+import { readCheck } from "@/lib/contract-checks/service";
+import { selectedSponsor } from "@/lib/contract-checks/context";
 import { demoFeaturesEnabled } from "@/lib/config";
 import { simulation } from "@/lib/rebate-protection/service";
 import { RebateHistory, RebateExceptions } from "@/components/rebate-protection-view";
@@ -13,6 +15,11 @@ export const dynamic = "force-dynamic";
 const stamp=(d:Date)=>d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit",timeZone:"UTC"})+" UTC";
 export default async function RunPage({params}:{params:Promise<{runId:string}>}) {
   const clock=await getClock(); const runId=(await params).runId;
+  if(runId.startsWith("cck_")) {
+    if(!demoFeaturesEnabled())notFound();
+    const check=await readCheck(runId,await selectedSponsor());if(!check||check.cutoff>clock.now)notFound();
+    return <div className={styles.page}><Link href={`/contract-checks?run=${runId}`}>← Contract checks</Link><header className={styles.heading}><div><p className={styles.eyebrow}>Rebate protection · Scripted sandbox</p><h1>Review contract exceptions</h1><p>Rebate operations · Finance</p></div></header><section className={styles.panel}><h2>Check completed</h2><p>Saved {stamp(check.createdAt)}. Evidence cutoff {check.cutoff.toISOString().slice(0,10)}.</p><ol className="my-5 list-decimal space-y-3 pl-5"><li>Loaded {check.result.claims} synthetic claims and separate transaction files.</li><li>Matched effective terms and independent manufacturer and client eligibility.</li><li>Reconciled submissions, receipts, employer credits and noncash guarantee credits.</li><li>Recorded {check.result.findings.length} findings and observations. No payments or submissions were changed.</li></ol><p>Human review is required for interpretation or financial corrections. No reviewer, decision or application is recorded.</p><Link href={`/contract-checks?run=${runId}`}>Open work queue →</Link></section></div>;
+  }
   if(runId.startsWith("rbp_")) {
     if(!demoFeaturesEnabled())notFound();
     const sandbox=await simulation(runId,clock.now);if(!sandbox)notFound();

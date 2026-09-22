@@ -1,3 +1,5 @@
+import { selectedSponsor } from "@/lib/contract-checks/context";
+import { TennesseeSponsor } from "@/components/tennessee-sponsor";
 import Link from "next/link";
 import { demoFeaturesEnabled } from "@/lib/config";
 import { recentSimulations, simulation } from "@/lib/rebate-protection/service";
@@ -9,6 +11,7 @@ import { SponsorAssurance } from "@/components/sponsor-assurance";
 export const dynamic = "force-dynamic";
 
 export default async function AssurancePage() {
+  if(await selectedSponsor()==="tennessee")return <TennesseeSponsor assurance/>;
   const clock=await getClock();
   const data=await getSponsorAssurance(clock);
   const recent=demoFeaturesEnabled()?await recentSimulations():[];
