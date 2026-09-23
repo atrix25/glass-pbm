@@ -15,7 +15,7 @@ export async function executeExtraction(id:string,sponsor:string){
  state.status='Running';state.startedAt=new Date().toISOString();state.attempt++;
  const claim=await prisma.assuranceRun.updateMany({where:{id,revision:row.revision,...scope(sponsor)},data:{state:JSON.stringify(state),revision:row.revision+1}});if(!claim.count)return;
  try{const result=await extract(state.source);state.raw=result.value;state.original=freeze(result.value,state.source);state.originalHash=hash(state.original);state.execution='model';state.model=result.model;state.usage=result.usage;state.limitations=result.value.limitations;state.status='Complete';state.error=null;}
- catch{state.status='Failed';state.error='Model extraction did not complete. No scripted answer was substituted.';}
+ catch(error){console.error('Contract extraction failed',{name:error instanceof Error?error.name:'Unknown'});state.status='Failed';state.error='Model extraction did not complete. No scripted answer was substituted.';}
  state.finishedAt=new Date().toISOString();
  await prisma.assuranceRun.updateMany({where:{id,revision:row.revision+1,...scope(sponsor)},data:{state:JSON.stringify(state),revision:row.revision+2}});
 }
