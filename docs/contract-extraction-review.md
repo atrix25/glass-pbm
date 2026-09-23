@@ -1,0 +1,13 @@
+# Public contract extraction review
+
+`/contract-extraction` evaluates real model extraction against a frozen public source. It is linked from Leakage prevention. Staff authentication and the demo gate apply. Runs and all review operations are scoped to tenant and selected sponsor and use isolated `ext_` AssuranceRun records. No operational requirements, benefits, payments or agent proposals are updated.
+
+The initial reference is Wisconsin ETF / Navitus ETG0013 Amendment 1, PDF pages 43, 59, 60, 115 and 139–141. The complete original PDF is preserved under `public/contracts`; extracted source text and its PDF SHA-256 are under `data/contract-extraction`. This is a historical selected-page evaluation, not current pricing, the entire contract package, or Tennessee contract terms. Drug lists and referenced clinical criteria are not inferred.
+
+The page-focused extraction uses Claude Sonnet 4.5 through the existing Anthropic SDK. Each request sees all seven supplied pages as context. `CONTRACT_EXTRACTION_API_KEY` is preferred; the existing local `ANTHROPIC_API_KEY` is a fallback credential only. There is no scripted-answer fallback. Model failures are recorded as failures and can be retried. Model execution runs after the authenticated create response; stale interrupted executions can be retried after five minutes. Revision compare-and-swap prevents duplicate workers or concurrent reviewers from overwriting evidence.
+
+Original model answers, source snapshots, citations and hashes remain separate from append-only human reviews. Exact-quotation matching normalizes whitespace, not meaning. Correct requires matched quotations, but this does not establish that the interpretation is correct. Human verdicts assess the whole original extraction including conditions and proposed implementation. Proposed test cases are not executed tests.
+
+Reviewed accuracy is original answers marked Correct divided by all reviewed original answers. Corrected, Unsupported, Unverifiable and Duplicate remain separate counts and do not count as correct. Unreviewed answers are excluded. The latest verdict counts; earlier verdicts remain in exported history. Reviewers can add omissions quoting supplied source pages. No recall or full-contract completeness score is inferred from an absence of reported omissions.
+
+Review the source pages for omitted obligations in addition to checking extracted answers. Page review covers only the supplied pages. A verdict evaluates AI accuracy; it never authorizes client configuration changes. Evidence export includes original output, source text, model usage, hashes, review identities and timestamps.

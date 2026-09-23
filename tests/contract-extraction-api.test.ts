@@ -1,0 +1,18 @@
+import {beforeEach,afterEach,expect,it,vi} from 'vitest';
+const s=vi.hoisted(()=>({createExtraction:vi.fn(),executeExtraction:vi.fn(),readExtraction:vi.fn(),reviewExtraction:vi.fn()}));
+const auth=vi.hoisted(()=>({authenticatedStaff:vi.fn(),sameOrigin:vi.fn()}));
+vi.mock('@/lib/contract-extraction/service',()=>s);
+vi.mock('@/lib/contract-checks/access',()=>auth);
+vi.mock('@/lib/contract-checks/context',()=>({selectedSponsor:async()=> 'tennessee'}));
+vi.mock('@/lib/session',()=>({getSessionUser:async()=>null}));
+vi.mock('next/server',async importOriginal=>({...await importOriginal<typeof import('next/server')>(),after:vi.fn()}));
+import {GET,POST} from '@/app/api/contract-extraction/route';
+const req=(body:unknown)=>new Request('http://localhost/api/contract-extraction',{method:'POST',body:JSON.stringify(body)});
+const command={action:'review',id:'ext_test',revision:0,key:'9b08f7f7-0844-4d53-b1f7-220b557aeeb9',requirementId:'term-1',verdict:'Correct'};
+beforeEach(()=>{vi.resetAllMocks();vi.stubEnv('DEMO_FEATURES','1');auth.authenticatedStaff.mockResolvedValue(true);auth.sameOrigin.mockReturnValue(true);});
+afterEach(()=>vi.unstubAllEnvs());
+it('gates all interfaces and refuses foreign-origin review writes',async()=>{vi.stubEnv('DEMO_FEATURES','0');expect((await POST(req(command))).status).toBe(404);expect((await GET(new Request('http://localhost'))).status).toBe(404);vi.stubEnv('DEMO_FEATURES','1');auth.sameOrigin.mockReturnValue(false);expect((await POST(req(command))).status).toBe(403);});
+it('blocks unauthorized reads and writes',async()=>{auth.authenticatedStaff.mockResolvedValue(false);expect((await POST(req(command))).status).toBe(403);expect((await GET(new Request('http://localhost'))).status).toBe(403);});
+it('does not accept caller-authored identity, model output or sponsor',async()=>{for(const extra of [{actor:'invented'},{original:[]},{sponsor:'other'}])expect((await POST(req({...command,...extra}))).status).toBe(400);expect(s.reviewExtraction).not.toHaveBeenCalled();});
+it('scopes verdicts and makes absent reviewer identity explicit',async()=>{expect((await POST(req(command))).status).toBe(200);expect(s.reviewExtraction).toHaveBeenCalledWith('tennessee',expect.objectContaining(command),'Demo reviewer · identity not recorded');});
+it('returns missing-run status and hides internal error details',async()=>{s.readExtraction.mockResolvedValue(null);expect((await GET(new Request('http://localhost?id=ext_test'))).status).toBe(404);s.reviewExtraction.mockRejectedValue(Error('private database error'));const r=await POST(req(command));expect(r.status).toBe(409);expect(JSON.stringify(await r.json())).not.toContain('private');});
