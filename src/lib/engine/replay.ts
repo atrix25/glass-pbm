@@ -417,6 +417,58 @@ function applyFormularyOverride(
 // The replay
 // ---------------------------------------------------------------------------
 
+/**
+ * How a stored B2 contributes to the before/after totals under an override.
+ *
+ * The before side is always the stored reversal. The after side is the
+ * negation of the re-priced original when that original still paid, or zero
+ * when it did not — never "omit the row", which would leave the baseline
+ * carrying clawed-back dollars as if they were still plan-paid.
+ */
+export function reversalReplayDelta(args: {
+  stored: {
+    planPaidCents: number;
+    patientPayCents: number;
+    rebateCents: number;
+    totalBilledCents: number;
+  };
+  replayedOriginal: {
+    plan: number;
+    member: number;
+    rebate: number;
+    billed: number;
+  } | null;
+}): {
+  planPaidBeforeCents: number;
+  planPaidAfterCents: number;
+  memberPaidBeforeCents: number;
+  memberPaidAfterCents: number;
+  rebateBeforeCents: number;
+  rebateAfterCents: number;
+  changed: boolean;
+} {
+  const { stored, replayedOriginal: original } = args;
+  const planPaidAfterCents = original ? -original.plan : 0;
+  const memberPaidAfterCents = original ? -original.member : 0;
+  const rebateAfterCents = original ? -original.rebate : 0;
+  const changed = original
+    ? stored.planPaidCents !== -original.plan ||
+      stored.patientPayCents !== -original.member ||
+      stored.totalBilledCents !== -original.billed
+    : stored.planPaidCents !== 0 ||
+      stored.patientPayCents !== 0 ||
+      stored.rebateCents !== 0;
+  return {
+    planPaidBeforeCents: stored.planPaidCents,
+    planPaidAfterCents,
+    memberPaidBeforeCents: stored.patientPayCents,
+    memberPaidAfterCents,
+    rebateBeforeCents: stored.rebateCents,
+    rebateAfterCents,
+    changed,
+  };
+}
+
 export interface ClaimDiff {
   claimId: string;
   claimNumber: string;
@@ -855,24 +907,31 @@ export async function replay(
         tallyAfter?.add(fill);
       }
 
-      const original = replayed.get(row.reversalOfClaimId ?? "");
-      if (!original) continue;
+      /*
+       * The before side always includes the stored B2. Skipping it when the
+       * re-priced original is absent (newly rejected under an override, or
+       * never paid) drops the clawback from the baseline and reports the
+       * original fill's dollars as still plan-paid — so excluding an
+       * already-reversed drug invents phantom savings equal to the fill.
+       */
+      const original = replayed.get(row.reversalOfClaimId ?? "") ?? null;
+      const delta = reversalReplayDelta({
+        stored: {
+          planPaidCents: row.planPaidCents,
+          patientPayCents: row.patientPayCents,
+          rebateCents: row.estimatedRebateCents,
+          totalBilledCents: row.totalBilledCents,
+        },
+        replayedOriginal: original,
+      });
       result.claimsEvaluated++;
-
-      result.planPaidBeforeCents += row.planPaidCents;
-      result.planPaidAfterCents += -original.plan;
-      result.memberPaidBeforeCents += row.patientPayCents;
-      result.memberPaidAfterCents += -original.member;
-      result.rebateBeforeCents += row.estimatedRebateCents;
-      result.rebateAfterCents += -original.rebate;
-
-      if (
-        row.planPaidCents !== -original.plan ||
-        row.patientPayCents !== -original.member ||
-        row.totalBilledCents !== -original.billed
-      ) {
-        result.claimsChanged++;
-      }
+      result.planPaidBeforeCents += delta.planPaidBeforeCents;
+      result.planPaidAfterCents += delta.planPaidAfterCents;
+      result.memberPaidBeforeCents += delta.memberPaidBeforeCents;
+      result.memberPaidAfterCents += delta.memberPaidAfterCents;
+      result.rebateBeforeCents += delta.rebateBeforeCents;
+      result.rebateAfterCents += delta.rebateAfterCents;
+      if (delta.changed) result.claimsChanged++;
       continue;
     }
 
