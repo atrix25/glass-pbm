@@ -21,6 +21,7 @@ import {
 } from "../../src/lib/engine/adjudicate.js";
 import type { Channel } from "../../src/lib/engine/types.js";
 import {
+  applyMedicalDeductibleCredit,
   medicalEncountersFor,
   type MedicalEncounter,
 } from "../../src/lib/accumulators/medical-feed.js";
@@ -874,8 +875,15 @@ export function generateClaims(
         medicalCursor < medicalEncounters.length &&
         medicalEncounters[medicalCursor]!.day < fill.day
       ) {
-        accumulators.deductibleAccumulatedCents +=
-          medicalEncounters[medicalCursor]!.amountCents;
+        /*
+         * Medical deductible dollars are real member out-of-pocket on this
+         * integrated plan. Credit deductible and both OOP accumulators, or
+         * pharmacy will collect a second full trip to the $2,500 maximum.
+         */
+        applyMedicalDeductibleCredit(
+          accumulators,
+          medicalEncounters[medicalCursor]!.amountCents,
+        );
         medicalCursor++;
       }
 
