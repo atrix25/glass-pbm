@@ -85,10 +85,12 @@ export interface MedicalEncounter {
  * same deductible balance it saw the first time. This is the same reason the
  * NPS temperament draws are hashed rather than sampled from a shared stream.
  *
- * Only the deductible matters to pharmacy adjudication, so generation stops
- * once the encounters cover the deductible. A member with a $9,000 hospital
- * stay and a $1,700 deductible has met it; the rest is the medical plan's
- * business and appears on no pharmacy accumulator.
+ * Only the deductible matters to the shape of the feed itself — generation
+ * stops once encounters cover the deductible, because amounts past it are the
+ * medical plan's coinsurance and never appear on a deductible accumulator
+ * file. Those deductible dollars still count toward the pharmacy benefit's
+ * combined out-of-pocket maximum on an HSA-qualified integrated plan; callers
+ * apply them through `applyMedicalDeductibleCredit`.
  */
 export function medicalEncountersFor(
   memberId: string,
@@ -182,6 +184,33 @@ export function medicalDeductibleAsOf(
     if (e.day < dayOfYear) total += e.amountCents;
   }
   return total;
+}
+
+/**
+ * Apply medical deductible spend to the pharmacy-side accumulators.
+ *
+ * On an HSA-qualified integrated plan the deductible and the out-of-pocket
+ * maximum share one pocket. Dollars the member already paid a hospital or
+ * clinic count toward both: they reduce what pharmacy may still collect
+ * against the deductible, and they reduce what remains under the combined
+ * maximum. Pharmacy fills credit their own deductible dollars into Rx and
+ * federal OOP through cost-share deltas; the medical feed must do the same,
+ * or a member who met the $1,700 deductible on the medical side can still be
+ * charged a full $2,500 of pharmacy cost share — $1,700 of double collection
+ * against a single integrated maximum.
+ */
+export function applyMedicalDeductibleCredit(
+  accumulators: {
+    deductibleAccumulatedCents: number;
+    rxOopAccumulatedCents: number;
+    federalOopAccumulatedCents: number;
+  },
+  medicalCents: number,
+): void {
+  if (medicalCents <= 0) return;
+  accumulators.deductibleAccumulatedCents += medicalCents;
+  accumulators.rxOopAccumulatedCents += medicalCents;
+  accumulators.federalOopAccumulatedCents += medicalCents;
 }
 
 /**

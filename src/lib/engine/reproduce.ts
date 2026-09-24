@@ -282,12 +282,18 @@ async function rebuildPosition(
    * in the claim history above — reproducing the fill without them would price
    * it against a deductible only pharmacy had touched, and it would disagree
    * with what the member was actually charged.
+   *
+   * On the integrated HDHP those medical dollars also sit inside the combined
+   * out-of-pocket maximum, so they reduce Rx OOP the same way pharmacy
+   * deductible payments do through cost-share deltas.
    */
   if (integratedDeductibleCents > 0) {
-    deductible += medicalDeductibleAsOf(
+    const medicalCents = medicalDeductibleAsOf(
       medicalEncountersFor(memberId, integratedDeductibleCents),
       dayOfPlanYear(dateOfService),
     );
+    deductible += medicalCents;
+    rxOop += medicalCents;
   }
 
   for (const c of history) {

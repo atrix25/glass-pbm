@@ -12,6 +12,7 @@ import { prisma } from "@/lib/db";
 import { PLAN_YEAR_END } from "@/lib/clock";
 import { hashString } from "@/lib/hash";
 import {
+  applyMedicalDeductibleCredit,
   dayOfPlanYear,
   medicalEncountersFor,
   type MedicalEncounter,
@@ -905,8 +906,10 @@ export async function replay(
       medicalCursor < medicalEncounters.length &&
       medicalEncounters[medicalCursor]!.day < fillDay
     ) {
-      acc.deductibleAccumulatedCents +=
-        medicalEncounters[medicalCursor]!.amountCents;
+      applyMedicalDeductibleCredit(
+        acc,
+        medicalEncounters[medicalCursor]!.amountCents,
+      );
       medicalCursor++;
     }
 

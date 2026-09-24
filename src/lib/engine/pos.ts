@@ -189,12 +189,19 @@ export async function simulateFill(req: PosRequest): Promise<PosResponse> {
    * rather than adjudicates. Counted as of the date of service for the same
    * reason the pharmacy balance is rebuilt from dated claims: a fill in March
    * is priced against the deductible as it stood in March.
+   *
+   * Those dollars also count toward the combined out-of-pocket maximum. On the
+   * HDHP the deductible and the $2,500 MOOP share one pocket; omitting the
+   * medical credit from Rx OOP lets pharmacy collect another full $2,500 after
+   * medical already took the member through the deductible.
    */
   if (plan.deductibleIntegratedWithMedical) {
-    deductible += medicalDeductibleAsOf(
+    const medicalCents = medicalDeductibleAsOf(
       medicalEncountersFor(req.memberId, plan.deductibleIndividual),
       dayOfPlanYear(dateOfService),
     );
+    deductible += medicalCents;
+    rxOop += medicalCents;
   }
 
   const priorFills: PriorFill[] = [];
