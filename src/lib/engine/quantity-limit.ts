@@ -646,8 +646,13 @@ function cumulative(
     ? planYearStart
     : new Date(dateOfService.getTime() - period * 86_400_000);
 
+  /*
+   * Upper bound is inclusive of the fill date. Callers put only earlier fills
+   * into `priorFills`; a strict `< dateOfService` cut dropped every prior that
+   * shared the calendar day and reset cumulative budgets mid-morning.
+   */
   const inWindow = priorFills.filter(
-    (f) => f.dateOfService >= windowStart && f.dateOfService < dateOfService,
+    (f) => f.dateOfService >= windowStart && f.dateOfService <= dateOfService,
   );
   const alreadyUsed = inWindow.reduce((sum, f) => sum + ofFill(f), 0);
   const used = alreadyUsed + thisFill;

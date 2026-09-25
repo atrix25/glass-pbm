@@ -637,8 +637,14 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
       packageSize: drug.packageSize ?? 1,
       unitOfMeasure: drug.unitOfMeasure ?? "EA",
       packageContainers: drug.packageContainers ?? null,
+      /*
+       * Same-calendar-day priors must count. Replay (and POS once it supplies
+       * them) already ordered earlier fills on this DOS into `priorFills`; a
+       * strict `< dos` cut dropped every one of them and let a second fill the
+       * same morning exceed the published limit.
+       */
       priorFills: priorFills.filter(
-        (f) => f.drugId === drug.id && f.dateOfService < dos,
+        (f) => f.drugId === drug.id && f.dateOfService <= dos,
       ),
       planYearStart: PLAN_YEAR_START,
     });
@@ -703,8 +709,14 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
   }
 
   // --- Refill too soon -----------------------------------------------------
+  /*
+   * Include earlier fills on the same date of service. Dropping them with a
+   * strict `< dos` cut is how a second same-day dispense of the same product
+   * never saw the first and skipped reject 79 — after callers (replay today;
+   * POS once same-day history is supplied) already put that prior in the list.
+   */
   const sameDrugFills = priorFills
-    .filter((f) => f.drugId === drug.id && f.dateOfService < dos)
+    .filter((f) => f.drugId === drug.id && f.dateOfService <= dos)
     .sort((a, b) => b.dateOfService.getTime() - a.dateOfService.getTime());
 
   if (sameDrugFills.length > 0) {
