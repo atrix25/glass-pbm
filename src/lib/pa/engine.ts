@@ -121,10 +121,33 @@ function evaluatePredicate(
     case "member.hasTrialOf": {
       const patterns = (args.drugPatterns as string[]) ?? [];
       const alsoAccept = args.alsoAcceptAnswer as string | undefined;
+      /*
+       * Ingredient substrings alone are not enough. Dupixent step 6 asks for a
+       * *topical* corticosteroid / calcineurin inhibitor; a nasal mometasone or
+       * oral tacrolimus share the ingredient token and used to satisfy the
+       * step, minting a 365-day specialty Approve the published form does not
+       * allow. Optional form tokens narrow (or exclude) the product shape.
+       */
+      const requireFormTokens = ((args.requireFormTokens as string[]) ?? []).map(
+        (t) => t.toUpperCase(),
+      );
+      const excludeFormTokens = ((args.excludeFormTokens as string[]) ?? []).map(
+        (t) => t.toUpperCase(),
+      );
+      const nameMatchesTrial = (name: string, pattern: string): boolean => {
+        const upper = name.toUpperCase();
+        if (!upper.includes(pattern.toUpperCase())) return false;
+        if (
+          requireFormTokens.length > 0 &&
+          !requireFormTokens.some((t) => upper.includes(t))
+        ) {
+          return false;
+        }
+        if (excludeFormTokens.some((t) => upper.includes(t))) return false;
+        return true;
+      };
       const matched = patterns.filter((p) =>
-        facts.filledDrugNames.some((n) =>
-          n.toUpperCase().includes(p.toUpperCase()),
-        ),
+        facts.filledDrugNames.some((n) => nameMatchesTrial(n, p)),
       );
       if (matched.length > 0) {
         return {
