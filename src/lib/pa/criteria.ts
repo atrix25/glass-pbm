@@ -309,6 +309,11 @@ export const DUPIXENT: CriteriaTreeDef = {
           "tacrolimus",
           "pimecrolimus",
         ],
+        /*
+         * The published form requires a topical product. Ingredient-only
+         * matching treated nasal sprays and oral capsules as trials.
+         */
+        requireFormTokens: ["cream", "ointment", "lotion", "gel", "topical"],
         alsoAcceptAnswer: "topicalTrialDocumented",
       },
       yes: { outcome: "approve", days: 365 },
@@ -412,6 +417,19 @@ export const ADALIMUMAB: CriteriaTreeDef = {
           "mesalamine",
           "budesonide",
           "acitretin",
+        ],
+        /*
+         * Conventional systemic / GI therapy — not inhaled or nasal budesonide
+         * that shares the ingredient token with Entocort-class products.
+         */
+        excludeFormTokens: [
+          "nasal",
+          "inhal",
+          "hfa",
+          "nebu",
+          "aerosol",
+          "diskus",
+          "respimat",
         ],
         alsoAcceptAnswer: "conventionalTherapyTrial",
       },

@@ -352,7 +352,14 @@ export async function runIntake(opts: {
     "Two of these steps are satisfied by claims history rather than by anything the prescriber wrote, so the book has to be read as well as the note.",
     async () => {
       const claims = await prisma.claim.findMany({
-        where: { memberId: pa.memberId, dateOfService: { lt: pa.receivedAt } },
+        where: {
+          memberId: pa.memberId,
+          dateOfService: { lt: pa.receivedAt },
+          // Trial-of evidence is paid fills only — a reject or reversal is not
+          // a completed therapy trial the criteria can lean on.
+          responseStatus: "P",
+          transactionCode: "B1",
+        },
         select: { drug: { select: { name: true } } },
         take: 400,
         orderBy: { dateOfService: "desc" },
