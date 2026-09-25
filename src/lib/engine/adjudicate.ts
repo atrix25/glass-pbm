@@ -174,6 +174,13 @@ export interface ApprovedPA {
   effectiveDate: Date;
   terminationDate?: Date | null;
   approvedQuantity?: number | null;
+  /**
+   * What was approved. Step and quantity exceptions waive those edits; they
+   * must not be treated as a prior-authorization coverage grant (see the
+   * specialty-PA unlock bug). Absent type is treated as a coverage PA for
+   * backward compatibility with callers that only model true PAs.
+   */
+  requestType?: string | null;
 }
 
 export interface AdjudicationContext {
@@ -313,6 +320,27 @@ function findRate(
     rates.find((r) => r.channel === channel && r.drugClass === brandGeneric) ??
     rates.find((r) => r.channel === channel && r.drugClass === "All")
   );
+}
+
+/** True when an approval covers this drug on this date of service. */
+function approvalCovers(
+  pa: ApprovedPA,
+  drugId: string,
+  dos: Date,
+): boolean {
+  return (
+    pa.drugId === drugId &&
+    pa.effectiveDate <= dos &&
+    (!pa.terminationDate || pa.terminationDate >= dos)
+  );
+}
+
+function grantsStepException(pa: ApprovedPA): boolean {
+  return pa.requestType === "StepException";
+}
+
+function grantsQuantityException(pa: ApprovedPA): boolean {
+  return pa.requestType === "QuantityException";
 }
 
 // ---------------------------------------------------------------------------
@@ -572,6 +600,29 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
         formularyEntry.qlDays ? ` per ${formularyEntry.qlDays} days` : " per fill"
       }`;
 
+    const quantityException = approvedPAs.find(
+      (pa) => approvalCovers(pa, drug.id, dos) && grantsQuantityException(pa),
+    );
+
+    if (quantityException) {
+      trace.cited({
+        ruleId: "um.quantity-limit.exception",
+        stage: "um",
+        question: "Is the dispensed quantity within the plan's limit?",
+        inputs: {
+          limit: printed,
+          quantityDispensed: request.quantityDispensed,
+          quantityExceptionOnFile: true,
+        },
+        output: { withinLimit: true, waivedByException: true },
+        fired: false,
+        detail:
+          "An approved quantity-limit exception covers this fill, so the published limit is not enforced.",
+        sourceDocumentId: SRC_FORMULARY,
+        citation: `Formulary quantity limit: ${printed}`,
+      });
+    } else {
+
     const verdict = evaluateQuantityLimit({
       limit: {
         quantity: formularyEntry.qlQuantity,
@@ -648,6 +699,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
         return reject(trace, "76", channel, brandGeneric, level, drug.isSpecialty);
       }
     }
+    } // quantityException else
   }
 
   // --- Refill too soon -----------------------------------------------------
@@ -798,6 +850,9 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
 
   // --- Step therapy --------------------------------------------------------
   if (formularyEntry.requiresStep) {
+    const stepException = approvedPAs.find(
+      (pa) => approvalCovers(pa, drug.id, dos) && grantsStepException(pa),
+    );
     const triedAlternative = priorFills.some(
       (f) =>
         f.therapeuticClass &&
@@ -805,6 +860,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
         f.therapeuticClass === drug.therapeuticClass &&
         f.drugId !== drug.id,
     );
+    const satisfied = Boolean(stepException) || triedAlternative;
     trace.cited({
       ruleId: "um.step-therapy",
       stage: "um",
@@ -814,16 +870,19 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
         priorFillsInClass: priorFills.filter(
           (f) => f.therapeuticClass === drug.therapeuticClass && f.drugId !== drug.id,
         ).length,
+        stepExceptionOnFile: Boolean(stepException),
       },
-      output: { satisfied: triedAlternative },
-      fired: !triedAlternative,
-      detail: triedAlternative
-        ? "Claims history shows a prior trial of an alternative in this class."
-        : "No prior trial of a preferred alternative in this therapeutic class.",
+      output: { satisfied },
+      fired: !satisfied,
+      detail: stepException
+        ? "An approved step-therapy exception covers this fill, so the preferred-trial requirement is waived."
+        : triedAlternative
+          ? "Claims history shows a prior trial of an alternative in this class."
+          : "No prior trial of a preferred alternative in this therapeutic class, and no step-therapy exception is on file.",
       sourceDocumentId: SRC_FORMULARY,
       citation: `Formulary special code ${formularyEntry.specialCode ?? "ST"} indicates step therapy required.`,
     });
-    if (!triedAlternative) {
+    if (!satisfied) {
       return reject(trace, "608", channel, brandGeneric, level, drug.isSpecialty);
     }
   }

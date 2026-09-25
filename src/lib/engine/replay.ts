@@ -102,7 +102,12 @@ interface ReplayWorld {
   >;
   approvedPAs: Map<
     string,
-    { drugId: string; effectiveDate: Date; terminationDate: Date | null }[]
+    {
+      drugId: string;
+      effectiveDate: Date;
+      terminationDate: Date | null;
+      requestType?: string | null;
+    }[]
   >;
 }
 
@@ -150,6 +155,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
         select: {
           memberId: true,
           drugId: true,
+          requestType: true,
           approvedEffectiveDate: true,
           approvedTerminationDate: true,
         },
@@ -292,7 +298,12 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
 
   const approvedPAs = new Map<
     string,
-    { drugId: string; effectiveDate: Date; terminationDate: Date | null }[]
+    {
+      drugId: string;
+      effectiveDate: Date;
+      terminationDate: Date | null;
+      requestType: string | null;
+    }[]
   >();
   for (const pa of paRows) {
     if (!pa.approvedEffectiveDate) continue;
@@ -301,6 +312,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
       drugId: pa.drugId,
       effectiveDate: pa.approvedEffectiveDate,
       terminationDate: pa.approvedTerminationDate,
+      requestType: pa.requestType,
     });
     approvedPAs.set(pa.memberId, list);
   }
