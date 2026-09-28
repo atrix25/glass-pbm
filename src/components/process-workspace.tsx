@@ -1,3 +1,4 @@
+import {DrugContractReview} from './drug-contract-review';
 import {ContractImplementationSetup} from './contract-implementation-setup';
 import {ContractSourceImage} from './contract-source-image';
 import {ProcessGuide} from './process-guide';
@@ -21,7 +22,10 @@ export async function ProcessWorkspace({id,area,tab='process',extractionId,term}
  return <div className={base.page}>
  <header className={base.header}><div><span className={base.eyebrow}>{sponsor} · Operational leakage protection</span><h1>Leakage prevention</h1><p className={base.muted}>Follow the data. Inspect the result.</p></div><span className={base.badge}>Connected sandbox · Scripted execution</span></header>
  <div className={css.linked}><Link href="/contract-extraction">Contract extraction & review →</Link><Link href="/rebate-protection?tab=controls">Earlier controls & history →</Link><Link href="/contract-checks">Contract checks →</Link><Link href="/leakage-challenges">Blind challenges →</Link><Link href="/agents/rebate-protection">Agent responsibilities →</Link></div>
- {!run&&<ContractImplementationSetup sponsor={sponsor} extractionId={extractionId} term={term}/>}
+ <nav className="my-4 flex flex-wrap gap-2" aria-label="Leakage areas">{[...STAGES].sort((a,b)=>a.area-b.area).map(s=><Link key={s.id} href={href(s.id,'process')} aria-current={s.id===stage.id?'page':undefined} className={`rounded-lg border px-3 py-2 text-sm ${s.id===stage.id?'border-amber-500 bg-amber-50':'border-ink-200 bg-white'}`}>{s.name}</Link>)}</nav>
+ {stage.id==='drugs'&&tab==='process'&&<DrugContractReview sponsor={sponsor} extractionId={extractionId} term={term}/>}
+ {!run&&stage.id==='contract'&&<ContractImplementationSetup sponsor={sponsor} extractionId={extractionId} term={term}/>}
+ {stage.id==='drugs'&&<h2 className="mt-8 text-lg font-medium">Sandbox processing</h2>}
  <section className={base.panel}><details><summary>{run?'Advanced run controls':'Or explore a synthetic example'}</summary><div className={base.sectionHeading}><div><h2>Processing book</h2><p>Two synthetic claims, eight connected areas. Public definitions are cited; prices, rates and other terms are demo assumptions.</p></div><ProcessActions/></div>{run&&<><div className="my-5"><ProcessActions id={run.id} revision={run.revision}/></div><p className={base.note}>Evidence cutoff {state!.source.cutoff.slice(0,10)} · Revision {run.revision} · Last recorded {state!.events.at(-1)?.at??run.createdAt}</p><div className={css.linked}><Link href={href()}>Refresh</Link><Link href={`/api/operational-assurance/process?id=${run.id}`}>Export evidence</Link><Link href={`/agents/runs/${run.id}`}>Agent work</Link></div></>}</details></section>
  {recent.length>0&&<nav className={base.recent} aria-label="Recent process runs">{recent.map(r=><Link key={r.id} href={`/rebate-protection?run=${r.id}&tab=process&area=${stage.id}`}>{r.createdAt.toISOString().slice(0,19).replace('T',' ')} UTC</Link>)}</nav>}
  <nav className={base.tabs} aria-label="Leakage prevention views">{['process','tests','evidence'].map(t=><Link key={t} href={href(stage.id,t)} aria-current={tab===t?'page':undefined}>{label(t)}</Link>)}</nav>
