@@ -15,7 +15,7 @@ const sections = [
 
 export function AppShell({ sidebar, children, sponsor }: { sidebar: ReactNode; children: ReactNode; sponsor?: string }) {
   const pathname = usePathname();
-  const visibleSections = sponsor === "tennessee" ? [["/sponsor", "Overview"], ["/rebate-protection", "Rebate protection"], ["/sponsor/assurance", "Assurance"]] : sections;
+  const visibleSections = sponsor === "tennessee" ? [["/sponsor", "Overview"], ["/rebate-protection", "Operational assurance"], ["/sponsor/assurance", "Assurance"]] : sections;
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { dialog.current?.close(); }, [pathname]);
   function close() { dialog.current?.close(); }

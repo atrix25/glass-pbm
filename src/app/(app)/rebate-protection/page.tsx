@@ -1,3 +1,4 @@
+import { OperationalAssuranceWorkspace } from '@/components/operational-assurance-workspace';
 import { ProcessWorkspace } from '@/components/process-workspace';
 import { AssuranceWorkspace } from "@/components/assurance-workspace";
 import { selectedSponsor } from "@/lib/contract-checks/context";
@@ -15,6 +16,7 @@ export const dynamic="force-dynamic";
 export default async function RebatePage({searchParams}:{searchParams:Promise<{run?:string;tab?:string;cutoff?:string;test?:string;area?:string;extraction?:string;term?:string}>}){
  if(!demoFeaturesEnabled())notFound();
  const q=await searchParams;
+ if(!q.run&&(!q.tab||["process","tests","evidence"].includes(q.tab)))return <OperationalAssuranceWorkspace area={q.area} extractionId={q.extraction} term={q.term}/>;
  if(q.run?.startsWith("prc_")||(!q.run&&(!q.tab||["process","tests","evidence"].includes(q.tab))))return <ProcessWorkspace id={q.run} area={q.area} tab={q.tab} extractionId={q.extraction} term={q.term}/>;
  if(q.run?.startsWith("oas_")||(!q.run&&(!q.tab||["controls","proof","history"].includes(q.tab))))return <AssuranceWorkspace id={q.run} area={q.area} tab={q.tab}/>;
  if(await selectedSponsor()==="tennessee"||q.run?.startsWith("cck_")||(!q.run&&q.tab!=="scenarios"))return <ContractCheckPage runId={q.run} tab={q.tab} testId={q.test}/>;
