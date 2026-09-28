@@ -15,6 +15,7 @@ import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
 import { formatCents, formatCentsWhole } from "@/lib/money";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 import type { ConfigOverride } from "@/lib/engine/replay";
+import { diffRetailCostShare } from "@/lib/engine/cost-share-override";
 
 // ---------------------------------------------------------------------------
 
@@ -34,7 +35,7 @@ export interface BaselineConfig {
   refillThreshold: number;
 }
 
-interface Draft extends BaselineConfig {
+export interface Draft extends BaselineConfig {
   /*
    * Utilisation edits, expressed as a drug-name match rather than a drug list.
    *
@@ -926,32 +927,22 @@ function Results({
 
 // ---------------------------------------------------------------------------
 
-function buildOverride(base: BaselineConfig, d: Draft): ConfigOverride {
+/**
+ * Build a replay override from the draft.
+ *
+ * Only changed cost-share fields are emitted. Sending the full Retail absolute
+ * schedule on every projection used to overwrite Mail (2×) and Retail90 (3×)
+ * rules with Retail dollars even when the lever only flipped an OOP flag.
+ */
+export function buildOverride(base: BaselineConfig, d: Draft): ConfigOverride {
   const o: ConfigOverride = {
-    costShare: [
-      { level: "1", copayCents: d.level1CopayCents },
-      {
-        level: "2",
-        coinsuranceRateBps: d.level2RateBps,
-        coinsuranceMaxCents: d.level2MaxCents,
-      },
-      {
-        level: "3",
-        coinsuranceRateBps: d.level3RateBps,
-        coinsuranceMaxCents: d.level3MaxCents,
-        accumulatesToRxOop: d.level3CountsToRxOop,
-      },
-      {
-        level: "4",
-        copayCents: d.level4CopayCents,
-        accumulatesToRxOop: d.level4CountsToRxOop,
-      },
-    ],
     rxOopLimitIndividual: d.rxOopLimitCents,
     dawPenaltyEnabled: d.dawPenaltyEnabled,
     specialtyChannelRestricted: d.specialtyChannelRestricted,
     refillThreshold: d.refillThreshold,
   };
+  const costShare = diffRetailCostShare(base, d);
+  if (costShare) o.costShare = costShare;
   const formulary: NonNullable<ConfigOverride["formulary"]> = [];
   if (d.paRemovedFor.trim())
     formulary.push({ nameContains: d.paRemovedFor.trim(), requiresPA: false });

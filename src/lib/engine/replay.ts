@@ -41,19 +41,20 @@ import {
   type FillOutcome,
   type FixedSignals,
 } from "@/lib/nps/tally";
+import {
+  patchCostShareRules,
+  type CostShareOverride,
+} from "./cost-share-override";
+
+export type { CostShareOverride } from "./cost-share-override";
+export {
+  costShareChannelMultiplier,
+  patchCostShareRules,
+} from "./cost-share-override";
 
 // ---------------------------------------------------------------------------
 // The levers a plan sponsor can actually pull
 // ---------------------------------------------------------------------------
-
-export interface CostShareOverride {
-  level: string;
-  costShareType?: "Copay" | "Coinsurance" | "NotCovered" | "Zero";
-  copayCents?: number;
-  coinsuranceRateBps?: number;
-  coinsuranceMaxCents?: number;
-  accumulatesToRxOop?: boolean;
-}
 
 export interface FormularyOverride {
   /** Match by drug id, or by a case-insensitive substring of the drug name. */
@@ -327,29 +328,6 @@ function applyPlanOverride(
   plan: EngineBenefitPlan,
   o: ConfigOverride,
 ): EngineBenefitPlan {
-  const rules = plan.costShareRules.map((r) => {
-    const patch = o.costShare?.find((c) => c.level === r.level);
-    if (!patch) return r;
-    return {
-      ...r,
-      costShareType: patch.costShareType ?? r.costShareType,
-      copayCents:
-        patch.copayCents !== undefined ? patch.copayCents : r.copayCents,
-      coinsuranceRateBps:
-        patch.coinsuranceRateBps !== undefined
-          ? patch.coinsuranceRateBps
-          : r.coinsuranceRateBps,
-      coinsuranceMaxCents:
-        patch.coinsuranceMaxCents !== undefined
-          ? patch.coinsuranceMaxCents
-          : r.coinsuranceMaxCents,
-      accumulatesToRxOop:
-        patch.accumulatesToRxOop !== undefined
-          ? patch.accumulatesToRxOop
-          : r.accumulatesToRxOop,
-    };
-  });
-
   return {
     ...plan,
     rxOopLimitIndividual: o.rxOopLimitIndividual ?? plan.rxOopLimitIndividual,
@@ -358,7 +336,7 @@ function applyPlanOverride(
     dawPenaltyEnabled: o.dawPenaltyEnabled ?? plan.dawPenaltyEnabled,
     specialtyChannelRestricted:
       o.specialtyChannelRestricted ?? plan.specialtyChannelRestricted,
-    costShareRules: rules,
+    costShareRules: patchCostShareRules(plan.costShareRules, o.costShare),
   };
 }
 
