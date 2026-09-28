@@ -5,6 +5,7 @@ import {initial,hash,freeze,citation,type State,type Verdict} from './core';
 import {extract,available} from './extract';
 const scope=(sponsor:string)=>({tenantId:tenantSponsorId(),sponsorId:sponsor});
 export async function createExtraction(sponsor:string,key:string){
+ if(sponsor!=='wisconsin')throw Error('Contract source unavailable for selected sponsor');
  if(!available())throw Error('Model connection required');const state=initial();
  const row=await prisma.assuranceRun.upsert({where:{key:hash(['extraction',tenantSponsorId(),sponsor,key])},update:{},create:{id:`ext_${randomUUID()}`,key:hash(['extraction',tenantSponsorId(),sponsor,key]),...scope(sponsor),cutoff:new Date('2019-12-31'),state:JSON.stringify(state),inputHash:hash(state.source),sealedAnswer:'{}',commitment:'manual-review-1'}});return row.id;
 }

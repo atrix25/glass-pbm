@@ -7,6 +7,7 @@ import {ExtractionActions} from './contract-extraction-actions';
 import {ContractSourceImage} from './contract-source-image';
 import styles from './rebate-protection.module.css';
 export async function DrugContractReview({sponsor,extractionId,term}:{sponsor:string;extractionId?:string;term?:string}){
+ if(sponsor!=='wisconsin')return <section className={styles.panel}><span className={styles.eyebrow}>Drug definitions · Contract review</span><h2>Contract data unavailable</h2><p>The selected contract’s drug definition clauses and supporting drug lists are not available in this review.</p><p className="mt-3">AI interpretation: unavailable. Drug classification checks: not performed.</p><p className={styles.note}>Required: the applicable contract definitions, exhibits and dated drug reference lists. Another sponsor’s contract will not be substituted.</p></section>;
  const recent=await recentExtractions(sponsor);
  const extraction=await readExtraction(extractionId??recent[0]?.id??'',sponsor);
  if(extractionId&&!extraction)notFound();
@@ -17,7 +18,7 @@ export async function DrugContractReview({sponsor,extractionId,term}:{sponsor:st
  return <section className={styles.panel} id="drug-contract-review">
   <span className={styles.eyebrow}>Drug definitions · Contract review</span><h2>Source and AI interpretation</h2>
   <p className="mb-4">Select a clause. Compare the highlighted contract language with the AI’s conclusion, then record your verdict.</p>
-  <p className={styles.note}>Historical Wisconsin ETF / Navitus contract · {sponsor==='tennessee'?'Reference document only—not Tennessee or CVS Caremark requirements.':'Not a statement of current plan terms.'} Review records belong to the selected sponsor.</p>
+  <p className={styles.note}>Historical Wisconsin ETF / Navitus contract · Not a statement of current plan terms. Review records belong to the selected sponsor.</p>
   <details className="my-4"><summary>Extraction details</summary><p>{state?.model??'No model result'} · {state?.status??'Not extracted'} · {requirements.length} related clauses</p><p>Selected pages only. A matched quotation does not establish a correct interpretation or complete coverage.</p>{state&&!state.source.pages.some(p=>p.page===104)&&<p>Brand and generic definition pages were not included in this older extraction. Extract again to include them.</p>}<ExtractionActions mode="create" configured={available()} returnArea="drugs"/></details>
   {running&&<div role="status"><p>AI extraction in progress. The recorded answer will appear here.</p><ExtractionActions mode="create" running configured={false} returnArea="drugs"/></div>}
   {state?.status==='Failed'&&<><p>Extraction failed. No substitute answer was generated.</p><ExtractionActions mode="retry" id={extraction!.id} revision={extraction!.revision}/></>}
@@ -30,7 +31,7 @@ export async function DrugContractReview({sponsor,extractionId,term}:{sponsor:st
    <section><h3>AI conclusion</h3><p className="mt-3">{selected.interpretation}</p>{selected.conditions.length>0&&<><h4 className="mt-5 font-medium">Conditions and exceptions</h4><ul className={styles.list}>{selected.conditions.map((c,i)=><li key={i}>{c}</li>)}</ul></>}
    <h4 className="mt-5 font-medium">Proposed implementation</h4><p>{selected.implementation}</p><p className={styles.note}>Proposal only · No configuration has been changed by this review.</p>
    {selected.missingDependencies.length>0&&<div className="my-5 rounded-lg border border-amber-200 bg-amber-50 p-4"><h4 className="font-medium">Evidence still needed</h4><ul className={styles.list}>{selected.missingDependencies.map((c,i)=><li key={i}>{c}</li>)}</ul></div>}
-   <details className="my-5"><summary>Proposed checks · Not executed</summary>{selected.tests.map((t,i)=><div className="my-3" key={i}><p><strong>Input:</strong> {t.input}</p><p><strong>Expected:</strong> {t.expected}</p></div>)}</details>
+   <div className="my-5 rounded-lg border border-ink-200 p-4"><h4 className="font-medium">Verification data unavailable</h4><p>The contract text is available. The applicable dated drug reference files and actual implementation records are not loaded for comparison.</p><p className={styles.note}>Checks not performed · No substitute drug records or test results.</p></div>
    <div className="mt-5 border-t border-ink-200 pt-5"><h4 className="mb-3 font-medium">Your review · {review?.verdict??'Not reviewed'}</h4>{review?.correction&&<p>Reviewed interpretation: {review.correction}</p>}<ExtractionActions key={`${selected.id}-${extraction!.revision}`} mode="review" id={extraction!.id} revision={extraction!.revision} requirementId={selected.id} initialVerdict={review?.verdict??'Correct'} initialCorrection={review?.correction??selected.interpretation}/></div>
    </section></div>
   </>}
