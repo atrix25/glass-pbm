@@ -1,0 +1,52 @@
+{
+  "title": "Tennessee CaremarkPCS Health LLC \u2014 RFS 31786-00151 / Edison 65576",
+  "sourceUrl": "https://capitol.tn.gov/Archives/Joint/committees/fiscal-review/contracts/9.%20RFS%20317.86-00151%20F%26A%20%28Caremark%20PCS%20Health%2C%20LLC%29%20redacted.pdf",
+  "indexUrl": "https://capitol.tn.gov/joint/committees/fiscal-review/contracts2122.html",
+  "retrievedOn": "2026-09-28",
+  "sha256": "43be1b246b18b3f8f83cfec6771da3fda949bc0a216e6db59ef878f6c7f86f2e",
+  "bytes": 10501086,
+  "pdfPages": 121,
+  "originalTerm": {
+    "start": "2020-03-01",
+    "end": "2025-06-30"
+  },
+  "pageNumbering": "All page references below are one-based PDF pages. Printed page totals vary within the scanned original.",
+  "pageGuide": [
+    {
+      "pages": "1\u201310",
+      "description": "Proposed Amendment One packet; signature fields on PDF page 10 are blank. Execution not verified."
+    },
+    {
+      "pages": "11\u2013114",
+      "description": "Base contract cover, contract and attachments; base contract signatures visible on PDF page 92."
+    },
+    {
+      "pages": "13\u201314",
+      "description": "Brand, generic and house-generic definitions, including single-source generic treatment."
+    },
+    {
+      "pages": "70\u201371",
+      "description": "Financial tables with redacted values."
+    },
+    {
+      "pages": "74",
+      "description": "Quarterly rebate guarantee reconciliation, annual true-up, specialty treatment and single-source generics."
+    },
+    {
+      "pages": "92",
+      "description": "Base contract signatures dated February 7 and February 11, 2020."
+    },
+    {
+      "pages": "115\u2013121",
+      "description": "Additional packet material; not represented as later executed amendments."
+    }
+  ],
+  "limitations": [
+    "Official public redacted copy; not an unredacted contract.",
+    "Included proposed amendment is unsigned; do not treat its changes as effective requirements without execution evidence.",
+    "Completeness of subsequent amendments and incorporated external schedules has not been established.",
+    "Scanned base contract requires OCR and citation verification before automated extraction.",
+    "Downloading this source does not establish AI extraction accuracy, implementation compliance, or absence of leakage."
+  ],
+  "extractionStatus": "Not yet ingested into the Tennessee AI extraction workflow"
+}
