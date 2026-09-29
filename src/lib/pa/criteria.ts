@@ -403,15 +403,47 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
       args: {
-        drugPatterns: [
-          "methotrexate",
-          "sulfasalazine",
-          "leflunomide",
-          "hydroxychloroquine",
-          "azathioprine",
-          "mesalamine",
-          "budesonide",
-          "acitretin",
+        /*
+         * Bound to diagnosis: a flat OR across RA / IBD / psoriasis agents
+         * Approves specialty adalimumab when the only fill is the wrong class
+         * for the indication (e.g. acitretin with K51, mesalamine with M05).
+         */
+        byDiagnosis: [
+          {
+            codes: ["L40"],
+            drugPatterns: ["methotrexate", "acitretin", "SORIATANE"],
+          },
+          {
+            codes: ["M05", "M06"],
+            drugPatterns: [
+              "methotrexate",
+              "sulfasalazine",
+              "leflunomide",
+              "hydroxychloroquine",
+            ],
+          },
+          {
+            codes: ["K50", "K51"],
+            drugPatterns: [
+              "mesalamine",
+              "budesonide",
+              "azathioprine",
+              "sulfasalazine",
+              "methotrexate",
+            ],
+          },
+          {
+            codes: ["L73"],
+            drugPatterns: ["methotrexate"],
+          },
+          {
+            codes: ["M45"],
+            drugPatterns: ["methotrexate", "sulfasalazine"],
+          },
+          {
+            codes: ["H20"],
+            drugPatterns: ["methotrexate", "azathioprine"],
+          },
         ],
         alsoAcceptAnswer: "conventionalTherapyTrial",
       },
