@@ -1,12 +1,12 @@
 import {randomUUID} from 'node:crypto';
 import {prisma} from '@/lib/db';
 import {tenantSponsorId} from '@/lib/config';
-import {initial,hash,freeze,citation,type State,type Verdict} from './core';
+import {initial,hash,freeze,citation,sourceForSponsor,type State,type Verdict} from './core';
 import {extract,available} from './extract';
 const scope=(sponsor:string)=>({tenantId:tenantSponsorId(),sponsorId:sponsor});
 export async function createExtraction(sponsor:string,key:string){
- if(sponsor!=='wisconsin')throw Error('Contract source unavailable for selected sponsor');
- if(!available())throw Error('Model connection required');const state=initial();
+ const source=sourceForSponsor(sponsor);if(!source)throw Error('Contract source unavailable for selected sponsor');
+ if(!available())throw Error('Model connection required');const state=initial(source);
  const row=await prisma.assuranceRun.upsert({where:{key:hash(['extraction',tenantSponsorId(),sponsor,key])},update:{},create:{id:`ext_${randomUUID()}`,key:hash(['extraction',tenantSponsorId(),sponsor,key]),...scope(sponsor),cutoff:new Date('2019-12-31'),state:JSON.stringify(state),inputHash:hash(state.source),sealedAnswer:'{}',commitment:'manual-review-1'}});return row.id;
 }
 export async function executeExtraction(id:string,sponsor:string){
@@ -16,7 +16,7 @@ export async function executeExtraction(id:string,sponsor:string){
  state.status='Running';state.startedAt=new Date().toISOString();state.attempt++;
  const claim=await prisma.assuranceRun.updateMany({where:{id,revision:row.revision,...scope(sponsor)},data:{state:JSON.stringify(state),revision:row.revision+1}});if(!claim.count)return;
  try{const result=await extract(state.source);state.raw=result.value;state.original=freeze(result.value,state.source);state.originalHash=hash(state.original);state.execution='model';state.model=result.model;state.usage=result.usage;state.limitations=result.value.limitations;state.status='Complete';state.error=null;}
- catch(error){console.error('Contract extraction failed',{name:error instanceof Error?error.name:'Unknown'});state.status='Failed';state.error='Model extraction did not complete. No scripted answer was substituted.';}
+ catch(error){console.error('Contract extraction failed',{name:error instanceof Error?error.name:'Unknown',status:typeof error==='object'&&error&&'statusCode' in error?error.statusCode:undefined});state.status='Failed';state.error='Model extraction did not complete. No scripted answer was substituted.';}
  state.finishedAt=new Date().toISOString();
  await prisma.assuranceRun.updateMany({where:{id,revision:row.revision+1,...scope(sponsor)},data:{state:JSON.stringify(state),revision:row.revision+2}});
 }

@@ -1,4 +1,5 @@
 import geometry from '../../../data/contract-extraction/wisconsin-geometry.json';
+import tennesseeGeometry from '../../../data/contract-extraction/tennessee-geometry.json';
 
 type Citation = {page:number; quote:string; matched:boolean};
 type Word = {text:string; box:number[]; line:string};
@@ -24,7 +25,7 @@ export function locatePassage(words:Word[], quote:string):HighlightBox[] {
  return [...lines.values()].map(([x,y,right,bottom])=>({x,y,width:right-x,height:bottom-y}));
 }
 export function sourceHighlights(page:number,sha256:string,citations:Citation[]){
- const source=geometry.sha256===sha256?geometry.pages.find(p=>p.page===page):undefined;
+ const source=[geometry,tennesseeGeometry].find(g=>g.sha256===sha256)?.pages.find(p=>p.page===page);
  if(!source)return null;
  const relevant=citations.filter(c=>c.page===page);
  const passages=relevant.map(c=>c.matched?locatePassage(source.words,c.quote):[]);

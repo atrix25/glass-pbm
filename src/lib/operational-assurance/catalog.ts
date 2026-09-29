@@ -1,4 +1,4 @@
-import type {Requirement,State} from '../contract-extraction/core';
+import {sourceForSponsor,type Requirement,type State} from '../contract-extraction/core';
 import {drugRequirements} from '../contract-extraction/areas';
 export const ASSURANCE_AREAS = [
  {id:'contract',name:'Contract implementation',authority:['Executed agreement','Approved configuration'],requirement:'Approved terms are reflected in network, benefit, clinical and financial configuration.',actual:'Effective configuration, approval records and amendment history',check:'Compare each approved provision to its effective configuration and affected population.',role:'Contract administration',next:'Provide the approved configuration and applicable contract amendments.'},
@@ -26,7 +26,7 @@ export function relatedRequirements(area:string,requirements:Requirement[]){
  });
 }
 export function visibleExtraction(state:State,sponsor:string,cutoff:Date){
- return sponsor==='wisconsin'&&state.source.id==='wisconsin-etg0013-amendment-1'&&state.status==='Complete'&&state.execution==='model'&&!!state.finishedAt&&new Date(state.finishedAt)<=cutoff;
+ return !!sourceForSponsor(sponsor)&&state.source.id===sourceForSponsor(sponsor)?.id&&state.source.sha256===sourceForSponsor(sponsor)?.sha256&&state.status==='Complete'&&state.execution==='model'&&!!state.finishedAt&&new Date(state.finishedAt)<=cutoff;
 }
 // No real implementation feed is connected to this workspace. Missing data never passes.
 export function assurancePosition(){return {recordsChecked:0,areasVerified:0,areasMissingEvidence:ASSURANCE_AREAS.length,discrepancies:null,status:'Unable to verify' as const};}

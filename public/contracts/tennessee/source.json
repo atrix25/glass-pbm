@@ -48,5 +48,5 @@
     "Scanned base contract requires OCR and citation verification before automated extraction.",
     "Downloading this source does not establish AI extraction accuracy, implementation compliance, or absence of leakage."
   ],
-  "extractionStatus": "Not yet ingested into the Tennessee AI extraction workflow"
+  "extractionStatus": "20 selected base-contract pages connected to the AI extraction and manual-review workflow; no completeness claim"
 }
