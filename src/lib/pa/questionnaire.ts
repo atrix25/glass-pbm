@@ -168,10 +168,22 @@ function prepopulationExpression(step: CriteriaStepDef): string | null {
       return `Condition.where(code.coding.code.startsWith(${JSON.stringify(
         (args.codes as string[]) ?? [],
       )})).exists()`;
-    case "member.hasTrialOf":
+    case "member.hasTrialOf": {
+      const byDiagnosis = args.byDiagnosis as
+        | { drugPatterns?: string[] }[]
+        | undefined;
+      const patterns =
+        byDiagnosis && byDiagnosis.length > 0
+          ? [
+              ...new Set(
+                byDiagnosis.flatMap((g) => g.drugPatterns ?? []),
+              ),
+            ]
+          : ((args.drugPatterns as string[]) ?? []);
       return `ClaimResponse.where(item.productOrService.display.matches(${JSON.stringify(
-        (args.drugPatterns as string[]) ?? [],
+        patterns,
       )})).exists()`;
+    }
     case "member.ageBetween":
       return "Patient.birthDate.toAge()";
     case "member.weightBelowKg":

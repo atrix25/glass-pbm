@@ -120,12 +120,44 @@ function evaluatePredicate(
 
     case "member.hasTrialOf": {
       const patterns = (args.drugPatterns as string[]) ?? [];
+      const byDiagnosis = args.byDiagnosis as
+        | { codes: string[]; drugPatterns: string[] }[]
+        | undefined;
       const alsoAccept = args.alsoAcceptAnswer as string | undefined;
-      const matched = patterns.filter((p) =>
-        facts.filledDrugNames.some((n) =>
-          n.toUpperCase().includes(p.toUpperCase()),
-        ),
-      );
+      /*
+       * When byDiagnosis is present, only fills that match a drug pattern for a
+       * diagnosis the member actually holds count as a trial. A flat OR-list
+       * across RA / IBD / psoriasis agents let mesalamine Approve rheumatoid
+       * arthritis requests and acitretin Approve ulcerative colitis — both
+       * contradict the form text "conventional therapy appropriate to the
+       * diagnosis" and persist a specialty Authorize.
+       */
+      const nameMatches = (name: string, pattern: string): boolean =>
+        name.toUpperCase().includes(pattern.toUpperCase());
+
+      let matched: string[] = [];
+      let expectedPatterns = patterns;
+      if (byDiagnosis && byDiagnosis.length > 0) {
+        const applicable: string[] = [];
+        for (const group of byDiagnosis) {
+          const hasDx = (group.codes ?? []).some((c) =>
+            facts.memberDiagnosisCodes.some((held) => held.startsWith(c)),
+          );
+          if (!hasDx) continue;
+          applicable.push(...(group.drugPatterns ?? []));
+          for (const p of group.drugPatterns ?? []) {
+            for (const n of facts.filledDrugNames) {
+              if (nameMatches(n, p)) matched.push(p);
+            }
+          }
+        }
+        expectedPatterns = applicable.length > 0 ? [...new Set(applicable)] : [];
+        matched = [...new Set(matched)];
+      } else {
+        matched = patterns.filter((p) =>
+          facts.filledDrugNames.some((n) => nameMatches(n, p)),
+        );
+      }
       if (matched.length > 0) {
         return {
           result: true,
@@ -140,7 +172,10 @@ function evaluatePredicate(
       }
       return {
         result: false,
-        evidence: `No claim found for any of ${patterns.join(", ")}, and no prescriber attestation was provided.`,
+        evidence:
+          expectedPatterns.length > 0
+            ? `No claim found for any of ${expectedPatterns.join(", ")}, and no prescriber attestation was provided.`
+            : "No diagnosis-appropriate conventional therapy patterns apply, and no prescriber attestation was provided.",
       };
     }
 
