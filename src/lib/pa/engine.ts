@@ -109,12 +109,43 @@ function evaluatePredicate(
       const matched = codes.filter((c) =>
         facts.memberDiagnosisCodes.some((held) => held.startsWith(c)),
       );
+      if (matched.length === 0) {
+        return {
+          result: false,
+          evidence: `Member diagnoses on file are ${facts.memberDiagnosisCodes.join(", ") || "none"}, none of which match ${codes.join(", ")}.`,
+        };
+      }
+      /*
+       * Some form steps bind diagnosis to a minimum age in the same question
+       * ("six months of age or older with a diagnosis of…"). Encoding that as
+       * diagnosis-only lets infants clear the step and unlock specialty fills.
+       * minAgeYears is fractional so six months is 0.5 without inventing a
+       * second predicate.
+       */
+      const minAgeYears =
+        typeof args.minAgeYears === "number" ? args.minAgeYears : null;
+      if (minAgeYears != null) {
+        const age = facts.memberAgeYears;
+        if (age == null || age < 0) {
+          return {
+            result: false,
+            evidence: `Member has qualifying diagnosis ${matched.join(", ")}, but age is unknown and this step requires at least ${minAgeYears} years.`,
+          };
+        }
+        if (age < minAgeYears) {
+          return {
+            result: false,
+            evidence: `Member has qualifying diagnosis ${matched.join(", ")}, but age ${age} years is under the required ${minAgeYears} years.`,
+          };
+        }
+        return {
+          result: true,
+          evidence: `Member is ${age} years old with qualifying diagnosis ${matched.join(", ")}.`,
+        };
+      }
       return {
-        result: matched.length > 0,
-        evidence:
-          matched.length > 0
-            ? `Member has qualifying diagnosis ${matched.join(", ")}.`
-            : `Member diagnoses on file are ${facts.memberDiagnosisCodes.join(", ") || "none"}, none of which match ${codes.join(", ")}.`,
+        result: true,
+        evidence: `Member has qualifying diagnosis ${matched.join(", ")}.`,
       };
     }
 

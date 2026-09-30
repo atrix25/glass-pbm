@@ -285,12 +285,14 @@ export const DUPIXENT: CriteriaTreeDef = {
       question:
         "Is the member six months of age or older with a diagnosis of moderate to severe atopic dermatitis?",
       predicate: "member.hasDiagnosis",
-      args: { codes: ["L20"] },
+      // Six months is half a year. Flooring age to whole years would deny
+      // seven-to-eleven-month-olds who clear the published threshold.
+      args: { codes: ["L20"], minAgeYears: 0.5 },
       yes: { outcome: "step", step: 6 },
       no: {
         outcome: "deny",
         reason:
-          "No documented diagnosis of moderate to severe atopic dermatitis (ICD-10 L20).",
+          "Member is under six months of age, or has no documented diagnosis of moderate to severe atopic dermatitis (ICD-10 L20).",
       },
       citation: "DUPIXENT prior authorization form, atopic dermatitis initial therapy",
     },

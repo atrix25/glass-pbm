@@ -685,9 +685,10 @@ export function generateClaims(
             planYearEnd: new Date(Date.UTC(input.planYear, 11, 31)),
             diagnosisCodes: member.diagnosisCodes,
             filledDrugNames: chronicDrugs.map((d) => d.name),
-            ageYears: Math.floor(
+            // Fractional years so PA age gates (e.g. Dupixent ≥6 months) can
+            // distinguish a four-month-old from a nine-month-old.
+            ageYears:
               (yearStart - member.dateOfBirth.getTime()) / 31_557_600_000,
-            ),
             // Weight is not modelled on the member, and only matters for the
             // weight-band dosing branch, so it is drawn here.
             weightKg: rng.int(45, 130),
@@ -837,9 +838,8 @@ export function generateClaims(
         planYearEnd: new Date(Date.UTC(input.planYear, 11, 31)),
         diagnosisCodes: member.diagnosisCodes,
         filledDrugNames: chronicDrugs.map((d) => d.name),
-        ageYears: Math.floor(
+        ageYears:
           (yearStart - member.dateOfBirth.getTime()) / 31_557_600_000,
-        ),
         weightKg: member.weightKg,
       };
 
