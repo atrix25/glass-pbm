@@ -360,10 +360,9 @@ export async function runIntake(opts: {
       return {
         filledDrugNames: [...new Set(claims.map((c) => c.drug.name))].slice(0, 60),
         diagnosisCodes: parseCodes(pa.member.diagnosisCodes),
-        ageYears: Math.floor(
+        ageYears:
           (pa.receivedAt.getTime() - pa.member.dateOfBirth.getTime()) /
-            (365.25 * 86_400_000),
-        ),
+          (365.25 * 86_400_000),
         weightKg: pa.member.weightKg ?? undefined,
       };
     },
