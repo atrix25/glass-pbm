@@ -19,6 +19,7 @@ import {
   SPECIALTY_PHARMACY,
   OON_PHARMACY,
   MAIL_PHARMACY,
+  HDHP_PLAN,
   drug,
   entry,
 } from "./fixtures";
@@ -194,6 +195,39 @@ describe("the $600 prescription out-of-pocket limit", () => {
 
     expect(out.responseStatus).toBe("P");
     expect(out.patientPayCents).toBe(300);
+    // Component fields are what claim detail and POS display. After the Rx
+    // OOP cap they must still sum to member pay, not the pre-cap $5 copay.
+    expect(out.copayCoinsuranceCents).toBe(300);
+    expect(
+      out.appliedToDeductibleCents +
+        out.copayCoinsuranceCents +
+        out.brandSelectionPenaltyCents,
+    ).toBe(out.patientPayCents);
+  });
+
+  it("reconciles DAW penalty components after the total-allowed clamp", () => {
+    // HDHP: unmet deductible swallows the fill, then DAW 1 adds a brand
+    // penalty that pushes liability above total allowed. The clamp binds;
+    // the stored components must still add up to patient pay.
+    const out = adjudicate(
+      makeContext({
+        plan: HDHP_PLAN,
+        drug: drug({ nadacPerUnit: 12, isBrandLabel: true, monyCode: "M" }),
+        formularyEntry: entry({ level: "2" }),
+        dawCode: "1",
+        quantityDispensed: 30,
+        daysSupply: 30,
+      }),
+    );
+
+    expect(out.responseStatus).toBe("P");
+    expect(out.costShare?.cappedBy).toBe("total-allowed");
+    expect(out.patientPayCents).toBe(out.totalBilledCents);
+    expect(
+      out.appliedToDeductibleCents +
+        out.copayCoinsuranceCents +
+        out.brandSelectionPenaltyCents,
+    ).toBe(out.patientPayCents);
   });
 
   it("keeps charging on Level 3 after the limit, because it never applied", () => {
