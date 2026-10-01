@@ -19,6 +19,7 @@
 
 import { prisma } from "@/lib/db";
 import { adjudicate, type AdjudicationContext, type PriorFill } from "./adjudicate";
+import { priorPaidClaimsWhere } from "./prior-fills";
 import { loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
@@ -192,6 +193,7 @@ async function adjudicateStored(
   const { priorFills, rxOop, deductible } = await rebuildPosition(
     claim.memberId,
     claim.dateOfService,
+    claim.claimNumber,
     plan.costShareRules
       .filter((r) => r.accumulatesToRxOop)
       .map((r) => r.level),
@@ -243,22 +245,21 @@ async function adjudicateStored(
  *
  * The stored accumulator balance is the end of the year, and a claim dated in
  * March has to be priced against March. The balance is therefore recomputed
- * from the paid claims that precede the date, which is the same thing the
- * point-of-sale simulator does.
+ * from the paid claims that precede this fill in book order — date of service,
+ * then claim number — matching seed and empty-override replay. Cutting only on
+ * the calendar day drops same-day priors and prices the later fill against a
+ * deductible and out-of-pocket balance the member had already paid past.
  */
 async function rebuildPosition(
   memberId: string,
   dateOfService: Date,
+  claimNumber: string,
   accumulatingLevels: string[],
   world: Awaited<ReturnType<typeof loadWorld>>,
   integratedDeductibleCents: number,
 ): Promise<{ priorFills: PriorFill[]; rxOop: number; deductible: number }> {
   const history = await prisma.claim.findMany({
-    where: {
-      memberId,
-      responseStatus: "P",
-      dateOfService: { lt: dateOfService },
-    },
+    where: priorPaidClaimsWhere(memberId, dateOfService, claimNumber),
     select: {
       dateOfService: true,
       daysSupply: true,
@@ -269,7 +270,7 @@ async function rebuildPosition(
       formularyLevel: true,
       brandSelectionPenaltyCents: true,
     },
-    orderBy: { dateOfService: "asc" },
+    orderBy: [{ dateOfService: "asc" }, { claimNumber: "asc" }],
   });
 
   const levels = new Set(accumulatingLevels);
