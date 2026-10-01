@@ -636,10 +636,13 @@ async function searchFormularyUm(
           : result.flag === "ql"
             ? "quantity limit"
             : "mandatory specialty";
+  const nameBit = args.query?.trim()
+    ? ` matching “${args.query.trim()}”`
+    : "";
   return {
     data: result,
     citations: [formularyCite],
-    summary: `${formatNumber(result.totalMatching)} formulary product(s) with ${label}; showing ${result.returned}.`,
+    summary: `${formatNumber(result.totalMatching)} formulary product(s) with ${label}${nameBit}; showing ${result.returned}.`,
   };
 }
 
