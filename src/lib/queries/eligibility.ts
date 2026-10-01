@@ -338,9 +338,12 @@ export async function getAuditFindings(
 
     /*
      * The exposure is the claims that fall after the termination this audit
-     * reported. The spans carry the date the plan learned, which the feed sets
-     * to the audit that found them, so the two join on that instant rather
-     * than on a list of member identifiers.
+     * reported, and that have already happened as of the clock. The spans
+     * carry the date the plan learned, which the feed sets to the audit that
+     * found them, so the two join on that instant rather than on a list of
+     * member identifiers. The DOS cut matches getRecoveryOverview on the
+     * reversals page — without it a mid-year pin would count fills that have
+     * not been submitted yet as already recoverable.
      */
     const [exposure] = await prisma.$queryRaw<
       Array<{ n: number; cents: number | null }>
@@ -353,6 +356,7 @@ export async function getAuditFindings(
         AND e.retroReportedAt = ${audit.processedAt}
         AND e.reportedTerminationDate IS NOT NULL
         AND c.dateOfService > e.reportedTerminationDate
+        AND c.dateOfService <= ${now}
     `;
 
     findings.push({
