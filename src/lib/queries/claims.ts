@@ -210,9 +210,15 @@ async function totalsFromClaims(where: Prisma.ClaimWhereInput) {
   };
 }
 
-export async function getClaimDetail(idOrNumber: string) {
+export async function getClaimDetail(
+  idOrNumber: string,
+  clock: SimulationClock,
+) {
+  // Same cut as the ledger: a fill dated after the simulation clock has not
+  // been submitted yet, so deep links and agent lookups must not surface it.
   return prisma.claim.findFirst({
     where: {
+      dateOfService: { lte: clock.today },
       OR: [{ id: idOrNumber }, { claimNumber: idOrNumber }],
     },
     include: {
@@ -226,9 +232,17 @@ export async function getClaimDetail(idOrNumber: string) {
 }
 
 /** Prior and subsequent fills of the same prescription, for context. */
-export async function getRelatedFills(memberId: string, drugId: string) {
+export async function getRelatedFills(
+  memberId: string,
+  drugId: string,
+  clock: SimulationClock,
+) {
   return prisma.claim.findMany({
-    where: { memberId, drugId },
+    where: {
+      memberId,
+      drugId,
+      dateOfService: { lte: clock.today },
+    },
     select: {
       id: true,
       claimNumber: true,

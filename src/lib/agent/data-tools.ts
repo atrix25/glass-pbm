@@ -377,9 +377,10 @@ export const getClaimDetailSchema = z.object({
 });
 
 async function getClaimDetailTool(
+  clock: SimulationClock,
   args: z.infer<typeof getClaimDetailSchema>,
 ): Promise<ToolResult> {
-  const claim = await getClaimDetail(args.idOrNumber);
+  const claim = await getClaimDetail(args.idOrNumber, clock);
   if (!claim) {
     return {
       data: { found: false },
@@ -948,8 +949,8 @@ export const DATA_TOOL_REGISTRY: Record<DataToolName, DataToolDef> = {
   },
   getClaimDetail: {
     schema: getClaimDetailSchema,
-    execute: (a) =>
-      getClaimDetailTool(a as z.infer<typeof getClaimDetailSchema>),
+    execute: (a, clock) =>
+      getClaimDetailTool(clock, a as z.infer<typeof getClaimDetailSchema>),
   },
   composeReportBriefing: {
     schema: composeReportBriefingSchema,
