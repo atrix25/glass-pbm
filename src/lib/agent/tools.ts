@@ -16,6 +16,8 @@ import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
 import { REJECT_MEMBER_EXPLANATION } from "@/lib/engine/types";
+import { computeRefillWindow } from "@/lib/agent/refill-timing";
+import { getClock } from "@/lib/session";
 
 export interface Citation {
   sourceId: string;
@@ -768,18 +770,21 @@ export const refillEligibilitySchema = z.object({
 export async function refillEligibility(
   args: z.infer<typeof refillEligibilitySchema>,
 ): Promise<ToolResult> {
+  const clock = await getClock();
   let drugName = args.drugName;
   let rejectedAt: Date | null = null;
 
   // A member who says "my refill was too soon" is quoting the pharmacy, not
   // naming a drug. Find the fill that actually got the 79 so the answer is
-  // about the right prescription instead of the most recent one.
+  // about the right prescription instead of the most recent one. Cut at the
+  // simulation clock — a later-year 79 has not been submitted yet.
   if (!drugName) {
     const reject = await prisma.claim.findFirst({
       where: {
         memberId: args.memberId,
         responseStatus: "R",
         rejectCodes: { contains: "79" },
+        dateOfService: { lte: clock.today },
       },
       include: { drug: true },
       orderBy: { dateOfService: "desc" },
@@ -803,7 +808,9 @@ export async function refillEligibility(
       memberId: args.memberId,
       responseStatus: "P",
       drug: { name: { contains: drugName } },
-      ...(rejectedAt ? { dateOfService: { lt: rejectedAt } } : {}),
+      dateOfService: rejectedAt
+        ? { lt: rejectedAt }
+        : { lte: clock.today },
     },
     include: { drug: true },
     orderBy: { dateOfService: "desc" },
@@ -815,12 +822,11 @@ export async function refillEligibility(
       summary: `No paid fill of ${drugName} on file, so there is nothing holding a refill.`,
     };
   }
-  const threshold = 0.75;
-  const requiredDays = Math.ceil(last.daysSupply * threshold);
-  const eligible = new Date(
-    last.dateOfService.getTime() + requiredDays * 86_400_000,
+  const window = computeRefillWindow(
+    last.dateOfService,
+    last.daysSupply,
+    clock.now,
   );
-  const now = new Date();
   return {
     data: {
       drug: tidyName(last.drug.name),
@@ -830,13 +836,10 @@ export async function refillEligibility(
       rejectedOn: rejectedAt?.toISOString().slice(0, 10) ?? null,
       lastFilled: last.dateOfService.toISOString().slice(0, 10),
       daysSupplyDispensed: last.daysSupply,
-      thresholdPercent: threshold * 100,
-      eligibleForRefillOn: eligible.toISOString().slice(0, 10),
-      eligibleNow: now >= eligible,
-      daysToWait: Math.max(
-        0,
-        Math.ceil((eligible.getTime() - now.getTime()) / 86_400_000),
-      ),
+      thresholdPercent: window.thresholdPercent,
+      eligibleForRefillOn: window.eligibleForRefillOn,
+      eligibleNow: window.eligibleNow,
+      daysToWait: window.daysToWait,
     },
     citations: [
       cite(
@@ -844,7 +847,7 @@ export async function refillEligibility(
         "A refill is allowed once 75% of the previous days supply has elapsed.",
       ),
     ],
-    summary: `The last ${last.daysSupply}-day fill of ${tidyName(last.drug.name)} was ${last.dateOfService.toISOString().slice(0, 10)}, so a refill is allowed from ${eligible.toISOString().slice(0, 10)}.`,
+    summary: `The last ${last.daysSupply}-day fill of ${tidyName(last.drug.name)} was ${last.dateOfService.toISOString().slice(0, 10)}, so a refill is allowed from ${window.eligibleForRefillOn}.`,
   };
 }
 
