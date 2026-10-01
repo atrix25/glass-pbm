@@ -19,6 +19,7 @@ import {
 } from "@/lib/queries/members";
 import { DEMO_MEMBER_BY_ID } from "@/lib/demo-members";
 import { formatCents } from "@/lib/money";
+import { getClock } from "@/lib/session";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +30,10 @@ export default async function MemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const member = await getMemberDetail(id);
+  const [member, clock] = await Promise.all([getMemberDetail(id), getClock()]);
   if (!member) notFound();
 
-  const claims = await getMemberClaims(id);
+  const claims = await getMemberClaims(id, clock);
   const curve = buildOopCurve(claims);
   const story = DEMO_MEMBER_BY_ID[id];
   const span = member.eligibilitySpans[0];
@@ -234,10 +235,10 @@ export default async function MemberPage({
       ) : null}
 
       <Card>
-        <CardHeader
-          title="Claim history"
-          description="Every submission for this member, in date order. Open any one for its full derivation."
-          action={
+          <CardHeader
+            title="Claim history"
+            description="Every submission for this member through the simulation clock, in date order. Open any one for its full derivation."
+            action={
             <Link
               href={`/claims?member=${member.id}`}
               className="text-[12.5px] font-medium text-glass-700 hover:text-glass-900"

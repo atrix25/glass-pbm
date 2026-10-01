@@ -97,9 +97,15 @@ export async function getMemberDetail(id: string) {
   });
 }
 
-export async function getMemberClaims(memberId: string) {
+export async function getMemberClaims(
+  memberId: string,
+  clock: SimulationClock,
+) {
+  // Same cut as listMembers / the claim ledger: a fill dated after the
+  // simulation clock has not been submitted yet, so it must not inflate
+  // year-to-date spend or the out-of-pocket gauges on the member page.
   return prisma.claim.findMany({
-    where: { memberId },
+    where: { memberId, dateOfService: { lte: clock.today } },
     select: {
       id: true,
       claimNumber: true,
