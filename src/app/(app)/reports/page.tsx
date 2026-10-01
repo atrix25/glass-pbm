@@ -282,10 +282,11 @@ export default async function ReportsPage() {
                 </span>
               </div>
               <p className="mt-1 text-[12px] leading-relaxed text-ink-600">
-                Exhibit C guarantees at least{" "}
-                {formatCents(rebates.minPerBrandClaimCents)} per retail brand
-                claim, a floor of {formatCents(rebates.minGuaranteeCents)} on
-                this volume. Actual collections were{" "}
+                Exhibit C sets a per-brand-claim floor by channel ($100 retail,
+                $210 retail-90, $260 mail, $750 specialty). On this mix that is
+                a blended {formatCents(rebates.minPerBrandClaimCents)} per brand
+                claim, a floor of {formatCents(rebates.minGuaranteeCents)}.
+                Actual collections were{" "}
                 {formatCents(rebates.grossRebateCents)}. Under this contract the
                 plan keeps the higher of the two rather than the guarantee
                 alone.

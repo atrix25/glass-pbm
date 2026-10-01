@@ -19,6 +19,7 @@
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
 import { PLAN_YEAR, PLAN_YEAR_START } from "@/lib/clock";
+import { computeBrandRebateFloor } from "@/lib/contracts/rebate-floor";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
 import {
   PERFORMANCE_GUARANTEES,
@@ -423,16 +424,36 @@ export interface RebateFloor {
 export async function getRebateFloor(
   clock: SimulationClock,
 ): Promise<RebateFloor> {
-  const agg = await prisma.bookDay.aggregate({
-    where: { date: { gte: PLAN_YEAR_START, lte: clock.today } },
-    _sum: { estimatedRebateCents: true, brandClaims: true },
-  });
+  const dateWindow = { gte: PLAN_YEAR_START, lte: clock.today };
+  const [agg, cells] = await Promise.all([
+    prisma.bookDay.aggregate({
+      where: { date: dateWindow },
+      _sum: { estimatedRebateCents: true, brandClaims: true },
+    }),
+    prisma.bookDayDimension.groupBy({
+      by: ["key"],
+      where: { dimension: "guarantee", date: dateWindow },
+      _sum: { claims: true },
+    }),
+  ]);
 
-  const brandClaims = agg._sum.brandClaims ?? 0;
+  const rollupBrandClaims = agg._sum.brandClaims ?? 0;
   const actualCents = agg._sum.estimatedRebateCents ?? 0;
-  // Exhibit C, commercial retail brand: the per-brand-claim minimum.
-  const floorPerClaimCents = 10_000;
-  const floorCents = brandClaims * floorPerClaimCents;
+  // Exhibit C floors differ by channel; do not apply the retail $100 rate to
+  // mail / retail-90 / specialty brand volume.
+  const floor = computeBrandRebateFloor(
+    cells.map((c) => {
+      const [channel, brandGeneric] = c.key.split("::");
+      return {
+        channel,
+        claims: brandGeneric === "Brand" ? (c._sum.claims ?? 0) : 0,
+      };
+    }),
+  );
+  const brandClaims =
+    floor.brandClaims > 0 ? floor.brandClaims : rollupBrandClaims;
+  const floorPerClaimCents = floor.blendedFloorPerClaimCents;
+  const floorCents = floor.minGuaranteeCents;
 
   return {
     brandClaims,
