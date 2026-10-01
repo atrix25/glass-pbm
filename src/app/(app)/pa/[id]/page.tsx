@@ -23,6 +23,7 @@ import { EpaExchange } from "@/components/epa-exchange";
 import { getEpaExchange, getPaClaims, getPriorAuthDetail } from "@/lib/queries/pa";
 import { paDeadlines } from "@/lib/pa/engine";
 import { formatCents } from "@/lib/money";
+import { getClock } from "@/lib/session";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getSource } from "@/lib/sources";
 import { cn } from "@/lib/utils";
@@ -35,12 +36,13 @@ export default async function PriorAuthDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const detail = await getPriorAuthDetail(id);
+  const simClock = await getClock();
+  const detail = await getPriorAuthDetail(id, simClock);
   if (!detail) notFound();
   const { pa, path } = detail;
   const [claims, exchange] = await Promise.all([
-    getPaClaims(pa.memberId, pa.drugId),
-    getEpaExchange(id),
+    getPaClaims(pa.memberId, pa.drugId, simClock),
+    getEpaExchange(id, simClock),
   ]);
 
   const approved = pa.determination === "Approved";

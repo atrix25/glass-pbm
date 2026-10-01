@@ -109,6 +109,62 @@ export const IN_FLIGHT_STATUSES: PaLiveStatus[] = [
   "InReview",
 ];
 
+/**
+ * Fields that only exist once a determination has been released.
+ *
+ * Seeded rows often carry their eventual outcome with a future `decidedAt`.
+ * The queue derives live state from timestamps; anything that surfaces the
+ * stored determination (detail pages, member history, agent tools) must hide
+ * those fields until that instant, or a mid-year pin leaks the final step,
+ * denial reason, and approval before the request has been decided.
+ */
+export type PaDecisionReveal = {
+  determination: string | null;
+  decidedAt: Date | null;
+  decidedBy?: string | null;
+  decidingStepNumber?: number | null;
+  denyReason?: string | null;
+  approvedDays?: number | null;
+  approvedEffectiveDate?: Date | null;
+  approvedTerminationDate?: Date | null;
+  status?: string;
+  decisionSteps?: readonly unknown[];
+};
+
+/** True when the stored decision has already happened at `now`. */
+export function paDecisionRevealedAsOf(
+  decidedAt: Date | null | undefined,
+  now: Date,
+): boolean {
+  return decidedAt != null && decidedAt.getTime() <= now.getTime();
+}
+
+/**
+ * Return the prior-auth row as it appears at `now`: future determinations are
+ * stripped so the detail matches the in-flight state the queue already shows.
+ */
+export function asOfPriorAuth<T extends PaTimingRow & PaDecisionReveal>(
+  pa: T,
+  now: Date,
+): T {
+  if (paDecisionRevealedAsOf(pa.decidedAt, now)) return pa;
+
+  const live = paLiveState(pa, now);
+  return {
+    ...pa,
+    determination: null,
+    decidedAt: null,
+    decidedBy: null,
+    decidingStepNumber: null,
+    denyReason: null,
+    approvedDays: null,
+    approvedEffectiveDate: null,
+    approvedTerminationDate: null,
+    status: live.status === "NotYetReceived" ? "Received" : live.status,
+    decisionSteps: [],
+  } as T;
+}
+
 /** "4h 20m", "2d 3h", "18m" — short enough to sit in a table cell. */
 export function formatDuration(ms: number): string {
   const abs = Math.abs(ms);

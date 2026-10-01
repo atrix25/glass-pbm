@@ -19,6 +19,7 @@ import {
 } from "@/lib/queries/members";
 import { DEMO_MEMBER_BY_ID } from "@/lib/demo-members";
 import { formatCents } from "@/lib/money";
+import { getClock } from "@/lib/session";
 import { formatDate, formatNumber, levelMeta } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,8 @@ export default async function MemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const member = await getMemberDetail(id);
+  const clock = await getClock();
+  const member = await getMemberDetail(id, clock);
   if (!member) notFound();
 
   const claims = await getMemberClaims(id);
@@ -217,13 +219,15 @@ export default async function MemberPage({
                             : "warn"
                       }
                     >
-                      {pa.determination}
+                      {pa.determination ?? pa.status}
                     </Badge>
                   </Td>
                   <Td className="text-[12.5px] text-ink-600">
                     {pa.decidingStepNumber
                       ? `Step ${pa.decidingStepNumber}`
-                      : "routed to a pharmacist"}
+                      : pa.determination
+                        ? "routed to a pharmacist"
+                        : "awaiting determination"}
                   </Td>
                   <Td align="right">{formatDate(pa.receivedAt)}</Td>
                 </tr>
