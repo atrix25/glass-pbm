@@ -1,9 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authMode } from "@/lib/config";
-import { hashToken } from "@/lib/auth";
 
 // Production gate: session cookie or API key. Basic auth remains available for
 // DEMO_FEATURES / AUTH_MODE=basic. /api/health and /api/health/live stay open.
+//
+// In session|oidc mode the edge can only see that a cookie is present. Node
+// layouts and API routes must call requirePageSession / requireApiIdentity so
+// a forged or expired glass_session value cannot read the book.
 
 const USERNAME = process.env.DEMO_USERNAME ?? "josh";
 const SECOND_USERNAME = process.env.DEMO_USERNAME_2 ?? "test";
@@ -72,8 +75,8 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // session | oidc — cookie present is enough at the edge; route handlers
-  // resolve the user against Postgres. Missing cookie → login.
+  // session | oidc — presence only at the edge (no Prisma on Edge). Invalid
+  // tokens are rejected in requirePageSession / requireApiIdentity.
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (token) return NextResponse.next();
 

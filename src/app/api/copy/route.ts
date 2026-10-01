@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { saveCopyOverride } from "@/lib/copy";
+import { requireApiIdentity } from "@/lib/require-auth";
 
 /**
  * Save one wording change.
@@ -11,6 +12,9 @@ import { saveCopyOverride } from "@/lib/copy";
  * the written copy back. An empty string clears the text on purpose.
  */
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   let body: { original?: unknown; replacement?: unknown };
   try {
     body = await request.json();

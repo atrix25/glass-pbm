@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { runIntake } from "@/lib/agents/pa-intake/agent";
+import { requireApiIdentity } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,6 +14,9 @@ export const maxDuration = 60;
  * turn the operations page into a log of people pressing buttons.
  */
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const { paId } = (await request.json()) as { paId: string };
 
   const [note, pa] = await Promise.all([

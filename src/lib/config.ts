@@ -27,6 +27,16 @@ export function authMode(): AuthMode {
   return "open";
 }
 
+/**
+ * Session and OIDC modes promise a real identity. Edge middleware can only
+ * see cookie presence; Node layouts/API routes must resolve it (or accept a
+ * service API key). Basic/open keep the demo gate alone.
+ */
+export function identityMustResolve(): boolean {
+  const mode = authMode();
+  return mode === "session" || mode === "oidc";
+}
+
 export function tenantContractId(): string {
   return process.env.TENANT_CONTRACT_ID ?? "etg0013";
 }

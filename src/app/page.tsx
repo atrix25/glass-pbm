@@ -6,6 +6,7 @@ import { formatCentsCompact } from "@/lib/money";
 import { getLandingStats } from "@/lib/queries/sponsor";
 import { getClock } from "@/lib/session";
 import { formatNumber } from "@/lib/utils";
+import { requirePageSession } from "@/lib/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ async function bookStats() {
 }
 
 export default async function LoginPage() {
+  await requirePageSession();
   const stats = await bookStats();
 
   return (

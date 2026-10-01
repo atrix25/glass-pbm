@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { enqueueJob, getJob } from "@/lib/jobs";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
 import { recordAudit } from "@/lib/audit";
+import { requireApiIdentity } from "@/lib/require-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -14,6 +15,9 @@ interface ReplayBody {
 }
 
 export async function POST(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const body = (await request.json()) as ReplayBody | ConfigOverride;
   const isWrapped = typeof body === "object" && body !== null && "override" in body;
   const override = (isWrapped ? (body as ReplayBody).override : body) ?? {};
@@ -49,6 +53,9 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const identity = await requireApiIdentity(request);
+  if (identity instanceof NextResponse) return identity;
+
   const id = new URL(request.url).searchParams.get("jobId");
   if (!id) {
     return NextResponse.json({ error: "jobId required" }, { status: 400 });
