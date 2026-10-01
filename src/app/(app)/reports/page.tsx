@@ -114,7 +114,11 @@ export default async function ReportsPage() {
                 <Td
                   align="right"
                   className={
-                    g.met === false ? "text-rose-700" : "text-emerald-700"
+                    g.met === false
+                      ? "text-rose-700"
+                      : g.met === null
+                        ? "text-ink-500"
+                        : "text-emerald-700"
                   }
                 >
                   {g.discountVarianceBps != null
