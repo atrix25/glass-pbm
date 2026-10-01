@@ -32,7 +32,7 @@ export interface ToolResult<T = unknown> {
   summary: string;
 }
 
-function cite(sourceId: string, locator?: string): Citation {
+export function cite(sourceId: string, locator?: string): Citation {
   const s = getSource(sourceId);
   return {
     sourceId: s.id,

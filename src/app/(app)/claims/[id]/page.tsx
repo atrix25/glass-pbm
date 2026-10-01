@@ -11,23 +11,16 @@ import {
   Th,
   VerifiedBadge,
 } from "@/components/ui";
-import { TraceViewer, type TraceSource } from "@/components/trace-viewer";
+import { TraceViewer } from "@/components/trace-viewer";
 import { NcpdpPanel } from "@/components/ncpdp-panel";
 import { getClaimDetail, getRelatedFills } from "@/lib/queries/claims";
 import { reproduceClaim } from "@/lib/engine/reproduce";
-import { SOURCES } from "@/lib/sources";
+import { SOURCE_MAP } from "@/lib/sources";
 import { formatCents, formatUnitPrice } from "@/lib/money";
 import { formatDate, formatPercent, levelMeta } from "@/lib/utils";
 import { REJECT_MEMBER_EXPLANATION, type TraceStepInput } from "@/lib/engine/types";
 
 export const dynamic = "force-dynamic";
-
-const SOURCE_MAP: Record<string, TraceSource> = Object.fromEntries(
-  SOURCES.map((s) => [
-    s.id,
-    { id: s.id, title: s.title, publisher: s.publisher, url: s.url },
-  ]),
-);
 
 export default async function ClaimProofPage({
   params,

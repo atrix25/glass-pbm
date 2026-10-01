@@ -284,3 +284,14 @@ export function getSource(id: string): SourceDefinition {
   if (!source) throw new Error(`Unknown source document: ${id}`);
   return source;
 }
+
+/** Sources keyed by id, in the plain shape client components take as props. */
+export const SOURCE_MAP: Record<
+  string,
+  { id: string; title: string; publisher: string; url: string }
+> = Object.fromEntries(
+  SOURCES.map((s) => [
+    s.id,
+    { id: s.id, title: s.title, publisher: s.publisher, url: s.url },
+  ]),
+);

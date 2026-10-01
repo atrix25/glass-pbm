@@ -24,6 +24,8 @@
 import { prisma } from "@/lib/db";
 import type { SimulationClock } from "@/lib/clock";
 import type { ConfigOverride } from "@/lib/engine/replay";
+import { formatCentsWhole } from "@/lib/money";
+import { formatNumber } from "@/lib/utils";
 
 export type RecommendationKind =
   | "prior-auth"
@@ -202,8 +204,8 @@ export async function getRecommendations(
       kind: "prior-auth",
       title: `Remove prior authorisation from ${name}`,
       rationale:
-        `${formatCount(n(d.members))} members were turned away at a counter on this drug alone, across ` +
-        `${formatCount(n(d.claims))} rejected fills. It sits on Level ${d.level ?? "—"}. ` +
+        `${formatNumber(n(d.members))} members were turned away at a counter on this drug alone, across ` +
+        `${formatNumber(n(d.claims))} rejected fills. It sits on Level ${d.level ?? "—"}. ` +
         `The first refusal costs a member 1.5 points and each one after that half a point more.`,
       addresses: "reject-pa-required",
       membersAffected: n(d.members),
@@ -230,8 +232,8 @@ export async function getRecommendations(
       kind: "quantity",
       title: `Lift the quantity limit on ${name}`,
       rationale:
-        `${formatCount(n(d.members))} members were given less than their prescription said, ` +
-        `over ${formatCount(n(d.claims))} rejected fills. Level ${d.level ?? "—"}. ` +
+        `${formatNumber(n(d.members))} members were given less than their prescription said, ` +
+        `over ${formatNumber(n(d.claims))} rejected fills. Level ${d.level ?? "—"}. ` +
         `Often the same medication is dispensed anyway a week later, so the limit buys a second trip rather than a saving.`,
       addresses: "reject-quantity",
       membersAffected: n(d.members),
@@ -255,8 +257,8 @@ export async function getRecommendations(
       kind: "step-therapy",
       title: `Drop the step therapy requirement on ${name}`,
       rationale:
-        `${formatCount(n(d.members))} members were told to fail on something else first, across ` +
-        `${formatCount(n(d.claims))} rejected fills. This is the complaint members phrase as the plan overruling their doctor.`,
+        `${formatNumber(n(d.members))} members were told to fail on something else first, across ` +
+        `${formatNumber(n(d.claims))} rejected fills. This is the complaint members phrase as the plan overruling their doctor.`,
       addresses: "reject-step-therapy",
       membersAffected: n(d.members),
       eventsAvoided: n(d.claims),
@@ -281,7 +283,7 @@ export async function getRecommendations(
       kind: "cost-share",
       title: "Let Level 3 cost share count toward the $600 limit",
       rationale:
-        `${formatCount(n(level3.members))} members paid ${formatMoney(n(level3.oop))} out of pocket on Level 3 brands, ` +
+        `${formatNumber(n(level3.members))} members paid ${formatCentsWhole(n(level3.oop))} out of pocket on Level 3 brands, ` +
         `and none of it counts toward their own out-of-pocket limit. This is the asymmetry members ring up about: ` +
         `a ceiling that does not apply to the tier where the money actually goes.`,
       addresses: "oop-band",
@@ -303,8 +305,8 @@ export async function getRecommendations(
       kind: "cost-share",
       title: "Take Level 1 generics to $0",
       rationale:
-        `${formatCount(n(level1.members))} members — most of the book — pay a $5 copay across ` +
-        `${formatCount(n(level1.fills))} generic fills, ${formatMoney(n(level1.oop))} in total. ` +
+        `${formatNumber(n(level1.members))} members — most of the book — pay a $5 copay across ` +
+        `${formatNumber(n(level1.fills))} generic fills, ${formatCentsWhole(n(level1.oop))} in total. ` +
         `The broadest lever available, because it touches nearly everybody rather than a cohort.`,
       addresses: "oop-band",
       membersAffected: n(level1.members),
@@ -325,8 +327,8 @@ export async function getRecommendations(
       kind: "refill",
       title: "Loosen the refill-too-soon threshold from 75% to 70%",
       rationale:
-        `${formatCount(n(r79.members))} members were turned away for arriving early, across ` +
-        `${formatCount(n(r79.claims))} fills. A small irritation each time and rarely the member's fault ` +
+        `${formatNumber(n(r79.members))} members were turned away for arriving early, across ` +
+        `${formatNumber(n(r79.claims))} fills. A small irritation each time and rarely the member's fault ` +
         `when it is a holiday or a travel week, which is why it is weighted lightly and still worth removing.`,
       addresses: "reject-refill-too-soon",
       membersAffected: n(r79.members),
@@ -363,10 +365,3 @@ function estimateRejectPoints(
   return Math.round(members * Math.min(raw, cap) * 10) / 10;
 }
 
-function formatCount(v: number): string {
-  return v.toLocaleString("en-US");
-}
-
-function formatMoney(cents: number): string {
-  return `$${Math.round(cents / 100).toLocaleString("en-US")}`;
-}

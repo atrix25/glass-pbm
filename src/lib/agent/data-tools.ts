@@ -10,7 +10,6 @@ import { z } from "zod";
 import type { SimulationClock } from "@/lib/clock";
 import { formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber } from "@/lib/utils";
-import { getSource } from "@/lib/sources";
 import {
   getBookTotals,
   getChannelMix,
@@ -52,18 +51,7 @@ import { getCurrentReading } from "@/lib/queries/nps";
 import { getIntegrityOverview } from "@/lib/queries/integrity";
 import { getClinicalOverview } from "@/lib/queries/clinical";
 import { getFeedOverview } from "@/lib/queries/eligibility";
-import type { Citation, ToolResult } from "./tools";
-
-function cite(sourceId: string, locator?: string): Citation {
-  const s = getSource(sourceId);
-  return {
-    sourceId: s.id,
-    title: s.title,
-    publisher: s.publisher,
-    url: s.url,
-    locator,
-  };
-}
+import { cite, type ToolResult } from "./tools";
 
 const CONTRACT_CITES = [
   cite("etg0013-amd1-exhibit-c", "Exhibit C guaranteed pricing terms"),

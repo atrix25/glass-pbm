@@ -22,6 +22,7 @@
 
 import { prisma } from "@/lib/db";
 import { DAY_MS, PLAN_YEAR_START, type SimulationClock } from "@/lib/clock";
+import { getDrugMetaById } from "@/lib/queries/drug-meta";
 
 /** Longest comparison window worth using, in days. */
 const MAX_WINDOW_DAYS = 90;
@@ -326,11 +327,7 @@ export async function getDrugDrivers(
     overview.periods,
     overview.current.memberMonths,
   );
-  const drugs = await prisma.drug.findMany({
-    where: { id: { in: rows.slice(0, 40).map((r) => r.key) } },
-    select: { id: true, name: true, therapeuticClass: true, isSpecialty: true },
-  });
-  const byId = new Map(drugs.map((d) => [d.id, d]));
+  const byId = await getDrugMetaById(rows.slice(0, 40).map((r) => r.key));
   return rows.map((r) => {
     const d = byId.get(r.key);
     return {

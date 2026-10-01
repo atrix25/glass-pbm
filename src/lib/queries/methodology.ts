@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getPaidPopulationTotals } from "@/lib/queries/population";
 
 /**
  * The figures the methodology page states about itself.
@@ -8,9 +9,9 @@ import { prisma } from "@/lib/db";
  * date the next time the book is regenerated.
  */
 export async function getMethodologyFacts() {
-  const [members, contracts, pricedDrugs, criteriaSteps, plan, paid, generic, agg] =
+  const [population, contracts, pricedDrugs, criteriaSteps, plan, generic] =
     await Promise.all([
-      prisma.member.count(),
+      getPaidPopulationTotals(),
       prisma.member.count({ where: { personCode: "01" } }),
       prisma.drugPrice.count(),
       prisma.criteriaStep.count(),
@@ -18,18 +19,17 @@ export async function getMethodologyFacts() {
         select: { rxOopLimitIndividual: true },
         orderBy: { rxOopLimitIndividual: "asc" },
       }),
-      prisma.claim.count({ where: { responseStatus: "P" } }),
       prisma.claim.count({
         where: { responseStatus: "P", brandGenericClass: "Generic" },
       }),
-      prisma.claim.aggregate({
-        where: { responseStatus: "P" },
-        _sum: { totalBilledCents: true, patientPayCents: true },
-      }),
     ]);
 
-  const billed = agg._sum.totalBilledCents ?? 0;
-  const memberPaid = agg._sum.patientPayCents ?? 0;
+  const {
+    members,
+    paidClaims: paid,
+    billedCents: billed,
+    memberPaidCents: memberPaid,
+  } = population;
 
   return {
     members,
