@@ -18,7 +18,13 @@
  */
 
 import { prisma } from "@/lib/db";
-import { adjudicate, type AdjudicationContext, type PriorFill } from "./adjudicate";
+import {
+  adjudicate,
+  type AdjudicationContext,
+  type EngineBenefitPlan,
+  type PriorFill,
+} from "./adjudicate";
+import { rebuildPharmacyAccumulators } from "./rebuild-accumulators";
 import { loadWorld } from "./replay";
 import type { AdjudicationOutcome } from "./types";
 import {
@@ -189,14 +195,11 @@ async function adjudicateStored(
   const plan = world.plans.get(elig.benefitPlanId);
   if (!plan) return null;
 
-  const { priorFills, rxOop, deductible } = await rebuildPosition(
+  const { priorFills, rxOop, federalOop, deductible } = await rebuildPosition(
     claim.memberId,
     claim.dateOfService,
-    plan.costShareRules
-      .filter((r) => r.accumulatesToRxOop)
-      .map((r) => r.level),
+    plan,
     world,
-    plan.deductibleIntegratedWithMedical ? plan.deductibleIndividual : 0,
   );
 
   const ctx: AdjudicationContext = {
@@ -229,7 +232,7 @@ async function adjudicateStored(
     priorFills,
     accumulators: {
       rxOopAccumulatedCents: rxOop,
-      federalOopAccumulatedCents: rxOop,
+      federalOopAccumulatedCents: federalOop,
       deductibleAccumulatedCents: deductible,
     },
     approvedPAs: world.approvedPAs.get(claim.memberId) ?? [],
@@ -249,10 +252,14 @@ async function adjudicateStored(
 async function rebuildPosition(
   memberId: string,
   dateOfService: Date,
-  accumulatingLevels: string[],
+  plan: EngineBenefitPlan,
   world: Awaited<ReturnType<typeof loadWorld>>,
-  integratedDeductibleCents: number,
-): Promise<{ priorFills: PriorFill[]; rxOop: number; deductible: number }> {
+): Promise<{
+  priorFills: PriorFill[];
+  rxOop: number;
+  federalOop: number;
+  deductible: number;
+}> {
   const history = await prisma.claim.findMany({
     where: {
       memberId,
@@ -267,15 +274,22 @@ async function rebuildPosition(
       patientPayCents: true,
       appliedToDeductibleCents: true,
       formularyLevel: true,
-      brandSelectionPenaltyCents: true,
     },
     orderBy: { dateOfService: "asc" },
   });
 
-  const levels = new Set(accumulatingLevels);
-  let rxOop = 0;
-  let deductible = 0;
-  const priorFills: PriorFill[] = [];
+  const pharmacy = rebuildPharmacyAccumulators(history, {
+    rxOopLevels: new Set(
+      plan.costShareRules.filter((r) => r.accumulatesToRxOop).map((r) => r.level),
+    ),
+    federalOopLevels: new Set(
+      plan.costShareRules
+        .filter((r) => r.accumulatesToFederalOop)
+        .map((r) => r.level),
+    ),
+  });
+
+  let deductible = pharmacy.deductibleCents;
 
   /*
    * Medical claims against a shared deductible. Not adjudicated here, so not
@@ -283,26 +297,25 @@ async function rebuildPosition(
    * it against a deductible only pharmacy had touched, and it would disagree
    * with what the member was actually charged.
    */
-  if (integratedDeductibleCents > 0) {
+  if (plan.deductibleIntegratedWithMedical && plan.deductibleIndividual > 0) {
     deductible += medicalDeductibleAsOf(
-      medicalEncountersFor(memberId, integratedDeductibleCents),
+      medicalEncountersFor(memberId, plan.deductibleIndividual),
       dayOfPlanYear(dateOfService),
     );
   }
 
-  for (const c of history) {
-    deductible += c.appliedToDeductibleCents;
-    if (levels.size === 0 || levels.has(c.formularyLevel ?? "")) {
-      rxOop += c.patientPayCents - c.brandSelectionPenaltyCents;
-    }
-    priorFills.push({
-      dateOfService: c.dateOfService,
-      daysSupply: c.daysSupply,
-      quantityDispensed: c.quantityDispensed,
-      drugId: c.drugId,
-      therapeuticClass: world.drugs.get(c.drugId)?.therapeuticClass ?? null,
-    });
-  }
+  const priorFills: PriorFill[] = history.map((c) => ({
+    dateOfService: c.dateOfService,
+    daysSupply: c.daysSupply,
+    quantityDispensed: c.quantityDispensed,
+    drugId: c.drugId,
+    therapeuticClass: world.drugs.get(c.drugId)?.therapeuticClass ?? null,
+  }));
 
-  return { priorFills, rxOop, deductible };
+  return {
+    priorFills,
+    rxOop: pharmacy.rxOopCents,
+    federalOop: pharmacy.federalOopCents,
+    deductible,
+  };
 }
