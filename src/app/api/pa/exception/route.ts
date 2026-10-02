@@ -16,7 +16,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paDeadlines } from "@/lib/pa/engine";
-import { exceptionKind, mayAppeal, type ExceptionKind } from "@/lib/pa/review";
+import {
+  bindExceptionSubject,
+  exceptionKind,
+  mayAppeal,
+  type ExceptionKind,
+} from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
 
 interface Body {
@@ -41,14 +46,14 @@ export async function POST(request: Request) {
     );
   }
 
-  let memberId = body.memberId;
-  let drugId = body.drugId;
   let against: {
     id: string;
     paNumber: string;
     determination: string | null;
     decidedBy: string | null;
     treeId: string | null;
+    memberId: string;
+    drugId: string;
   } | null = null;
 
   if (body.againstPaId) {
@@ -70,19 +75,6 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
-    const source = against as typeof against & {
-      memberId: string;
-      drugId: string;
-    };
-    memberId ??= source.memberId;
-    drugId ??= source.drugId;
-  }
-
-  if (!memberId || !drugId) {
-    return NextResponse.json(
-      { error: "A member and a drug are required." },
-      { status: 400 },
-    );
   }
 
   if (body.kind === "Appeal") {
@@ -97,6 +89,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: verdict.reason }, { status: 409 });
     }
   }
+
+  const subject = bindExceptionSubject({
+    against: against
+      ? { memberId: against.memberId, drugId: against.drugId }
+      : null,
+    memberId: body.memberId,
+    drugId: body.drugId,
+  });
+  if (!subject.ok) {
+    return NextResponse.json(
+      { error: subject.error },
+      { status: subject.error.startsWith("A member") ? 400 : 409 },
+    );
+  }
+  const { memberId, drugId } = subject;
 
   // Filed against the simulated present, so a request filed on stage lands in
   // the queue the rest of the application is looking at.

@@ -21,6 +21,7 @@ import {
   paDeadlines,
 } from "@/lib/pa/engine";
 import {
+  bindExceptionSubject,
   dispositionFor,
   EXCEPTION_KINDS,
   exceptionKind,
@@ -144,6 +145,79 @@ describe("appeals", () => {
     expect(verdict.mustDifferFrom).toBe(
       "Rachel Imhoff, PharmD (WI-RPH-041882)",
     );
+  });
+});
+
+describe("exception subject binding", () => {
+  const contested = {
+    memberId: "mbr-denied-01",
+    drugId: "drug-denied-01",
+  };
+
+  it("binds an appeal to the contested determination's member and drug", () => {
+    const subject = bindExceptionSubject({
+      against: contested,
+      memberId: contested.memberId,
+      drugId: contested.drugId,
+    });
+    expect(subject).toEqual({
+      ok: true,
+      memberId: contested.memberId,
+      drugId: contested.drugId,
+    });
+  });
+
+  it("ignores a missing body subject when a contested request supplies one", () => {
+    // The form sends both; a sparse client that only names againstPaId is still
+    // a valid filing, and must not invent a different member or drug.
+    const subject = bindExceptionSubject({ against: contested });
+    expect(subject).toEqual({
+      ok: true,
+      memberId: contested.memberId,
+      drugId: contested.drugId,
+    });
+  });
+
+  it("refuses a body that rebinds the member or drug away from the contested request", () => {
+    // loadWorld indexes Approved appeals by (memberId, drugId). Overriding
+    // either field while the note still says Contests PA… is how an appeal of
+    // one refusal unlocked specialty coverage for another member or drug.
+    const reboundMember = bindExceptionSubject({
+      against: contested,
+      memberId: "mbr-victim",
+      drugId: contested.drugId,
+    });
+    expect(reboundMember.ok).toBe(false);
+    if (!reboundMember.ok) {
+      expect(reboundMember.error).toMatch(/member and drug/i);
+    }
+
+    const reboundDrug = bindExceptionSubject({
+      against: contested,
+      memberId: contested.memberId,
+      drugId: "drug-specialty-requires-pa",
+    });
+    expect(reboundDrug.ok).toBe(false);
+  });
+
+  it("still takes member and drug from the body for a free-standing exception", () => {
+    const subject = bindExceptionSubject({
+      against: null,
+      memberId: "mbr-new",
+      drugId: "drug-new",
+    });
+    expect(subject).toEqual({
+      ok: true,
+      memberId: "mbr-new",
+      drugId: "drug-new",
+    });
+  });
+
+  it("requires a member and a drug when nothing is contested", () => {
+    expect(bindExceptionSubject({ against: null }).ok).toBe(false);
+    expect(
+      bindExceptionSubject({ against: null, memberId: "mbr-only" }).ok,
+    ).toBe(false);
   });
 });
 

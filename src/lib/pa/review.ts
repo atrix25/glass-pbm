@@ -203,6 +203,49 @@ export function exceptionKind(kind: string): ExceptionKindInfo | undefined {
 }
 
 /**
+ * Resolve which member and drug an exception or appeal is about.
+ *
+ * When the filing names a determination it contests, the subject is that
+ * determination's member and drug — never the caller's suggestion. Point of
+ * sale loads Approved appeals by `(memberId, drugId)` and treats a match as
+ * satisfying formulary `requiresPA`. Letting the body override those fields
+ * while the reviewer note still says "Contests PA…" is how an appeal of one
+ * refusal could unlock specialty coverage for a different member or drug.
+ *
+ * A free-standing exception (no contested request) still takes member and drug
+ * from the body, because that is how a new coverage request is filed.
+ */
+export function bindExceptionSubject(args: {
+  against: { memberId: string; drugId: string } | null;
+  memberId?: string;
+  drugId?: string;
+}):
+  | { ok: true; memberId: string; drugId: string }
+  | { ok: false; error: string } {
+  if (args.against) {
+    if (
+      (args.memberId != null && args.memberId !== args.against.memberId) ||
+      (args.drugId != null && args.drugId !== args.against.drugId)
+    ) {
+      return {
+        ok: false,
+        error:
+          "A filing that contests a determination must keep that request's member and drug. Contesting one refusal cannot unlock coverage for another.",
+      };
+    }
+    return {
+      ok: true,
+      memberId: args.against.memberId,
+      drugId: args.against.drugId,
+    };
+  }
+  if (!args.memberId || !args.drugId) {
+    return { ok: false, error: "A member and a drug are required." };
+  }
+  return { ok: true, memberId: args.memberId, drugId: args.drugId };
+}
+
+/**
  * Whether an appeal may be filed, and who may decide it.
  *
  * The constraint that matters is the reviewer, not the timing: an appeal decided
