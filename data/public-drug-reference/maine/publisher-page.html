@@ -1,0 +1,530 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!--<meta http-equiv="X-Frame-Options" content="deny" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />-->
+    <title>Rx Reference Rates</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Report of International Referenced Rate Pricing for Prescription Drugs." />
+    
+    <!-- Le styles -->
+    <link href="https://mhdo.maine.gov/_css/bootstrap.css" rel="stylesheet" />
+    <link href="https://mhdo.maine.gov/_css/bootstrap-responsive.css" rel="stylesheet" />
+    <style type="text/css">
+        body {
+            padding-top: 10px;
+            padding-bottom: 20px;
+        }
+
+        .sidebar-nav {
+            padding: 1px 0;
+        }
+    </style>
+
+    <!-- Le fav and touch icons -->
+    <link rel="apple-touch-icon-MHDO" sizes="144x144" href="https://mhdo.maine.gov/assets/ico/apple-touch-icon-144-MHDO.png" />
+    <link rel="apple-touch-icon-MHDO" sizes="114x114" href="https://mhdo.maine.gov/assets/ico/apple-touch-icon-114-MHDO.png" />
+    <link rel="apple-touch-icon-MHDO" sizes="72x72" href="https://mhdo.maine.gov/assets/ico/apple-touch-icon-72-MHDO.png" />
+    <link rel="apple-touch-icon-MHDO" sizes="57x57" href="https://mhdo.maine.gov/assets/ico/apple-touch-icon-57-MHDO.png" />
+    <link rel="shortcut icon" href="https://mhdo.maine.gov/assets/ico/faviconMHDO.ico" />
+</head>
+
+<body>
+<!-- Skip Navigation for Accessibility -->
+<a href="#skiptocontent" class="offscreen" id="skiptocontent" accesskey="C" title="Skip All Navigation: Alt+C"> Skip to Content</a>
+<!-- End Skip Navigation -->
+
+<div class="container-fluid">
+    <div class="row-fluid">            
+        <div class="span5">
+            <img src="https://mhdo.maine.gov/assets/img/NewLogo_2.jpg" width="230" alt="MHDO logo of information, insight, improvement" />
+        </div>
+        <div class="span3">
+            <a href="https://www.comparemaine.org/">
+                <img src="https://www.comparemaine.org/assets/logo.png" width="250" alt="CompareMaine health costs & quality" />
+            </a>
+        </div>
+        <div class="span4">
+            <a href="https://mhdo.maine.gov/mqf.html" class="pull-right">
+                <img src="https://mhdo.maine.gov/assets/img/MQF Logo_2016.jpg" width="240" alt="logo of Maine Quality Forum" />
+            </a>
+        </div>
+    </div> <!-- end row-fluid -->
+</div> <!-- end container-fluid -->
+
+<div class="container-fluid">
+    <div class="navbar">
+        <div class="navbar-inner">
+            <div class="container">
+                <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </a>
+                <div class="nav-collapse">
+                    <ul class="nav">
+                        <li><a href="https://mhdo.maine.gov/index.aspx">Home</a></li>
+                        <li><a href="https://mhdo.maine.gov/data_rqst_process.htm">Data</a></li>
+                        <li><a href="https://mhdo.maine.gov/contact.htm">Contact</a></li>
+                        <li><a href="https://mhdo.maine.gov/sec_priv.htm">Security and Privacy</a></li>
+                    </ul>
+                    <ul class="nav" style="float: right;">
+                        <li>
+                            <a href="https://mhdo.maine.gov/portal/" target="_blank">
+                                <abbr title="For Claims Data Submitters Only">
+                                    APCD Portal
+                                </abbr>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://mhdo.maine.gov/hospital_portal/" target="_blank">
+                                <abbr title="For Hospital Data Submitters Only">
+                                    Hospital Data Portal
+                                </abbr>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://mhdo.maine.gov/de-management-portal/" target="_blank">
+                                <abbr title="For Data Requests Only.  First time users will need to register in order to complete an online form.">
+                                    Data Request Portal
+                                </abbr>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://mhdo.maine.gov/pharma_portal" target="_blank">
+                                <abbr title="For Prescription Drug Price Data Submitters Only">
+                                    Prescription Drug Price Portal
+                                </abbr>
+                            </a>
+                        </li>
+                    </ul>
+                </div> <!--/.nav-collapse -->
+            </div> <!-- / .container -->
+        </div> <!-- / . navbar-inner -->
+
+        <!--  Changed where google translator is 11/24/25 to follow how I did it for MQF. Put it in div tags -->
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="span12">
+                    <div class="pull-right" id="google_translate_element"></div>
+                    <script type="text/javascript">
+                        function googleTranslateElementInit() {
+                            new google.translate.TranslateElement({ pageLanguage: 'en', layout: google.translate.TranslateElement.InlineLayout.HORIZONTAL }, 'google_translate_element');
+                        }
+                    </script>
+                    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+                    </script>
+                    <!-- End Google Translator Code  -->
+                </div> <!-- END SPAN12-->
+            </div>  <!-- End Row-fluid -->
+        </div>  <!-- End container-fluid -->
+    </div> <!-- /.navbar -->
+
+    <div class="row-fluid">
+        <div class="span2">
+            <div class="well sidebar-nav">
+                <ul class="nav nav-list">
+                    <li class="nav-header">Administrative</li>
+                    <li><a href="https://mhdo.maine.gov/boardMtngs.htm">MHDO Board Meetings</a></li>
+                    <li><a href="https://mhdo.maine.gov/dataReleaseSubcommittee.htm">Data Release Subcommittee</a></li>
+                    <li><a href="https://mhdo.maine.gov/vpSubcommittee.htm">MHDO Value Proposition Subcommittee</a> </li>
+                    <li><a href="https://mhdo.maine.gov/rules.htm">Rules and Statutes</a></li>
+                    <li class="nav-header">CompareMaine</li>
+                    <li><a href="http://www.comparemaine.org">CompareMaine.Org</a></li>
+
+                    <li class="nav-header">Legislative Reports and Other</li>
+                    <li><a href="https://mhdo.maine.gov/hospTransparencyRegs.htm">Hospital Transparency Regs</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/healthCarePayments.cshtml">Health Care Payments in Maine</a></li>
+                    <li class="active"><a href="#">Rx Reference Rates</a></li>
+                    <li><a href="https://mhdo.maine.gov/RxDrugPricingTransparency.htm">Rx Drug Pricing Transparency</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/prescriptionReports.cshtml">Top 25 Costliest Drugs</a></li>
+                    <li><a href="https://mhdo.maine.gov/340B_hospitals.htm">Hospitals 340B Drug Program</a></li>
+                    <li><a href="https://mhdo.maine.gov/facilityFeePayments.htm">Health Care Facility Fees</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/hospitalDashboard.cshtml">Hospital Dashboard</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/physicianDashboard.cshtml">Physician Dashboard</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/healthcareProcCostDrivers.cshtml">Healthcare Procedure Cost Drivers</a></li>
+                    <li><a href="https://mhdo.maine.gov/tableau/maineCancerBlueprint.cshtml">Maine Cancer Blueprint</a></li>
+
+                    <li class="nav-header">Obtain Data</li>
+                    <li><a href="https://mhdo.maine.gov/tableau/data.cshtml">Data Availability</a></li>
+                    <li><a href="https://mhdo.maine.gov/data_rqst_process.htm">Request Data or Reports</a></li>
+                    <li><a href="https://mhdo.maine.gov/pricing_information.html">Pricing Information</a></li>
+                    <li><a href="https://mhdo.maine.gov/datareleases.htm">Release Schedule</a></li>
+                    <li><a href="https://mhdo.maine.gov/dataRequests_v2.htm">Public Posting of Requests</a></li>
+                    <li><a href="https://mhdo.maine.gov/faqs_data.html">FAQs</a></li>
+
+                    <li class="nav-header">Data Submitters 
+                    <li class="nav-header"> - Nursing Facilities</li>
+                    <li><a href="https://mhdo.maine.gov/nursingFacilitySubmitters.htm">CDI Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/nursingFacilityUTIsubmitters.htm">UTI Data</a></li>
+                                            
+                    <li class="nav-header"> - Payers</li>
+                    <li><a href="https://mhdo.maine.gov/pugPage.htm">Claims Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/nonClaimsBasedPayments.htm">Non-Claims-Based-Payments (NCBPs)</a></li>
+                    <li><a href="https://mhdo.maine.gov/prem_compilation_form.htm">Premium Compilation Form</a></li>
+
+                    <li class="nav-header"> - Hospitals</li>
+                    <li><a href="https://mhdo.maine.gov/hosp_data_submitters.htm">Encounter Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/financial_data_submitters.htm">Financial Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/340B_submitters.htm">340B Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/organizational_data_submitters.htm">Organizational Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/quality_data.htm">Quality Data</a></li>
+
+                    <li class="nav-header"><a href="https://mhdo.maine.gov/mqf.html">Maine Quality Forum</a></li>
+
+                    <li class="nav-header"> - Pharma Companies</li>
+                    <li><a href="https://mhdo.maine.gov/trigger_NDCs.htm">Trigger NDCs</a></li>
+                    <li><a href="https://mhdo.maine.gov/drugProdFamilies.htm">List of Drug Product Families</a></li>
+                    <li><a href="https://mhdo.maine.gov/pharma_data_submitters.htm">Pricing Component Data</a></li>
+                    <li><a href="https://mhdo.maine.gov/insulin_cost_data_submitters.htm">Reporting Cost of Insulin</a></li>
+
+                    <li class="nav-header">Info for Data Users</li>
+                    <li><a href="https://mhdo.maine.gov/hospitalOwnership.htm">Hospital Ownership</a></li>
+                    <li><a href="https://mhdo.maine.gov/claims.htm">APCD</a></li>
+                    <li><a href="https://mhdo.maine.gov/inpatient_outpatient.htm">Hospital Encounters</a></li>
+                    <li><a href="https://mhdo.maine.gov/hospital_financials.htm">Hospital Financials</a></li>
+                    <li><a href="https://mhdo.maine.gov/quality_data_reports.htm">Hospital Quality Data Reports</a></li>
+
+                    <li class="nav-header">User Groups</li>
+                    <li><a href="https://mhdo.maine.gov/consumer_user_group.htm">Consumer User Group</a></li>
+                    <li><a href="https://mhdo.maine.gov/dugPage.htm">Data User Group</a></li>
+
+                    <li class="nav-header"><a href="https://mhdo.maine.gov/haiCPcommittee.htm">HAI Collaborating Partners Committee</a></li>
+
+                    <li class="nav-header">Reporting</li>
+                    <li><a href="https://mhdo.maine.gov/external_reports.htm">External Reports</a></li>
+                    <li><a href="http://www.maine.gov/dhhs/sim/evaluation/dashboard.shtml" target="_blank">SIM Core Metrics Dashboard</a></li>
+
+                    <li class="nav-header">Updates</li>
+                    <li><a href="https://mhdo.maine.gov/transformations.htm">Agency Transformation</a></li>
+                    <li><a href="https://mhdo.maine.gov/latest_news.htm">News</a></li>
+                </ul>
+            </div>  <!--/well sidebar-nav -->
+        </div>  <!--/span2 -->
+
+            <div class="span10">
+                <p>
+                    <a name="skiptocontent"></a>
+                </p>
+                <h2>
+                    International Referenced Rate Pricing for Prescription Drugs
+                </h2>
+                <p>
+                    <a href="https://legislature.maine.gov/ros/LawsOfMaine/breeze/Law/getDocById/?docId=91828"
+                       target="_blank">Public Law 2021, Chapter 606 (LD 1636)</a>, <em>
+                        An Act To Determine Potential Savings in Prescription Drug Costs by Using International Pricing
+                    </em>,
+                    requires the Maine Health Data Organization (MHDO) to produce an annual report beginning in January 2023
+                    that provides information regarding potential savings that could be achieved
+                    by subjecting drugs identified as the costliest and most frequently prescribed in
+                    the State of Maine to a referenced rate as defined in the law. <strong>This is MHDO's second annual report.</strong> MHDO's first annual report can be found here: <a href="RxReferenceRates_Historical.htm">https://mhdo.maine.gov/RxReferenceRates_Historical.htm</a>.
+                </p>
+                <h3>
+                    Definitions for Terminology Used in this Report
+                </h3>
+                <p>
+                    <strong>Brand Drug</strong> – a prescription drug, having a unique NDC, marketed
+                    under a proprietary name or registered trademark name, including a biological product,
+                    and approved under a New Drug Application or Biologics License Application.
+                </p>
+                <p>
+                    <strong>Drug Identification Number (DIN)</strong> – a computer-generated eight-digit
+                    number assigned by Health Canada to a drug product prior to being marketed in Canada.
+                    A DIN uniquely identifies the following product characteristics: manufacturer; product
+                    name; active ingredient(s); strength(s) of active ingredient(s); pharmaceutical
+                    form; route of administration.
+                </p>
+                <p>
+                    <strong>Generic Drug</strong> – a prescription drug, having a unique NDC, whether
+                    identified by its chemical, proprietary or nonproprietary name, that is not a brand
+                    drug, is therapeutically equivalent to a brand drug in dosage, strength, method
+                    of consumption, performance and intended use, and approved under an Abbreviated
+                    New Drug Application. Generic Drug includes a biosimilar product.
+                </p>
+                <p>
+                    <strong>Multi-Source Drug</strong> – a brand drug or generic drug that is available
+                    from more than one manufacturer.
+                </p>
+                <p>
+                    <strong>National Drug Code (NDC)</strong> – a code maintained by the US Food and
+                    Drug Administration that is uniquely assigned by manufacturer, product, and packaging.
+                </p>
+                <p>
+                    <strong>Pharmaceutically Equivalent Drug Products</strong> - brand drugs and/or
+                    generic drugs that are identical in active ingredient(s), dosage form, route of
+                    administration, and strength or concentration
+                </p>
+
+                <p>
+                    <strong>Prices on Canadian Provincial Formularies</strong> - represent amounts paid by payers in the province
+                </p>
+                <p>
+                    <strong>Single Source Drug</strong> – a brand drug or generic drug that is only
+                    available from one manufacturer.
+                </p>
+                <p>
+                    <strong>Wholesale Acquisition Cost (WAC)</strong> – a manufacturer’s published list
+                    price for sale of a prescription drug product with a unique NDC to a wholesale drug
+                    distributor or other entity that purchases a prescription drug directly from the
+                    manufacturer, not including any price concessions. WAC represents the price paid in the US to manufacturers by drug wholesalers and almost never reflects actual amounts paid by payers in the US.
+                </p>
+
+                <h3>Reference Rates Determined</h3>
+                <p>
+                    <strong>
+                        The following provisions in statute govern the determination of referenced rates
+                        of prescription drugs.
+                    </strong>
+                </p>
+
+                <h3>Part I</h3>
+                <!-- WORK ON IT HERE: -->
+                <p>
+                    <strong>§8741, 2. A.</strong> <em>
+                        Identify the 100 most costly prescription drugs and
+                        the 100 most frequently prescribed prescription drugs in the State of Maine, the
+                        Manufactures of these drugs and the average wholesale acquisition cost for each
+                        drug for the most current 12-month period.
+                    </em>
+                </p>
+                <ul>
+                    <li>
+                        MHDO identified the 100 most costly generic drugs and brand drugs and the 100 most
+                        frequently prescribed generic drugs and brand drugs in the State of Maine, the manufacturers
+                        of these drugs and the average wholesale acquisition costs for the most recent 12-month
+                        period, which is November 1, 2022 – October 31, 2023. These prescription drugs are
+                        identified by their National Drug Code (NDC).
+                    </li>
+                    <li>
+                        The total number of distinct NDC’s identified in both categories of costliest and most frequently
+                        prescribed for both generic drugs and brand name drugs is 282.
+                    </li>
+                    <li>
+                        The data below is a snapshot of the
+                        <a href="_xls/Top 100 Most Costly_Prescribed_231116.xlsx">
+                            complete data set that is available in the Excel File here.
+                        </a>
+                    </li>
+                </ul>
+
+                <p>
+                    <!--<img src="assets/img/RXreferenceRates/Top 100 Most Costly_Prescribed_231116.jpg" alt="image of part of the top 100 most costly and most frequently prescribed generic and brand drug data for 2nd annual report" />-->
+                    <img src="assets/img/RXreferenceRates/Top 100 Most Costly_Prescribed_231116_251119v2.jpg" alt="image of part of the top 100 most costly and most frequently prescribed generic and brand drug data for 2nd annual report" />
+                </p>
+                <h3>Part II</h3>
+                <p>
+                    <strong>§8741 2. B. </strong><em>
+                        To the extent possible, determine the referenced rate
+                        for each drug identified in paragraph 2.A. (Part 1) by comparing the wholesale acquisition
+                        cost to the cost in official publications of the governments of the Canadian provinces
+                        of Ontario, Quebec, British Columbia, and Alberta. <strong>The referenced rate for each prescription drug must be calculated as the lowest cost among the resources described in this paragraph and the wholesale acquisition cost for the most recent 12-month period.</strong> If a specific drug identified in paragraph A is not included within the
+                        resources described in this paragraph, MHDO shall use for the purpose of determining
+                        the referenced rate the ceiling price for drugs as reported in other official publications
+                        of the government of Canada.
+                    </em>
+                </p>
+                <ul>
+                    <li>
+                        For 194 of the 282 NDCs identified in Part I of this report (which represents 68.8% of the total), there is not a corresponding Drug Identification Number (DIN) on a provincial formulary in Canada.
+                        <ul>
+                            <li>
+                                When comparing NDCs in the US to the equivalent DINs in Canada there are not as many
+                                prescription drug products available in Canada.
+                            </li>
+                            <li>In Canada, multi-source brand drugs (brand drugs that are also available from generic manufacturers) are often excluded from provincial formularies and are instead replaced by lower cost generic equivalents.</li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        A reference rate as defined above (the lowest cost option when looking at the WAC and the costs in the Canadian provinces) has been determined for 88 of the 282 NDCs identified in Part I of this report (which represents 31.2% of the total).
+                        <ul>
+                            <li><strong>The reference rate for 23 of the 88 NDCs is based on the WAC as that is the lowest cost option; 21 of these 23 NDCs are for generic drugs and 2 NDCs are for brand drugs.</strong></li>
+                            <li><strong>The reference rate for 65 of the 88 NDCs is based on the lowest cost option identified in the Canadian provinces; 14 of these 72 NDCs are for generic drugs and 51 NDCs are for brand drugs.</strong></li>
+                        </ul>
+                    </li>
+                    <li>
+                        The data below is a snapshot of the
+                        <a href="_xls/Reference Rate_231116.xlsx">complete data set that is available in the Excel File here.</a>
+                    </li>
+                </ul>
+                <p>
+                    <img src="assets/img/RXreferenceRates/Reference Rate_231116.jpg" alt="image of part of the reference rate data for the 2nd annual report." />
+                </p>
+
+                <h3>Part III</h3>
+                <p>
+                    <strong>§8741 2. C. </strong><em>
+                        For each drug identified in paragraph A, the organization
+                        shall determine the potential savings that could be achieved by subjecting those
+                        drugs to the referenced rate as calculated pursuant to paragraph B. The savings
+                        must be determined based on the payments reported in the organization's claims database
+                        for the most current 12- month period.
+                    </em>
+                </p>
+                <ul>
+                    <li>A reference rate was calculated for the 88 NDCs as identified above.</li>
+                    <li> The potential savings calculation for the 65 drugs with a reference rate based on the lowest cost option identified in the Canadian provinces is $171.1M; of which 0.8% of the potential saving is for generic drugs and 99.2% is for brand drugs. (<strong>Note:</strong> potential savings calculations do not consider the impact of rebates to net prices in the US market as rebate data at the NDC level is not available in the MHDO claims data).</li>
+                    <li>
+                        The data below is a snapshot of the complete data set that is
+                        <a href="_xls/Potential Savings 240124.xlsx">
+                            available in the Excel File here.
+                        </a>
+                    </li>
+                </ul>
+                <!-- ------------- -->
+
+                <img src="assets/img/RXreferenceRates/Potential Savings_240124.jpg" />
+                <br />
+                <br />
+        
+                <h3>Key Findings Preparing This Report</h3>
+                <ul>
+                    <li>When comparing NDCs in the US to pharmaceutically equivalent DINs in Canada there are not as many prescription drug products available in Canada.</li>
+                    <li>
+                        Many drugs currently patented in the US are not under patent in Canada.  This allows for generic competition in Canada while brand drugs remain the only products available in the US.
+                        <ul>
+                            <li>In Canada, multi-source brand drugs (brand drugs that are also available from generic manufacturers) are often excluded from provincial formularies and are instead replaced by lower cost generic equivalents.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        Prices on Canadian provincial formularies represent amounts paid by payers in the province.  In contrast, WAC represents the price paid to manufacturers by drug wholesalers and almost never reflects actual amounts paid by payers in the US.
+                        <ul>
+                            <li>Many generic drugs show no Reference Rate savings resulting from the comparison of Canadian paid amounts to the US WAC amounts.</li>
+                        </ul>
+                    </li>
+                    <li>The 12-month pricing period evaluated in this report overlaps with the 12-month period in MHDO’s first annual report by two months.</li>
+                    <li>
+                        The NDCs evaluated in the second annual report are substantially the same as those included in the first report.
+                        <ul>
+                            <li>Five new NDCs were added and nine NDCs previously included were removed, including several Covid vaccines that are no longer available in the market.</li>
+                        </ul>
+                    </li>
+                    <li>A year-over-year comparison of key metrics is provided in the table below:</li>
+                </ul>
+
+                <table style="width:75%" border="1" class="table" summary="A year-over-year comparison of key metrics">
+                    <tr>
+                        <th scope="col">
+                            Report Year
+                        </th>
+                        <th scope="col">
+                            Distinct NDCs
+                        </th>
+                        <th scope="col">
+                            NDCs for which<br />Reference Rate<br />can be calculated
+                        </th>
+                        <th scope="col">
+                            NDCs with Reference Rate<br />based on WAC Pricing
+                        </th>
+                        <th scope="col">
+                            NDCs with Reference Rate<br /> based on Canadian Pricing
+                        </th>
+                        <th scope="col">
+                            Total Potential<br />Savings
+                        </th>
+                    </tr>
+                    <tr>
+                        <th scope="row">2022</th>
+                        <td>286</td>
+                        <td>93</td>
+                        <td>21</td>
+                        <td>72</td>
+                        <td>$146.7M</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">2023</th>
+                        <td>282</td>
+                        <td>88</td>
+                        <td>23</td>
+                        <td>65</td>
+                        <td>$171.1M</td>
+                    </tr>
+                </table>
+
+                <h3> Data Sources and Methodology</h3>
+
+                <p>Under contract with MHDO, Ten2Eleven Business Solutions provided MHDO technical support in the preparation of this report.</p>
+                <p>
+                    MHDO performed its analysis using descriptive drug product, pharmaceutical equivalency,
+                    and historical pricing information compiled from Wolters Kluwer’s Medi-Span MedFile
+                    v2 (MediSpan) and Canadian Drug File data files, and pharmaceutical claims data
+                    submitted to the MHDO All Payer Claims Database as required by 90-590 Rule Chapter
+                    243, Uniform Reporting System for Health Care Claims Data Sets, for the most recent
+                    12-month period (April 1, 2022 – March 31, 2023).
+                </p>
+                <p>
+                    Manufactures are incorporated as different corporate entities in the US and Canada.
+                    To compare country to country pricing between products by manufacturer, MHDO developed
+                    a crosswalk of US and Canadian manufacturers. Where possible, manufacturers were
+                    mapped by associating similar corporate names; when no match was found, MHDO performed
+                    internet research to determine corporate relationships between US manufacturers
+                    of NDCs on the Top 100 List and manufacturers of pharmaceutically equivalent products
+                    in Canada.
+                </p>
+                <p>
+                    The MediSpan and Canadian Drug Files share a common proprietary data element that
+                    is maintained by Wolters Kluwer to denote pharmaceutically equivalent drug products.
+                    This Generic Product Identifier (GPI) was used together with the manufacturer crosswalk
+                    to map products that are identical with respect to active ingredient(s), dosage
+                    form, route of administration, and strength or concentration but without considering
+                    the presence of inactive ingredients.
+                </p>
+                <p>
+                    Where US NDCs could be mapped to a Canadian DIN, and were priced on at least one provincial formulary, MHDO determined a Reference Rate for the NDC as described in §8741 2. B. Province pricing was evaluated based on amounts published as applicable for October 31, 2023, adjusted for the US / Canadian exchange rate of 1.3877 posted by the Wall Street Journal as of the close of the market on Tuesday, October 31, 2023<sup>1</sup>. Reference Rate values were calculated per NDC unit of measure.
+                </p>
+
+                <p>
+                    MHDO next calculated potential savings that could be achieved by subjecting NDCs on the Top 100 List to the Reference Rate. MHDO first determined the total quantity dispensed (by NDC unit of measure) and average percent markup above/below WAC for commercial claims during the claim review period (April 1, 2022 – March 31, 2023). The average rate of markup above/below WAC was then applied to both the average WAC per NDC unit of measure<sup>2</sup> and the Reference Rate, and both metrics were multiplied by the dispensed quantity. Finally, resultant values were compared to determine total potential savings for each NDC
+                </p>
+                <p>Potential savings values were updated on January 24, 2024, to incorporate additional claims for the claim review period (April 1, 2022 – March 31, 2023) that were initially omitted in error.</p>
+                <p>MHDO received one time funding from an external source to cover the annual data acquisition cost for the Canadian Drug File.  Funding is needed to continue MHDO’s subscription to the data file on an annual basis.</p>
+                <br />
+                <p>MHDO posted this report December 7th, 2023</p>
+                <br />
+                <p>
+                    <strong>Footnotes:</strong>
+                </p>
+                <p>
+                    <sup>1</sup>1 Wall Street Journal Website. Markets. Accessed November 6, 2023 at
+                    <a href="https://www.wsj.com/market-data/quotes/fx/USDCAD/historical-prices" target="_blank">
+                        https://www.wsj.com/market-data/quotes/fx/USDCAD/historical-prices
+                    </a>
+                </p>
+                <p>
+                    <sup>2</sup> Average WAC per NDC unit of measure was calculated by summing the mathematical
+                    product(s) of the number of days during the most recent 12-month period (November
+                    1, 2022 – October 31, 2023) that a drug product was priced at a unique WAC per
+                    unit value multiplied by the unique WAC per unit value and dividing the sum of all
+                    mathematical products by the number of days in the 12-month period. ((($a x 31 days)
+                    + ($b x 150 days) + ($c x 184 days)) / 365 days)
+                </p>
+
+
+            </div>
+            <!-- end span10 -->
+        </div>
+        <!-- end row fluid-->
+        <hr />
+        <footer>
+        <p>&copy; Maine Health Data Organization 2026</p>
+      </footer>
+    </div>
+    <!--/.fluid-container-->
+    <!-- Le javascript -->
+    <script src="assets/js/jquery-1.7.2.min.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-transition.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-alert.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-modal.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-dropdown.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-scrollspy.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-tab.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-tooltip.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-popover.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-button.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-collapse.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-carousel.js" type="text/javascript"></script>
+    <script src="assets/js/bootstrap-typeahead.js" type="text/javascript"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "title": "MHDO Top 100 Most Costly and Most Prescribed Prescription Drugs",
+  "publisher": "Maine Health Data Organization",
+  "landingPage": "https://mhdo.maine.gov/RxReferenceRates.htm",
+  "downloadUrl": "https://mhdo.maine.gov/_xls/Top%20100%20Most%20Costly_Prescribed_231116.xlsx",
+  "retrievedOn": "2026-10-05",
+  "sha256": "16764c08f73e5d3ab2f08375b57fcd366e578bc4fa10bd55f9c2754756b380f9",
+  "provenance": "MHDO states that its analysis uses Wolters Kluwer Medi-Span MedFile v2, Canadian Drug File, and Maine APCD claims. This is a published derivative report, not a licensed raw Medi-Span extract.",
+  "periodNotes": [
+    "Landing page Part I identifies November 1, 2022\u2013October 31, 2023.",
+    "The same page methodology instead references April 1, 2022\u2013March 31, 2023. Preserve this inconsistency; do not use the report as a day-specific classification snapshot.",
+    "The filename contains 231116. This is not treated as the effective date of each drug classification."
+  ],
+  "limitations": [
+    "No raw MONY codes or classification change history.",
+    "Brand/generic labels come from MHDO report categories, not a separately supplied Medi-Span field.",
+    "No claim-level records, approved Tennessee drug lists, actual guarantee calculations, AWP history, or per-record effective dates.",
+    "Average WAC is not AWP and is not treated as a price for a specific claim date.",
+    "These records are isolated from Tennessee operational and audit records. No synthetic data added."
+  ]
+}

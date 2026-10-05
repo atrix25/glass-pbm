@@ -1,0 +1,27 @@
+{
+  "records": 282,
+  "uniqueNdcs": 282,
+  "sourceTypes": {
+    "Single Source": 92,
+    "Multi-Source": 190
+  },
+  "genericSingleSourceNdcs": [
+    "00115169449",
+    "72626270101",
+    "66993001968",
+    "61314063705",
+    "68382043528"
+  ],
+  "checks": [
+    "Publisher total of 282 matched",
+    "All NDCs have 11 digits; leading zeroes preserved",
+    "No duplicate NDCs",
+    "Every record retains source row and original cells"
+  ],
+  "notTested": [
+    "Contract compliance",
+    "Actual claim adjudication",
+    "Guarantee calculations",
+    "Historical classification accuracy"
+  ]
+}
