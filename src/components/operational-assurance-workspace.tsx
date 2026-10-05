@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import {DrugReferenceChecks} from './drug-reference-checks';
 import {sourceForSponsor} from '@/lib/contract-extraction/core';
 import {notFound} from 'next/navigation';
 import {selectedSponsor} from '@/lib/contract-checks/context';
@@ -33,6 +34,7 @@ export async function OperationalAssuranceWorkspace({area,extractionId,term}:{ar
   </section>
   {selected&&<section id="area-review" className={css.detail}>
    <div className={css.sectionHead}><div><p className={css.eyebrow}>Responsible role · {selected.role}</p><h2>{selected.name}</h2></div><span className={css.status}>Unable to verify</span></div>
+   {sponsor==='tennessee'&&selected.id==='drugs'&&<><DrugReferenceChecks key={clock.now.toISOString().slice(0,10)}/><details className={css.panel}><summary>Contract rule used in the public-data check · PDF 74</summary><ContractSourceImage page={74} sha256={sourceForSponsor(sponsor)!.sha256} citations={[{page:74,matched:true,quote:'For Discount purposes and other related contract calculations, Single-Source Generics should be considered as Multi Source generics and must not be included in the Brands bucket for the purpose of pricing or guarantee reconciliation.'}]}/></details></>}
    <div className={css.steps}>
     <section className={css.panel}><span className={css.step}>01</span><h3>Requirement</h3><p>{selected.requirement}</p><div className={css.tags}>{selected.authority.map(a=><span key={a}>{a}</span>)}</div><p className={css.note}>Control objective · Not an extracted or approved requirement.</p></section>
     <section className={css.panel}><span className={css.step}>02</span><h3>Actual</h3><strong>Data unavailable</strong><p>{selected.actual}.</p><p className={css.note}>No actual records loaded for this comparison.</p></section>
