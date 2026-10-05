@@ -1,0 +1,1817 @@
+{
+  "id": "tn-formulary-2026-10",
+  "title": "Tennessee prescribing guide",
+  "effectiveDate": "2026-10-01",
+  "retrievedOn": "2026-10-05",
+  "url": "https://www.caremark.com/portal/asset/state_tn_formulary.pdf",
+  "localUrl": "/reference/tennessee/2026-10/formulary.pdf",
+  "sha256": "965719413ef60ec32a87e7c4673556b9818334584130fcb35ce794a363ffd1a7",
+  "totalPages": 365,
+  "selectedPages": [
+    22,
+    64,
+    124
+  ],
+  "rows": [
+    {
+      "id": "p22-r3",
+      "page": 22,
+      "name": "ADDERALL TAB 5MG",
+      "cells": {
+        "drug": "ADDERALL TAB 5MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 96.44850063666674,
+        "width": 476.03572910771413,
+        "height": 14.81616603000002
+      }
+    },
+    {
+      "id": "p22-r4",
+      "page": 22,
+      "name": "ADDERALL TAB 7.5MG",
+      "cells": {
+        "drug": "ADDERALL TAB 7.5MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 111.26466666666676,
+        "width": 476.03572910771413,
+        "height": 14.961999683333303
+      }
+    },
+    {
+      "id": "p22-r5",
+      "page": 22,
+      "name": "ADDERALL TAB 10MG",
+      "cells": {
+        "drug": "ADDERALL TAB 10MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 126.22666635000006,
+        "width": 476.03572910771413,
+        "height": 14.96199967777774
+      }
+    },
+    {
+      "id": "p22-r6",
+      "page": 22,
+      "name": "ADDERALL TAB 12.5MG",
+      "cells": {
+        "drug": "ADDERALL TAB 12.5MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 141.1886660277778,
+        "width": 476.03572910771413,
+        "height": 14.961997985555513
+      }
+    },
+    {
+      "id": "p22-r7",
+      "page": 22,
+      "name": "ADDERALL TAB 15MG",
+      "cells": {
+        "drug": "ADDERALL TAB 15MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 156.1506640133333,
+        "width": 476.03572910771413,
+        "height": 14.962001376666677
+      }
+    },
+    {
+      "id": "p22-r8",
+      "page": 22,
+      "name": "ADDERALL TAB 20MG",
+      "cells": {
+        "drug": "ADDERALL TAB 20MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 171.11266539,
+        "width": 476.03572910771413,
+        "height": 14.961998832222264
+      }
+    },
+    {
+      "id": "p22-r9",
+      "page": 22,
+      "name": "ADDERALL TAB 30MG",
+      "cells": {
+        "drug": "ADDERALL TAB 30MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 186.07466422222225,
+        "width": 476.03572910771413,
+        "height": 14.961998837777827
+      }
+    },
+    {
+      "id": "p22-r10",
+      "page": 22,
+      "name": "ADDERALL XR CAP 5MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 5MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 201.03666306000008,
+        "width": 476.03572910771413,
+        "height": 14.962005614444422
+      }
+    },
+    {
+      "id": "p22-r11",
+      "page": 22,
+      "name": "ADDERALL XR CAP 10MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 10MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 215.9986686744445,
+        "width": 476.03572910771413,
+        "height": 14.961998833333354
+      }
+    },
+    {
+      "id": "p22-r12",
+      "page": 22,
+      "name": "ADDERALL XR CAP 15MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 15MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 230.96066750777786,
+        "width": 476.03572910771413,
+        "height": 14.961998832222179
+      }
+    },
+    {
+      "id": "p22-r13",
+      "page": 22,
+      "name": "ADDERALL XR CAP 20MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 20MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 245.92266634000003,
+        "width": 476.03572910771413,
+        "height": 14.962005615555597
+      }
+    },
+    {
+      "id": "p22-r14",
+      "page": 22,
+      "name": "ADDERALL XR CAP 25MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 25MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 260.88467195555563,
+        "width": 476.03572910771413,
+        "height": 14.961998832222207
+      }
+    },
+    {
+      "id": "p22-r15",
+      "page": 22,
+      "name": "ADDERALL XR CAP 30MG",
+      "cells": {
+        "drug": "ADDERALL XR CAP 30MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 275.84667078777784,
+        "width": 476.03572910771413,
+        "height": 14.961998833333269
+      }
+    },
+    {
+      "id": "p22-r16",
+      "page": 22,
+      "name": "ADZENYS XR-ODT TBED 3.1MG, 6.3MG, 9.4MG, 12.5MG, 15.7MG, 18.8MG",
+      "cells": {
+        "drug": "ADZENYS XR-ODT TBED 3.1MG, 6.3MG,\nBrand drug\n9.4MG, 12.5MG, 15.7MG, 18.8MG",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 290.8086696211111,
+        "width": 476.03572910771413,
+        "height": 29.174000214444504
+      }
+    },
+    {
+      "id": "p22-r17",
+      "page": 22,
+      "name": "amphetamine tbed 3.1mg, 6.3mg, 9.4mg, 12.5mg, 15.7mg, 18.8mg",
+      "cells": {
+        "drug": "amphetamine tbed 3.1mg, 6.3mg, 9.4mg,\nGeneric drug\n12.5mg, 15.7mg, 18.8mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 319.9826698355556,
+        "width": 476.03572910771413,
+        "height": 29.174004447777747
+      }
+    },
+    {
+      "id": "p22-r18",
+      "page": 22,
+      "name": "amphetamine sulfate tabs 5mg, 10mg",
+      "cells": {
+        "drug": "amphetamine sulfate tabs 5mg, 10mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 349.15667428333336,
+        "width": 476.03572910771413,
+        "height": 14.962008156666684
+      }
+    },
+    {
+      "id": "p22-r19",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine 3-bead cap er 24hr 12.5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine 3-bead cap\nGeneric drug\ner 24hr 12.5 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 364.11868244000004,
+        "width": 476.03572910771413,
+        "height": 29.173995127777744
+      }
+    },
+    {
+      "id": "p22-r20",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine 3-bead cap er 24hr 25 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine 3-bead cap\nGeneric drug\ner 24hr 25 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 393.2926775677778,
+        "width": 476.03572910771413,
+        "height": 29.17399766666665
+      }
+    },
+    {
+      "id": "p22-r21",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine 3-bead cap er 24hr 37.5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine 3-bead cap\nGeneric drug\ner 24hr 37.5 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 422.46667523444444,
+        "width": 476.03572910771413,
+        "height": 29.17399766555559
+      }
+    },
+    {
+      "id": "p22-r22",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine 3-bead cap er 24hr 50 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine 3-bead cap\nGeneric drug\ner 24hr 50 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 451.6406729,
+        "width": 476.03572910771413,
+        "height": 29.17399766555559
+      }
+    },
+    {
+      "id": "p22-r23",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n5 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 480.8146705655556,
+        "width": 476.03572910771413,
+        "height": 29.17401123000002
+      }
+    },
+    {
+      "id": "p22-r24",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 10 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n10 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 509.98868179555564,
+        "width": 476.03572910771413,
+        "height": 29.17399766999995
+      }
+    },
+    {
+      "id": "p22-r25",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 15 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n15 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 539.1626794655556,
+        "width": 476.03572910771413,
+        "height": 29.173980714444497
+      }
+    },
+    {
+      "id": "p22-r26",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 20 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n20 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 568.3366601800001,
+        "width": 476.03572910771413,
+        "height": 29.17399766555559
+      }
+    },
+    {
+      "id": "p22-r27",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 25 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n25 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 597.5106578455557,
+        "width": 476.03572910771413,
+        "height": 29.174011229999905
+      }
+    },
+    {
+      "id": "p22-r28",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine cap er 24hr 30 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine cap er 24hr\nGeneric drug\n30 mg",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 626.6846690755556,
+        "width": 476.03572910771413,
+        "height": 29.174011229999905
+      }
+    },
+    {
+      "id": "p22-r29",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine tab 5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine tab 5 mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 655.8586803055555,
+        "width": 476.03572910771413,
+        "height": 14.961991202222293
+      }
+    },
+    {
+      "id": "p22-r30",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine tab 7.5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine tab 7.5 mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 670.8206715077778,
+        "width": 476.03572910771413,
+        "height": 14.962002224444518
+      }
+    },
+    {
+      "id": "p22-r31",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine tab 10 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine tab 10 mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 685.7826737322223,
+        "width": 476.03572910771413,
+        "height": 14.96200222333323
+      }
+    },
+    {
+      "id": "p22-r32",
+      "page": 22,
+      "name": "amphetamine-dextroamphetamine tab 12.5 mg",
+      "cells": {
+        "drug": "amphetamine-dextroamphetamine tab 12.5 mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98214285714286,
+        "y": 700.7446759555555,
+        "width": 476.03572910771413,
+        "height": 14.745322672444559
+      }
+    },
+    {
+      "id": "p64-r1",
+      "page": 64,
+      "name": "GVOKE HYPOPEN 1-PACK SOAJ .5MG/0.1ML, 1MG/0.2ML",
+      "cells": {
+        "drug": "GVOKE HYPOPEN 1-PACK SOAJ .5MG/0.1ML,\nBrand drug\n1MG/0.2ML",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 64.30266634666673,
+        "width": 476.0371931017948,
+        "height": 29.17399979000004
+      }
+    },
+    {
+      "id": "p64-r2",
+      "page": 64,
+      "name": "GVOKE HYPOPEN 2-PACK SOAJ .5MG/0.1ML, 1MG/0.2ML",
+      "cells": {
+        "drug": "GVOKE HYPOPEN 2-PACK SOAJ .5MG/0.1ML,\nBrand drug\n1MG/0.2ML",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 93.47666613666676,
+        "width": 476.0371931017948,
+        "height": 29.17399978444442
+      }
+    },
+    {
+      "id": "p64-r3",
+      "page": 64,
+      "name": "GVOKE KIT SOLN 1MG/0.2ML",
+      "cells": {
+        "drug": "GVOKE KIT SOLN 1MG/0.2ML\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 122.65066592111118,
+        "width": 476.0371931017948,
+        "height": 14.961998829999928
+      }
+    },
+    {
+      "id": "p64-r4",
+      "page": 64,
+      "name": "GVOKE PFS SOSY 1MG/0.2ML",
+      "cells": {
+        "drug": "GVOKE PFS SOSY 1MG/0.2ML\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 137.6126647511111,
+        "width": 476.0371931017948,
+        "height": 14.962001375555559
+      }
+    },
+    {
+      "id": "p64-r5",
+      "page": 64,
+      "name": "mifepristone (hyperglycemia) tabs 300mg",
+      "cells": {
+        "drug": "mifepristone (hyperglycemia) tabs 300mg\nGeneric drug",
+        "tier": "1",
+        "limits": "SP, PA, QL"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 152.57466612666667,
+        "width": 476.0371931017948,
+        "height": 14.732834708333371
+      }
+    },
+    {
+      "id": "p64-r7",
+      "page": 64,
+      "name": "alogliptin benzoate tabs 6.25mg, 12.5mg, 25mg",
+      "cells": {
+        "drug": "alogliptin benzoate tabs 6.25mg, 12.5mg,\nGeneric drug\n25mg",
+        "tier": "1",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 184.43249956833344,
+        "width": 476.0371931017948,
+        "height": 29.02816814944447
+      }
+    },
+    {
+      "id": "p64-r8",
+      "page": 64,
+      "name": "BRYNOVIN SOLN 25MG/ML",
+      "cells": {
+        "drug": "BRYNOVIN SOLN 25MG/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 213.4606677177779,
+        "width": 476.0371931017948,
+        "height": 14.961997984444423
+      }
+    },
+    {
+      "id": "p64-r9",
+      "page": 64,
+      "name": "JANUVIA TABS 25MG, 50MG, 100MG",
+      "cells": {
+        "drug": "JANUVIA TABS 25MG, 50MG, 100MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 228.42266570222233,
+        "width": 476.0371931017948,
+        "height": 14.961998832222179
+      }
+    },
+    {
+      "id": "p64-r10",
+      "page": 64,
+      "name": "saxagliptin hcl tabs 2.5mg, 5mg",
+      "cells": {
+        "drug": "saxagliptin hcl tabs 2.5mg, 5mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 243.3846645344445,
+        "width": 476.0371931017948,
+        "height": 14.962005615555569
+      }
+    },
+    {
+      "id": "p64-r11",
+      "page": 64,
+      "name": "sitagliptin phosphate tabs 25mg, 50mg, 100mg",
+      "cells": {
+        "drug": "sitagliptin phosphate tabs 25mg, 50mg, 100mg\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 258.3466701500001,
+        "width": 476.0371931017948,
+        "height": 14.961998832222207
+      }
+    },
+    {
+      "id": "p64-r12",
+      "page": 64,
+      "name": "TRADJENTA TABS 5MG",
+      "cells": {
+        "drug": "TRADJENTA TABS 5MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 273.3086689822223,
+        "width": 476.0371931017948,
+        "height": 14.961998833333325
+      }
+    },
+    {
+      "id": "p64-r13",
+      "page": 64,
+      "name": "ZITUVIO TABS 25MG, 50MG, 100MG",
+      "cells": {
+        "drug": "ZITUVIO TABS 25MG, 50MG, 100MG\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 288.2706678155556,
+        "width": 476.0371931017948,
+        "height": 14.732835982777772
+      }
+    },
+    {
+      "id": "p64-r15",
+      "page": 64,
+      "name": "CYCLOSET TABS .8MG",
+      "cells": {
+        "drug": "CYCLOSET TABS .8MG\nBrand drug",
+        "tier": "3",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 320.12849744500005,
+        "width": 476.0371931017948,
+        "height": 14.587001798333347
+      }
+    },
+    {
+      "id": "p64-r17",
+      "page": 64,
+      "name": "liraglutide sopn 6mg/ml",
+      "cells": {
+        "drug": "liraglutide sopn 6mg/ml\nGeneric drug",
+        "tier": "1",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 351.8405030566667,
+        "width": 476.0371931017948,
+        "height": 14.816168043333391
+      }
+    },
+    {
+      "id": "p64-r18",
+      "page": 64,
+      "name": "MOUNJARO SOAJ 2.5MG/0.5ML, 5MG/0.5ML, 7.5MG/0.5ML, 10MG/0.5ML, 12.5MG/0.5ML, 15MG/0.5ML",
+      "cells": {
+        "drug": "MOUNJARO SOAJ 2.5MG/0.5ML,\nBrand drug\n5MG/0.5ML, 7.5MG/0.5ML, 10MG/0.5ML,\n12.5MG/0.5ML, 15MG/0.5ML",
+        "tier": "2",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 366.6566711000001,
+        "width": 476.0371931017948,
+        "height": 43.38599904555548
+      }
+    },
+    {
+      "id": "p64-r19",
+      "page": 64,
+      "name": "OZEMPIC SOPN 2MG/3ML, 4MG/3ML, 8MG/3ML; TABS 1.5MG, 4MG, 9MG",
+      "cells": {
+        "drug": "OZEMPIC SOPN 2MG/3ML, 4MG/3ML,\nBrand drug\n8MG/3ML; TABS 1.5MG, 4MG, 9MG",
+        "tier": "2",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 410.0426701455556,
+        "width": 476.0371931017948,
+        "height": 29.17399935888892
+      }
+    },
+    {
+      "id": "p64-r20",
+      "page": 64,
+      "name": "RYBELSUS TABS 3MG, 7MG, 14MG",
+      "cells": {
+        "drug": "RYBELSUS TABS 3MG, 7MG, 14MG\nBrand drug",
+        "tier": "2",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 439.2166695044445,
+        "width": 476.0371931017948,
+        "height": 14.962008157777802
+      }
+    },
+    {
+      "id": "p64-r21",
+      "page": 64,
+      "name": "TRULICITY SOAJ .75MG/0.5ML, 1.5MG/0.5ML, 3MG/0.5ML, 4.5MG/0.5ML",
+      "cells": {
+        "drug": "TRULICITY SOAJ .75MG/0.5ML,\nBrand drug\n1.5MG/0.5ML, 3MG/0.5ML, 4.5MG/0.5ML",
+        "tier": "2",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 454.1786776622223,
+        "width": 476.0371931017948,
+        "height": 29.173995127777744
+      }
+    },
+    {
+      "id": "p64-r22",
+      "page": 64,
+      "name": "VICTOZA SOPN 18MG/3ML",
+      "cells": {
+        "drug": "VICTOZA SOPN 18MG/3ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 483.35267279000004,
+        "width": 476.0371931017948,
+        "height": 14.732831738333346
+      }
+    },
+    {
+      "id": "p64-r24",
+      "page": 64,
+      "name": "ADMELOG SOLN 100UNIT/ML",
+      "cells": {
+        "drug": "ADMELOG SOLN 100UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 515.2105083483333,
+        "width": 476.0371931017948,
+        "height": 14.816164649444545
+      }
+    },
+    {
+      "id": "p64-r25",
+      "page": 64,
+      "name": "ADMELOG SOLOSTAR SOPN 100UNIT/ML",
+      "cells": {
+        "drug": "ADMELOG SOLOSTAR SOPN 100UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 530.0266729977778,
+        "width": 476.0371931017948,
+        "height": 14.962005614444479
+      }
+    },
+    {
+      "id": "p64-r26",
+      "page": 64,
+      "name": "AFREZZA POWD 4UNIT, 8UNIT, 12UNIT",
+      "cells": {
+        "drug": "AFREZZA POWD 4UNIT, 8UNIT, 12UNIT\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 544.9886786122223,
+        "width": 476.0371931017948,
+        "height": 14.962005615555654
+      }
+    },
+    {
+      "id": "p64-r27",
+      "page": 64,
+      "name": "AFREZZA POW 4-8 UNIT",
+      "cells": {
+        "drug": "AFREZZA POW 4-8 UNIT\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 559.950684227778,
+        "width": 476.0371931017948,
+        "height": 14.961992049999935
+      }
+    },
+    {
+      "id": "p64-r28",
+      "page": 64,
+      "name": "AFREZZA POW 4-8-12",
+      "cells": {
+        "drug": "AFREZZA POW 4-8-12\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 574.9126762777779,
+        "width": 476.0371931017948,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p64-r29",
+      "page": 64,
+      "name": "AFREZZA POW 8-12UNIT",
+      "cells": {
+        "drug": "AFREZZA POW 8-12UNIT\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 589.8746785022223,
+        "width": 476.0371931017948,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p64-r30",
+      "page": 64,
+      "name": "APIDRA SOLN 100UNIT/ML",
+      "cells": {
+        "drug": "APIDRA SOLN 100UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 604.8366807266667,
+        "width": 476.0371931017948,
+        "height": 14.961975098888956
+      }
+    },
+    {
+      "id": "p64-r31",
+      "page": 64,
+      "name": "APIDRA SOLOSTAR SOPN 100UNIT/ML",
+      "cells": {
+        "drug": "APIDRA SOLOSTAR SOPN 100UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 619.7986558255557,
+        "width": 476.0371931017948,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p64-r32",
+      "page": 64,
+      "name": "AWIQLI FLEXTOUCH SOPN 700UNIT/ML",
+      "cells": {
+        "drug": "AWIQLI FLEXTOUCH SOPN 700UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 634.7606580500001,
+        "width": 476.0371931017948,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p64-r33",
+      "page": 64,
+      "name": "BASAGLAR KWIKPEN SOPN 100UNIT/ML",
+      "cells": {
+        "drug": "BASAGLAR KWIKPEN SOPN 100UNIT/ML\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 649.7226602744445,
+        "width": 476.0371931017948,
+        "height": 14.962002224444518
+      }
+    },
+    {
+      "id": "p64-r34",
+      "page": 64,
+      "name": "FIASP SOLN 100UNIT/ML",
+      "cells": {
+        "drug": "FIASP SOLN 100UNIT/ML\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 664.684662498889,
+        "width": 476.0371931017948,
+        "height": 14.96200222444429
+      }
+    },
+    {
+      "id": "p64-r35",
+      "page": 64,
+      "name": "FIASP FLEXTOUCH SOPN 100UNIT/ML",
+      "cells": {
+        "drug": "FIASP FLEXTOUCH SOPN 100UNIT/ML\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 679.6466647233333,
+        "width": 476.0371931017948,
+        "height": 14.962002223333343
+      }
+    },
+    {
+      "id": "p64-r36",
+      "page": 64,
+      "name": "FIASP PENFILL SOCT 100UNIT/ML",
+      "cells": {
+        "drug": "FIASP PENFILL SOCT 100UNIT/ML\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98141025641024,
+        "y": 694.6086669466666,
+        "width": 476.0371931017948,
+        "height": 14.745333521333464
+      }
+    },
+    {
+      "id": "p124-r1",
+      "page": 124,
+      "name": "SOFDRA GEL 12.45%",
+      "cells": {
+        "drug": "SOFDRA GEL 12.45%\nBrand drug",
+        "tier": "3",
+        "limits": "ST, PA, QL"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 64.30266634666673,
+        "width": 476.0389024513333,
+        "height": 14.961999890000016
+      }
+    },
+    {
+      "id": "p124-r2",
+      "page": 124,
+      "name": "XERAC AC SOLN 6.25%",
+      "cells": {
+        "drug": "XERAC AC SOLN 6.25%\nBrand drug",
+        "tier": "3",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 79.26466623666674,
+        "width": 476.0389024513333,
+        "height": 14.732833226666685
+      }
+    },
+    {
+      "id": "p124-r4",
+      "page": 124,
+      "name": "EUCRISA OINT 2%",
+      "cells": {
+        "drug": "EUCRISA OINT 2%\nBrand drug",
+        "tier": "2",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 111.1224994700001,
+        "width": 476.0389024513333,
+        "height": 14.816167617777765
+      }
+    },
+    {
+      "id": "p124-r5",
+      "page": 124,
+      "name": "ZORYVE CREA .05%, .15%, .3%; FOAM .3%",
+      "cells": {
+        "drug": "ZORYVE CREA .05%, .15%, .3%; FOAM .3%\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 125.93866708777786,
+        "width": 476.0389024513333,
+        "height": 14.73283343555552
+      }
+    },
+    {
+      "id": "p124-r7",
+      "page": 124,
+      "name": "KAXM EMUL 4%",
+      "cells": {
+        "drug": "KAXM EMUL 4%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 157.79649925,
+        "width": 476.0389024513333,
+        "height": 14.8161655011111
+      }
+    },
+    {
+      "id": "p124-r8",
+      "page": 124,
+      "name": "KEIDO EMUL 6%",
+      "cells": {
+        "drug": "KEIDO EMUL 6%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 172.6126647511111,
+        "width": 476.0389024513333,
+        "height": 14.962001375555559
+      }
+    },
+    {
+      "id": "p124-r9",
+      "page": 124,
+      "name": "KEXM EMUL 6%",
+      "cells": {
+        "drug": "KEXM EMUL 6%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 187.57466612666667,
+        "width": 476.0389024513333,
+        "height": 14.961997985555598
+      }
+    },
+    {
+      "id": "p124-r10",
+      "page": 124,
+      "name": "KUTEA EMUL 8%",
+      "cells": {
+        "drug": "KUTEA EMUL 8%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 202.53666411222227,
+        "width": 476.0389024513333,
+        "height": 14.961998837777799
+      }
+    },
+    {
+      "id": "p124-r11",
+      "page": 124,
+      "name": "KUXM EMUL 8%",
+      "cells": {
+        "drug": "KUXM EMUL 8%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 217.49866295000007,
+        "width": 476.0389024513333,
+        "height": 14.962005614444479
+      }
+    },
+    {
+      "id": "p124-r12",
+      "page": 124,
+      "name": "MEDORFA EMUL 6%",
+      "cells": {
+        "drug": "MEDORFA EMUL 6%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 232.46066856444455,
+        "width": 476.0389024513333,
+        "height": 14.961998833333297
+      }
+    },
+    {
+      "id": "p124-r13",
+      "page": 124,
+      "name": "MEDORFA HP EMUL 8%",
+      "cells": {
+        "drug": "MEDORFA HP EMUL 8%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 247.42266739777784,
+        "width": 476.0389024513333,
+        "height": 14.961998832222207
+      }
+    },
+    {
+      "id": "p124-r14",
+      "page": 124,
+      "name": "MEDORFA HP PLUS EMUL 8%",
+      "cells": {
+        "drug": "MEDORFA HP PLUS EMUL 8%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 262.38466623000005,
+        "width": 476.0389024513333,
+        "height": 14.962005615555597
+      }
+    },
+    {
+      "id": "p124-r15",
+      "page": 124,
+      "name": "MEDORFA LP EMUL 4%",
+      "cells": {
+        "drug": "MEDORFA LP EMUL 4%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 277.34667184555565,
+        "width": 476.0389024513333,
+        "height": 14.961998832222207
+      }
+    },
+    {
+      "id": "p124-r16",
+      "page": 124,
+      "name": "MEDORFA PLUS EMUL 6%",
+      "cells": {
+        "drug": "MEDORFA PLUS EMUL 6%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 292.30867067777785,
+        "width": 476.0389024513333,
+        "height": 14.732832588888868
+      }
+    },
+    {
+      "id": "p124-r18",
+      "page": 124,
+      "name": "azelaic acid gel 15%",
+      "cells": {
+        "drug": "azelaic acid gel 15%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 324.16649437000007,
+        "width": 476.0389024513333,
+        "height": 14.816165499999954
+      }
+    },
+    {
+      "id": "p124-r19",
+      "page": 124,
+      "name": "brimonidine tartrate (topical) gel .33%",
+      "cells": {
+        "drug": "brimonidine tartrate (topical) gel .33%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 338.98265987,
+        "width": 476.0389024513333,
+        "height": 14.962005615555597
+      }
+    },
+    {
+      "id": "p124-r20",
+      "page": 124,
+      "name": "EMROSI CP24 40MG",
+      "cells": {
+        "drug": "EMROSI CP24 40MG\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 353.9446654855556,
+        "width": 476.0389024513333,
+        "height": 14.962005614444479
+      }
+    },
+    {
+      "id": "p124-r21",
+      "page": 124,
+      "name": "FINACEA FOAM 15%",
+      "cells": {
+        "drug": "FINACEA FOAM 15%\nBrand drug",
+        "tier": "2",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 368.9066711000001,
+        "width": 476.0389024513333,
+        "height": 14.96200561555554
+      }
+    },
+    {
+      "id": "p124-r22",
+      "page": 124,
+      "name": "ivermectin (rosacea) crea 1%",
+      "cells": {
+        "drug": "ivermectin (rosacea) crea 1%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 383.86867671555564,
+        "width": 476.0389024513333,
+        "height": 14.962005614444422
+      }
+    },
+    {
+      "id": "p124-r23",
+      "page": 124,
+      "name": "metronidazole (topical) crea .75%; gel .75%, 1%; lotn .75%",
+      "cells": {
+        "drug": "metronidazole (topical) crea .75%; gel .75%,\nGeneric drug\n1%; lotn .75%",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 398.83068233000006,
+        "width": 476.0389024513333,
+        "height": 29.173995127777744
+      }
+    },
+    {
+      "id": "p124-r24",
+      "page": 124,
+      "name": "metronidazole (topical) crea .75%; lotn .75%",
+      "cells": {
+        "drug": "metronidazole (topical) crea .75%; lotn .75%\nGeneric drug",
+        "tier": "1",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 428.0046774577778,
+        "width": 476.0389024513333,
+        "height": 14.961994588888956
+      }
+    },
+    {
+      "id": "p124-r25",
+      "page": 124,
+      "name": "MIRVASO GEL .33%",
+      "cells": {
+        "drug": "MIRVASO GEL .33%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 442.96667204666676,
+        "width": 476.0389024513333,
+        "height": 14.96200561555554
+      }
+    },
+    {
+      "id": "p124-r26",
+      "page": 124,
+      "name": "NORITATE CREA 1%",
+      "cells": {
+        "drug": "NORITATE CREA 1%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 457.9286776622223,
+        "width": 476.0389024513333,
+        "height": 14.962005618888895
+      }
+    },
+    {
+      "id": "p124-r27",
+      "page": 124,
+      "name": "ORACEA CPDR 40MG",
+      "cells": {
+        "drug": "ORACEA CPDR 40MG\nBrand drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 472.8906832811112,
+        "width": 476.0389024513333,
+        "height": 14.961992051111054
+      }
+    },
+    {
+      "id": "p124-r28",
+      "page": 124,
+      "name": "oxymetazoline hcl (topical) crea 1%",
+      "cells": {
+        "drug": "oxymetazoline hcl (topical) crea 1%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 487.85267533222225,
+        "width": 476.0389024513333,
+        "height": 14.961992050000049
+      }
+    },
+    {
+      "id": "p124-r29",
+      "page": 124,
+      "name": "RHOFADE CREA 1%",
+      "cells": {
+        "drug": "RHOFADE CREA 1%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 502.8146673822223,
+        "width": 476.0389024513333,
+        "height": 14.96200561555554
+      }
+    },
+    {
+      "id": "p124-r30",
+      "page": 124,
+      "name": "SOOLANTRA CREA 1%",
+      "cells": {
+        "drug": "SOOLANTRA CREA 1%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 517.7766729977778,
+        "width": 476.0389024513333,
+        "height": 14.962005614444479
+      }
+    },
+    {
+      "id": "p124-r31",
+      "page": 124,
+      "name": "ZILXI FOAM 1.5%",
+      "cells": {
+        "drug": "ZILXI FOAM 1.5%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 532.7386786122223,
+        "width": 476.0389024513333,
+        "height": 14.732842764444513
+      }
+    },
+    {
+      "id": "p124-r33",
+      "page": 124,
+      "name": "Crotan Lotn 10%",
+      "cells": {
+        "drug": "Crotan Lotn 10%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 564.5965251900001,
+        "width": 476.0389024513333,
+        "height": 14.816151087777826
+      }
+    },
+    {
+      "id": "p124-r34",
+      "page": 124,
+      "name": "EURAX CREA 10%",
+      "cells": {
+        "drug": "EURAX CREA 10%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 579.4126762777779,
+        "width": 476.0389024513333,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p124-r35",
+      "page": 124,
+      "name": "malathion lotn .5%",
+      "cells": {
+        "drug": "malathion lotn .5%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 594.3746785022223,
+        "width": 476.0389024513333,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p124-r36",
+      "page": 124,
+      "name": "permethrin crea 5%",
+      "cells": {
+        "drug": "permethrin crea 5%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 609.3366807266667,
+        "width": 476.0389024513333,
+        "height": 14.961975098888956
+      }
+    },
+    {
+      "id": "p124-r37",
+      "page": 124,
+      "name": "PERMETHRIN CREA 5%",
+      "cells": {
+        "drug": "PERMETHRIN CREA 5%\nBrand drug",
+        "tier": "3",
+        "limits": "PA"
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 624.2986558255557,
+        "width": 476.0389024513333,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p124-r38",
+      "page": 124,
+      "name": "Pruradik Lotn 10%",
+      "cells": {
+        "drug": "Pruradik Lotn 10%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 639.2606580500001,
+        "width": 476.0389024513333,
+        "height": 14.962002224444404
+      }
+    },
+    {
+      "id": "p124-r39",
+      "page": 124,
+      "name": "spinosad susp .9%",
+      "cells": {
+        "drug": "spinosad susp .9%\nGeneric drug",
+        "tier": "1",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 654.2226602744445,
+        "width": 476.0389024513333,
+        "height": 14.962002224444518
+      }
+    },
+    {
+      "id": "p124-r40",
+      "page": 124,
+      "name": "SULF LIME SOL",
+      "cells": {
+        "drug": "SULF LIME SOL\nBrand drug",
+        "tier": "3",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 669.184662498889,
+        "width": 476.0389024513333,
+        "height": 14.732837676111103
+      }
+    },
+    {
+      "id": "p124-r42",
+      "page": 124,
+      "name": "COAL TAR SOLN 20%",
+      "cells": {
+        "drug": "COAL TAR SOLN 20%\nBrand drug",
+        "tier": "3",
+        "limits": ""
+      },
+      "width": 612.09997559,
+      "height": 792.09997559,
+      "box": {
+        "x": 71.98055555555554,
+        "y": 701.0424836483334,
+        "width": 476.0389024513333,
+        "height": 14.599492895666685
+      }
+    }
+  ],
+  "supportingText": [
+    {
+      "page": 1,
+      "text": "Prescribing Guide \u2013\nStandard Control for Clients with\nAdvanced Control Specialty\nFormulary\u00ae for State of Tennessee\nEffective October 1, 2026\nThe 2026 Prescribing Guide - Standard Control for Clients with Advanced Control Specialty\nFormulary\u00ae for State of Tennessee is intended to be a useful reference and informational tool for\nmedical providers. It is intended to assist practitioners in selecting clinically appropriate and cost-\neffective products for their patients.\n\u00a92026. All rights reserved."
+    },
+    {
+      "page": 19,
+      "text": "Drugs represented in the Prescribing Guide - Standard Control for Clients with\nAdvanced Control Specialty Formulary\u00ae may have varying cost to the plan\nmember. Prescription benefit plan may alter coverage of certain products or vary\ncopay amounts based on the condition being treated. Generic medications typically\nare available at the lowest cost, brand-name medications on the Prescribing Guide -\nStandard Control for Clients with Advanced Control Specialty Formulary\u00ae will\ngenerally cost more than generics, and brand-name medications not on the list will\ngenerally cost the most.\nPHARMACY AND THERAPEUTICS (P&T) COMMITTEE\nThe services of an independent National Pharmacy and Therapeutics Committee\n(\"P&T Committee\") are utilized to approve clinically appropriate drug therapies. The\nP&T Committee is an external advisory body of clinical professionals from across the\nUnited States. The P&T Committee's voting members include physicians,\npharmacists, a pharmacoeconomist and a medical ethicist, all of whom have a broad\nbackground of clinical and academic expertise regarding prescription drugs. Voting\nmembers of the P&T Committee must disclose any financial relationship or conflicts\nof interest with any pharmaceutical manufacturers.\nGENERIC SUBSTITUTION\nGeneric substitution is a pharmacy action whereby a generic version is dispensed\nrather than a prescribed brand-name product.\nOne way to reduce out-of-pocket cost is by requesting a generic drug. Generic drugs\nare usually priced lower than their brand-name equivalents. Prescription generic\ndrugs are:\n\u2022 Approved by the U.S. Food and Drug Administration for safety and effectiveness\nand are manufactured under the same strict standards that apply to brand-name\ndrugs.\n\u2022 Tested in humans to assure the generic is absorbed into the bloodstream in a\nsimilar rate and extent compared to the brand-name drug. Generics may be\ndifferent from the brand in size, color, and inactive ingredients, but this does not\nalter their effectiveness or ability to be absorbed just like the brand-name drug.\n\u2022 Manufactured in the same strength and dosage form as the brand-name drugs.\nWhen a generic drug is substituted for a brand-name drug, you can expect the\ngeneric to produce the same clinical effect and safety profile as the brand-name\ndrug.\nWHAT IS A DRUG TIER?\nEach covered drug is assigned to a Drug Tier. The Drug Tier is a group of drugs that\nindicates what your Copayment or Coinsurance is for each drug. A Deductible may also\n19"
+    },
+    {
+      "page": 20,
+      "text": "apply. For information about your Copayments, Coinsurance and/or Deductible, please\nconsult your benefits information available online by visiting Caremark.com or contact a\nCVS Caremark\u00ae Customer Care representative at 1-877-522-TNRX (8679). When you create\na State of Tennessee Health Plan online account, you can easily access your benefit\ninformation online 24 hours a day, 7 days a week.\nA preferred drug is a drug that the Pharmacy and Therapeutics Committee has determined\nprovides greater value than its alternatives when considering clinical effectiveness, safety\nand overall value.\nThe Drug Tier is marked throughout this document by one of the following symbols:\nSymbol Drug Tier Description\n1 Tier 1 Preferred Generic Drugs\n2 Tier 2 Preferred Brand-Name Drugs\nNon-preferred drugs (may include Brand Name or\n3 Tier 3\nGeneric Drugs)\nPLAN DESIGN\nThis document represents a closed formulary plan design. The medications listed on the\ndocument are covered by the plan as represented. Certain medications on the list are\ncovered if utilization management criteria are met (i.e., Prior Authorization, Quantity Limits,\nStep Therapy, etc.); requests for use of such medications outside of their listed criteria will\nbe reviewed for medical necessity. If a medication is not listed on the document, a formulary\nexception may be requested for coverage. Medical necessity or formulary exception\nrequests will be reviewed based on drug-specific prior authorization criteria or standard\nnon-formulary prescription request criteria.\nDrugs that require a Prior Authorization are indicated in the document by PA.\nDrugs that require Step Therapy authorization for coverage are indicated with ST. Step\nTherapy requires that drugs be used in a specific prescribing order.\nDrugs that have dispensing quantity limitation are indicated in the document by QL along\nwith the limits noted in the parentheses. Drugs are designated with a QL because they are\ntypically not taken on a regular schedule and/or because of potential safety and utilization\nconcerns. The Quantity Limit program provides for a maximum quantity of drug product\nthat a member may receive per prescription and/or over a specific period of time. Many\ndrug products have quantity limits based upon the dosage described in product labeling.\n20"
+    },
+    {
+      "page": 21,
+      "text": "Some medications are available in quantities greater than the typical 30-day supply. The\nState of Tennessee offers a 90-day fill option for certain drugs used to many chronic heart\nconditions such as high blood pressure.\nPRIOR AUTHORIZATION CRITERIA\nThe plan requires you or your physician to get prior authorization for certain drugs. This\nmeans that you will need to get approval from the plan before you fill your prescriptions. If\nyou don't get approval, the plan may not cover the drug.\nSTEP THERAPY CRITERIA\nThere are effective, lower-cost drugs that treat the same health condition as this drug. You\nmay be required to try one or more of these other drugs before the plan will cover your drug.\nIf you have already tried other drugs or your doctor thinks they are not right for you, please\nhave your prescribing doctor call CVS Caremark for an override.\nLEGEND\nAbbreviation Definition\nOTC Over the counter\nPA Prior Authorization\nQL Quantity Limits\nSP Specialty Drugs\nST Step Therapy\nNOTICE\nThe information contained in this document is proprietary. The information may not\nbe copied in whole or in part without written permission. \u00a92026. All rights reserved.\nThis document contains references to brand-name prescription drugs that are\ntrademarks or registered trademarks of pharmaceutical manufacturers.\nThe State of Tennessee does not operate the websites/organizations listed here, nor\nis it responsible for the availability or reliability of the websites' content. These listings\ndo not imply or constitute an endorsement, sponsorship, or recommendation by the\nState of Tennessee.\nPlease be advised that this document is updated periodically, and changes may\nappear prior to their effective date to allow for client notification.\n21"
+    }
+  ]
+}
