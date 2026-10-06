@@ -93,7 +93,8 @@ export default async function AppLayout({
   ]);
 
   const sponsor = await selectedSponsor();
-  const groups = sponsor === "tennessee" ? [{title:"Tennessee",items:[{href:"/sponsor",label:"Overview",icon:"sponsor" as const},{href:"/rebate-protection",label:"Rebate protection",icon:"integrity" as const},{href:"/sponsor/assurance",label:"Assurance",icon:"proof" as const}]}] : GROUPS;
+  const legacyGroups = sponsor === "tennessee" ? [{title:"Tennessee",items:[{href:"/sponsor",label:"Overview",icon:"sponsor" as const},{href:"/rebate-protection",label:"Rebate protection",icon:"integrity" as const},{href:"/sponsor/assurance",label:"Assurance",icon:"proof" as const}]}] : GROUPS;
+  const groups:NavGroup[] = demoFeaturesEnabled() ? [{title:"Connected demonstration",items:[{href:"/operating-demo",label:"Operating workspace",icon:"operations"},{href:"/public-data-checks",label:"Public data checks",icon:"sources"}]},...legacyGroups] : legacyGroups;
   const sidebar = (
     <>
       <Link href="/sponsor" className="border-b border-ink-100 px-6 py-6 text-2xl font-semibold tracking-[-1px] text-ink-900">glass</Link>
