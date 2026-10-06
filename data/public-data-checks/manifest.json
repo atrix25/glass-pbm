@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "retrievedAt": "2026-10-06T03:55:30.052692+00:00",
+  "plan": "SilverScript Choice (PDP)",
+  "planId": "S5601-024-000",
+  "region": "Alabama and Tennessee \u00b7 PDP region 12",
+  "periods": [
+    "2026-08",
+    "2026-09"
+  ],
+  "priceDates": [
+    "08/26/2026",
+    "09/30/2026"
+  ],
+  "sources": [
+    {
+      "id": "2026-08-plan",
+      "period": "2026-08",
+      "file": "plan information  20260831.txt",
+      "sha256": "5ba1ee7cbd97171a00a10f380b19ae602979741484931fc06e1ecd0ef6572a7a",
+      "hashFile": "plan information  20260831.txt",
+      "scanned": 112294,
+      "selected": 1,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-formulary",
+      "period": "2026-08",
+      "file": "basic drugs formulary file  20260831.txt",
+      "sha256": "3c8c9abb8ff645155b597615a14c0ea6d3c3fb224b8f2c25681bf58ce37eb258",
+      "hashFile": "basic drugs formulary file  20260831.txt",
+      "scanned": 1125804,
+      "selected": 3393,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-benefits",
+      "period": "2026-08",
+      "file": "beneficiary cost file  20260831.txt",
+      "sha256": "9453e4843e270814c88cf55ce821392c3ba583623f941b704fc52f1d49ecb977",
+      "hashFile": "beneficiary cost file  20260831.txt",
+      "scanned": 172660,
+      "selected": 28,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-insulin",
+      "period": "2026-08",
+      "file": "insulin beneficiary cost file  20260831.txt",
+      "sha256": "e2e6423ca9a45eba9d494f43930b6b145f89b466a412993c9d107410774740da",
+      "hashFile": "insulin beneficiary cost file  20260831.txt",
+      "scanned": 43066,
+      "selected": 7,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-excluded",
+      "period": "2026-08",
+      "file": "excluded drugs formulary file  20260831.txt",
+      "sha256": "ff02266016cfeddbe1696f0bf4144d9540d9d7d85c2942647da829825ee5390f",
+      "hashFile": "excluded drugs formulary file  20260831.txt",
+      "scanned": 13717,
+      "selected": 0,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-indications",
+      "period": "2026-08",
+      "file": "Indication Based Coverage Formulary File  20260831.txt",
+      "sha256": "ca58d5e0bbcc633a83de7f6e5959cffd7e28d6c5309ce669ee9310a7495cd8a6",
+      "hashFile": "Indication Based Coverage Formulary File  20260831.txt",
+      "scanned": 397,
+      "selected": 0,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-08-network",
+      "period": "2026-08",
+      "file": "pharmacy networks file  20260831 part 6.txt",
+      "sha256": "a24f5565f6d4debebbcc40ca883ffc7bb9c2b8c920a4a3ebe790e0acafbce4b0",
+      "hashFile": "network.zip (original nested CMS ZIP, partition 6)",
+      "scanned": 32970230,
+      "selected": 60514,
+      "partition": 6,
+      "url": "https://data.cms.gov/sites/default/files/2026-08/d8c9b393-66f0-4973-a748-f66742fe0fd2/2026_20260819.zip"
+    },
+    {
+      "id": "2026-09-plan",
+      "period": "2026-09",
+      "file": "plan information  20260930.txt",
+      "sha256": "5047d79b8c7fd7b2b59ebe9785d0d11a47e16907aef173b6bc81e46cbad4719b",
+      "hashFile": "plan information  20260930.txt",
+      "scanned": 112294,
+      "selected": 1,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-formulary",
+      "period": "2026-09",
+      "file": "basic drugs formulary file  20260930.txt",
+      "sha256": "adc94ae0cf9a38894af5709237feca0e9a3db919adab4346152d4b09f4f7baa1",
+      "hashFile": "basic drugs formulary file  20260930.txt",
+      "scanned": 1129364,
+      "selected": 3405,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-benefits",
+      "period": "2026-09",
+      "file": "beneficiary cost file  20260930.txt",
+      "sha256": "d045d1cd9fdf055e0fc0030a528ab093b1e4d960abebd124a1e1cbb72ad597bd",
+      "hashFile": "beneficiary cost file  20260930.txt",
+      "scanned": 172549,
+      "selected": 28,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-insulin",
+      "period": "2026-09",
+      "file": "insulin beneficiary cost file  20260930.txt",
+      "sha256": "1f14b7e42e0832e2bf5e6792d92268bed973cbbdc8d6fa5090e06ed873dacfe9",
+      "hashFile": "insulin beneficiary cost file  20260930.txt",
+      "scanned": 43045,
+      "selected": 7,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-excluded",
+      "period": "2026-09",
+      "file": "excluded drugs formulary file  20260930.txt",
+      "sha256": "ff02266016cfeddbe1696f0bf4144d9540d9d7d85c2942647da829825ee5390f",
+      "hashFile": "excluded drugs formulary file  20260930.txt",
+      "scanned": 13717,
+      "selected": 0,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-indications",
+      "period": "2026-09",
+      "file": "Indication Based Coverage Formulary File  20260930.txt",
+      "sha256": "ca58d5e0bbcc633a83de7f6e5959cffd7e28d6c5309ce669ee9310a7495cd8a6",
+      "hashFile": "Indication Based Coverage Formulary File  20260930.txt",
+      "scanned": 397,
+      "selected": 0,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "2026-09-network",
+      "period": "2026-09",
+      "file": "pharmacy networks file  20260930 part 6.txt",
+      "sha256": "4806f0ba25bba6b727c747ce0cdcb71fb19da8d7b82be669671957275719413f",
+      "hashFile": "network.zip (original nested CMS ZIP, partition 6)",
+      "scanned": 32894188,
+      "selected": 60521,
+      "partition": 6,
+      "url": "https://data.cms.gov/sites/default/files/2026-09/903ba816-d276-4c17-9b5a-0224bbd4e949/2026_20260916.zip"
+    },
+    {
+      "id": "nadac",
+      "period": "2026-09-30",
+      "file": "nadac-national-average-drug-acquisition-cost-09-30-2026.csv",
+      "sha256": "a9cacfa9bd60c902acd6f4ba234127ab74e125dc06459734b07f0e8943b0b410",
+      "hashFile": "nadac-national-average-drug-acquisition-cost-09-30-2026.csv",
+      "scanned": 1178135,
+      "selected": 4849,
+      "url": "https://download.medicaid.gov/data/nadac-national-average-drug-acquisition-cost-09-30-2026.csv"
+    }
+  ],
+  "census": {
+    "2026-08": {
+      "benefits": 28,
+      "formulary": 3393,
+      "insulin": 7,
+      "network": 60514,
+      "plan": 1
+    },
+    "2026-09": {
+      "benefits": 28,
+      "formulary": 3405,
+      "insulin": 7,
+      "network": 60521,
+      "plan": 1
+    }
+  },
+  "prices": 4849,
+  "payloadHash": "81187dd4076e3ef1b415f07cf919b16c4db6f1506a371f9a3201d6a52861f7a3",
+  "archiveHash": "74dc070685e1d7df88ac594953ac5cf25137d029b2deb5423716445aabf71f88",
+  "dictionary": "https://data.cms.gov/sites/default/files/2025-10/0564eb37-402d-4110-bd98-2d5399dc30e7/PUFRecordLayout-2026.pdf",
+  "networkScope": "Matching plan rows in CMS network partition 6 only. Other partitions have not been scanned; complete network coverage is not established."
+}
