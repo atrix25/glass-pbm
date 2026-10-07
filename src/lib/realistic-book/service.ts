@@ -1,0 +1,11 @@
+import {createHash,randomUUID} from 'node:crypto';
+import {gzipSync,gunzipSync} from 'node:zlib';
+import {prisma} from '@/lib/db';
+import {tenantSponsorId} from '@/lib/config';
+import {generate,META,type Book} from './core';
+import {verify} from './verify';
+const scope=(sponsor:string)=>({tenantId:tenantSponsorId(),sponsorId:sponsor});
+const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
+export async function create(sponsor:string,key:string){const unique=hash(JSON.stringify(['realistic-book-v2',tenantSponsorId(),sponsor,key]));const found=await prisma.assuranceRun.findUnique({where:{key:unique},select:{id:true}});if(found)return found.id;const book=generate();book.checks=verify(book);const raw=JSON.stringify(book);try{return (await prisma.assuranceRun.create({data:{id:'rbk_'+randomUUID(),key:unique,...scope(sponsor),cutoff:new Date(),state:gzipSync(raw).toString('base64'),inputHash:META.sourceHash,commitment:hash(raw),sealedAnswer:'{}'}})).id;}catch(e){if((e as {code?:string}).code!=='P2002')throw e;const row=await prisma.assuranceRun.findUnique({where:{key:unique}});if(!row)throw e;return row.id;}}
+export async function read(sponsor:string,cutoff:Date,id?:string){if(id&&!id.startsWith('rbk_'))return null;const row=await prisma.assuranceRun.findFirst({where:{...scope(sponsor),id:id??{startsWith:'rbk_'},createdAt:{lte:cutoff}},orderBy:{createdAt:'desc'}});if(!row)return null;const raw=gunzipSync(Buffer.from(row.state,'base64')).toString();if(hash(raw)!==row.commitment)throw Error('Integrity check failed');return {id:row.id,book:JSON.parse(raw) as Book};}
+export function summary(book:Book){const paid=book.claims.filter(c=>c.status==='Paid'),reversals=book.claims.filter(c=>c.status==='Reversal'),net=[...paid,...reversals];return {members:book.members.length,users:new Set(paid.filter(c=>!reversals.some(r=>r.originalId===c.id)).map(c=>c.memberId)).size,submissions:book.claims.length,paid:paid.length,reversals:reversals.length,rejected:book.claims.filter(c=>c.status==='Rejected').length,unknown:book.claims.filter(c=>c.status==='Not verified').length,allowed:net.reduce((n,c)=>n+c.allowed,0),member:net.reduce((n,c)=>n+c.member,0),employer:net.reduce((n,c)=>n+c.employer,0),netFills:paid.length-reversals.length};}
