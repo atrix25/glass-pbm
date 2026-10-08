@@ -155,6 +155,11 @@ export function adaptSqliteDialect(sql: string): string {
     /CAST\(\s*(MIN|MAX)\s*\(\s*([^)]+?(?:dateOfService|decidedAt|receivedAt|submittedAt|publishedAt|effectiveDate|retroReportedAt|reportedTerminationDate)[^)]*)\s*\)\s*AS\s+REAL\s*\)/gi,
     "((EXTRACT(EPOCH FROM $1($2)) * 1000))",
   );
+  // Bare CAST(dateCol AS REAL) — same epoch-ms meaning (MIN/MAX form handled above).
+  s = s.replace(
+    /CAST\(\s*((?:\w+\.)?(?:dateOfService|decidedAt|receivedAt|submittedAt|publishedAt|effectiveDate|retroReportedAt|reportedTerminationDate))\s+AS\s+REAL\s*\)/gi,
+    "((EXTRACT(EPOCH FROM $1) * 1000))",
+  );
   // dateOfService + daysSupply * 86400000 (SQLite ms arithmetic)
   s = s.replace(
     /(\w+\.)?(dateOfService)\s*\+\s*(\w+\.)?(daysSupply)\s*\*\s*\d+/gi,
