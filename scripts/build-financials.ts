@@ -59,7 +59,6 @@ const REVERSAL_REASONS = [
 
 async function buildReversals() {
   console.log("Reversals...");
-  await prisma.claim.deleteMany({ where: { transactionCode: "B2" } });
 
   const [{ maxSeq }] = await prisma.$queryRaw<Array<{ maxSeq: bigint | null }>>`
     SELECT MAX(CAST(SUBSTR(claimNumber, 4) AS INTEGER)) AS maxSeq FROM Claim
@@ -70,6 +69,9 @@ async function buildReversals() {
    * Selected deterministically off the claim sequence rather than at random,
    * so the same fills reverse on every run and the book does not change shape
    * between rehearsal and the meeting.
+   *
+   * Select BEFORE deleting existing B2s: on Postgres an unadapted CAST used to
+   * fail after deleteMany had already committed, wiping the reversal book.
    */
   const modulus = Math.round(1 / REVERSAL_RATE);
   const originals = await prisma.$queryRawUnsafe<
@@ -122,6 +124,8 @@ async function buildReversals() {
     WHERE responseStatus = 'P' AND transactionCode = 'B1'
       AND CAST(SUBSTR(claimNumber, 4) AS INTEGER) % ${modulus} = 7
   `);
+
+  await prisma.claim.deleteMany({ where: { transactionCode: "B2" } });
 
   const rng = new Rng(4242);
   const rows = originals.map((o) => {
