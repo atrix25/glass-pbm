@@ -317,10 +317,19 @@ async function buildRetroTerminations() {
 const INVOICE_LAG_DAYS = 45;
 const PAYMENT_TERMS_DAYS = 60;
 
+/** ISO timestamp literal for raw SQL against Postgres `timestamp` columns. */
+function sqlTimestamp(d: Date): string {
+  return `'${d.toISOString()}'`;
+}
+
 async function buildRebateInvoices() {
   console.log("Rebate invoicing...");
-  await prisma.rebateInvoice.deleteMany({});
 
+  /*
+   * Select BEFORE deleteMany. Prisma deletes commit immediately; on Postgres
+   * HAVING on a SELECT output alias used to abort after the wipe and leave
+   * the rebate receivable book empty.
+   */
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       quarter: number;
@@ -338,8 +347,10 @@ async function buildRebateInvoices() {
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
       AND c.estimatedRebateCents > 0 AND c.scenarioTag IS NULL
     GROUP BY quarter, manufacturer
-    HAVING amount > 0
+    HAVING SUM(c.estimatedRebateCents) > 0
   `);
+
+  await prisma.rebateInvoice.deleteMany({});
 
   const rng = new Rng(2929);
   const invoices = rows.map((r, i) => {
@@ -405,9 +416,12 @@ async function buildRebateInvoices() {
  */
 async function buildSettlement() {
   console.log("Settlement...");
-  await prisma.remittanceLine.deleteMany({});
-  await prisma.remittanceRun.deleteMany({});
-  await prisma.sponsorInvoice.deleteMany({});
+
+  /*
+   * Build remittance + sponsor invoice rows BEFORE wiping. On Postgres, SQLite
+   * epoch-ms comparisons (`dateOfService >= 1735…`) used to abort after
+   * deleteMany had already cleared RemittanceRun/Line and SponsorInvoice.
+   */
 
   // --- Pharmacy remittance, twice a month ---------------------------------
   const cycles: Array<{ start: Date; end: Date; paid: Date }> = [];
@@ -450,7 +464,8 @@ async function buildSettlement() {
              SUM(CASE WHEN transactionCode = 'B2' THEN pharmacyPaidCents ELSE 0 END) AS reversed
       FROM Claim
       WHERE (responseStatus = 'P' OR responseStatus = 'A')
-        AND dateOfService >= ${c.start.getTime()} AND dateOfService <= ${c.end.getTime()}
+        AND dateOfService >= ${sqlTimestamp(c.start)}
+        AND dateOfService <= ${sqlTimestamp(c.end)}
       GROUP BY pharmacyId
     `);
     if (perPharmacy.length === 0) continue;
@@ -494,17 +509,6 @@ async function buildSettlement() {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await prisma.remittanceRun.createMany({ data: runs as any });
-  for (let i = 0; i < lines.length; i += 1000) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await prisma.remittanceLine.createMany({ data: lines.slice(i, i + 1000) as any });
-  }
-  console.log(
-    `  ${runs.length} remittance cycles, ${lines.length} pharmacy lines, ` +
-      `$${(runs.reduce((s, r) => s + (r.netCents as number), 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} net to the network`,
-  );
-
   // --- Sponsor invoicing, monthly -----------------------------------------
   const sponsor = await prisma.planSponsor.findFirstOrThrow();
   const invoices: Array<Record<string, unknown>> = [];
@@ -525,15 +529,16 @@ async function buildSettlement() {
              SUM(planPaidCents) AS drugCost
       FROM Claim
       WHERE (responseStatus = 'P' OR responseStatus = 'A')
-        AND dateOfService >= ${start.getTime()} AND dateOfService <= ${end.getTime()}
+        AND dateOfService >= ${sqlTimestamp(start)}
+        AND dateOfService <= ${sqlTimestamp(end)}
     `);
 
     // Member months are the lives actually covered during the month, which is
     // what the administrative fee is charged on.
     const [{ lives }] = await prisma.$queryRawUnsafe<Array<{ lives: number }>>(`
       SELECT COUNT(*) AS lives FROM EligibilitySpan
-      WHERE effectiveDate <= ${end.getTime()}
-        AND (terminationDate IS NULL OR terminationDate >= ${start.getTime()})
+      WHERE effectiveDate <= ${sqlTimestamp(end)}
+        AND (terminationDate IS NULL OR terminationDate >= ${sqlTimestamp(start)})
     `);
 
     const memberMonths = Number(lives);
@@ -549,7 +554,8 @@ async function buildSettlement() {
     >(`
       SELECT COALESCE(SUM(collectedCents), 0) AS credited FROM RebateInvoice
       WHERE collectedAt IS NOT NULL
-        AND collectedAt >= ${start.getTime()} AND collectedAt <= ${end.getTime()}
+        AND collectedAt >= ${sqlTimestamp(start)}
+        AND collectedAt <= ${sqlTimestamp(end)}
     `);
 
     const drugCost = Number(claims?.drugCost ?? 0);
@@ -575,6 +581,21 @@ async function buildSettlement() {
       totalDueCents: drugCost + adminFeeCents - rebateCredit,
     });
   }
+
+  await prisma.remittanceLine.deleteMany({});
+  await prisma.remittanceRun.deleteMany({});
+  await prisma.sponsorInvoice.deleteMany({});
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await prisma.remittanceRun.createMany({ data: runs as any });
+  for (let i = 0; i < lines.length; i += 1000) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await prisma.remittanceLine.createMany({ data: lines.slice(i, i + 1000) as any });
+  }
+  console.log(
+    `  ${runs.length} remittance cycles, ${lines.length} pharmacy lines, ` +
+      `$${(runs.reduce((s, r) => s + (r.netCents as number), 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })} net to the network`,
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await prisma.sponsorInvoice.createMany({ data: invoices as any });
