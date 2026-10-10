@@ -17,9 +17,10 @@
  * adjudicated under the broken one.
  *
  * So: find the claims where the stored outcome disagrees with what the corrected
- * configuration produces, and reprocess them. Reversals are excluded, because a
- * reversal is defined as the negation of its original and re-pricing one would
- * let it drift from the fill it cancels.
+ * configuration produces, and reprocess them. Reversals are not re-priced on
+ * their own — a reversal is defined as the negation of its original — but any
+ * linked B2 is rewritten (or dropped, if the original is now refused) so Claim
+ * nets stay at zero after the B1 write.
  *
  *   npx tsx scripts/reprocess-claims.ts          # report only
  *   npx tsx scripts/reprocess-claims.ts --write  # apply
@@ -28,6 +29,7 @@
 import { prisma } from "../src/lib/db.js";
 import { replay } from "../src/lib/engine/replay.js";
 import { formatCents } from "../src/lib/money.js";
+import { claimMoneyFrom, planB2Sync } from "./reprocess-b2-sync.js";
 
 const WRITE = process.argv.includes("--write");
 
@@ -92,6 +94,8 @@ async function main() {
 
   console.log("\nWriting corrected adjudications...");
   let written = 0;
+  let b2Updated = 0;
+  let b2Deleted = 0;
   for (const d of result.diffs) {
     const rejected = d.after.status === "R";
     await prisma.claim.update({
@@ -120,9 +124,42 @@ async function main() {
           : {}),
       },
     });
+
+    /*
+     * Replay excludes B2s from diffs on purpose: a reversal is the negation of
+     * its original, not a second adjudication. After the B1 rewrite we must
+     * either re-negate the linked B2 or drop it when the original is now a
+     * reject — otherwise Claim nets invent phantom clawbacks.
+     */
+    const b1 = await prisma.claim.findUniqueOrThrow({
+      where: { id: d.claimId },
+    });
+    const b2 = await prisma.claim.findFirst({
+      where: { reversalOfClaimId: d.claimId, transactionCode: "B2" },
+      select: { id: true },
+    });
+    const sync = planB2Sync({
+      b1ResponseStatus: b1.responseStatus,
+      b1Money: claimMoneyFrom(b1),
+      b2,
+    });
+    if (sync.action === "update") {
+      await prisma.claim.update({
+        where: { id: sync.b2Id },
+        data: sync.data,
+      });
+      b2Updated++;
+    } else if (sync.action === "delete") {
+      await prisma.claim.delete({ where: { id: sync.b2Id } });
+      b2Deleted++;
+    }
+
     written++;
     if (written % 50 === 0) console.log(`  ${written} of ${result.diffs.length}`);
   }
+  console.log(
+    `  ${written} B1s rewritten; ${b2Updated} linked B2s re-negated; ${b2Deleted} B2s dropped for newly-rejected originals`,
+  );
 
   /*
    * The member's accumulator ledger has to be rebuilt, not adjusted. A claim
