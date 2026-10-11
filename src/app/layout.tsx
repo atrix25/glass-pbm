@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Glass — transparent PBM",
   description:
-    "Glass: transparent pharmacy benefits for small employers. Explore plan costs, guarantees and supporting evidence using demo data.",
+    "An end-to-end transparent pharmacy benefit manager running a hundred thousand lives on the published Wisconsin ETF / Navitus contract. Every number shows its derivation.",
 };
 
 export default function RootLayout({

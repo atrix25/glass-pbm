@@ -50,36 +50,6 @@ export interface AgentDef {
 }
 
 export const AGENTS: AgentDef[] = [
- {id:"data-agent-tester",name:"Data agent tester",purpose:"Asks varied questions of the actual data agent and records answers, tool evidence and bounded quality checks.",owner:"Quality assurance · Analytics",surface:"Data agent checks",autonomy:"Act",tools:["askDataAgent","evaluateDataAnswer"],mayNot:["Modify claims, contracts or payments.","Treat source presence as proof of factual accuracy.","Mix sponsor books or insert test runs into operational queues."],consequential:[],incumbent:"Analytics quality assurance",measure:{name:"Question coverage and answer quality",target:"Recorded checks, failures and explicit human-review gaps"}},
-  {
-    id: "leakage-challenge", name: "Leakage challenge",
-    purpose: "Introduces undisclosed errors into isolated synthetic records and evaluates frozen detector findings against a withheld answer key.",
-    owner: "Quality assurance · Finance controls", surface: "Blind challenges",
-    autonomy: "Act", tools: ["prepareSyntheticChallenge", "runBlindDetector", "scoreFrozenFindings"],
-    mayNot: ["Modify operational claims, payments, benefits or staff queues.", "Expose the answer key to the detector.", "Claim that detection is prevention or that this is an independent external audit."],
-    consequential: [], incumbent: "Independent control testing",
-    measure: {name: "Exact detection, misses and false positives", target: "Measured for each synthetic challenge; no universal guarantee"},
-  },
-  {
-    id: "rebate-protection", name: "Operational leakage protection",
-    purpose: "Checks eight operational areas, repairs deterministic sandbox errors, routes consequential changes to simulated review and verifies corrected records.",
-    owner: "Rebate operations · Finance", surface: "Rebate protection sandbox",
-    autonomy: "Propose", tools: ["evaluateRebateTerms", "reconcileRebateLedger", "prepareRebateCorrection", "checkOperationalControls", "repairSandboxRecords", "verifyCorrections"],
-    mayNot: ["Change employer entitlements or care access to create savings.", "Submit external claims or move real money.", "Count uncollected recoveries as savings.", "Insert simulated reviews into operational queues."],
-    consequential: ["interpret-contract", "write-off", "correct-payment", "activate-benefit"],
-    incumbent: "Rebate operations and Finance review",
-    measure: { name: "Attributable loss prevention", target: "Settled evidence only; synthetic results" },
-  },
-  {
-    id: "account-management", name: "Account management",
-    purpose: "Finds benefit options that meet the savings goal with the fewest affected members, then coordinates approved activation.",
-    owner: "Account management · Benefits lead", surface: "Account management",
-    autonomy: "Propose", tools: ["evaluateBenefits", "coordinateRollout"],
-    mayNot: ["Activate a change without recorded approval.", "Treat claim rejections or member cost shifts as proven clinical savings.", "Claim that downstream follow-up is complete without evidence."],
-    consequential: ["activate-benefit-design"],
-    incumbent: "Account management and benefit-design review",
-    measure: { name: "Savings goal met within member-impact limits", target: "Measured on full-book replay" },
-  },
   {
     id: "pa-intake",
     name: "Prior authorisation intake",
@@ -280,5 +250,5 @@ export function agent(id: string): AgentDef {
 }
 
 export function isConsequential(agentId: string, action: string): boolean {
-  return action === "review-benefit-release" || agent(agentId).consequential.includes(action);
+  return agent(agentId).consequential.includes(action);
 }

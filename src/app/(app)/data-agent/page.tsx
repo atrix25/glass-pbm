@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { demoFeaturesEnabled } from "@/lib/config";
 import { DataAgent } from "@/components/data-agent";
 import { SectionTitle } from "@/components/ui";
 
@@ -21,7 +19,7 @@ const SUGGESTIONS = [
 export default function DataAgentPage() {
   return (
     <div className="space-y-4">
-      <SectionTitle description={"Explore plan data and create report briefings."}>
+      <SectionTitle description="Ask a book-of-business question or request a report briefing. The agent calls the same sponsor and contract queries the dashboards use — every figure is tool-backed, never invented.">
         Data agent
       </SectionTitle>
 
@@ -34,7 +32,6 @@ export default function DataAgentPage() {
         therapy and PA rules, or say “write the year-end report briefing.”
       </p>
 
-      {demoFeaturesEnabled()&&<Link href="/data-agent-checks" className="block text-sm font-medium">Test the data agent →</Link>}
       <DataAgent suggestions={SUGGESTIONS} />
     </div>
   );

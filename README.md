@@ -1,30 +1,11 @@
 # Glass
 
-Glass is an initiative within **CVS Caremark** to sell a highly automated, more transparent pharmacy benefit offering to **small group employers**. The target supports **CVS Caremark TrueCost or Caremark drug-level rebate pricing**, with **100% rebate pass-through** and separately disclosed service fees.
-
-The current application remains a single-tenant demo / production foundation using historical Wisconsin ETF / Navitus ETG0013 fixtures. Those fixtures are not Caremark contracts or a representation of the target product. See the [initiative context](docs/ai-native-pbm/initiative-context.md) and [AI-native PBM blueprint](docs/ai-native-pbm/README.md) for the current direction.
-
-## Codebase map
-
-Labeled areas for onboarding and ownership — start here when sharing the repo:
-
-**[docs/codebase-map.md](docs/codebase-map.md)**
-
-| Label | Path | Owns |
-|-------|------|------|
-| **surface** | `src/app/` | Routes / pages |
-| **ui** | `src/components/` | Shared React UI |
-| **read-model** | `src/lib/queries/` | Page data / SQL |
-| **engine** | `src/lib/engine/` | Adjudication |
-| **platform** | `src/lib/db.ts`, `pg-sql.ts`, auth | DB, auth, jobs |
-| **schema** | `prisma/` | Data model |
-| **ops** | `scripts/`, `fly.toml`, `docs/` | Deploy / restore |
-| **proof** | `tests/` | Harness / golden tests |
+Transparent PBM proof of concept (Wisconsin ETF / Navitus ETG0013), evolving into a **single-tenant production** deploy.
 
 ## Architecture (foundation)
 
 - **Postgres** book (not SQLite-on-volume)
-- **Stateless Fly app** + **worker** for replay / NPS / rollups
+- **Stateless Fly app** (≥2 machines) + **worker** for replay / NPS / rollups
 - **Session or Basic auth**, durable copy overrides + harness results in DB
 - Ops: [docs/ops-runbook.md](docs/ops-runbook.md) · Cutover: [docs/cutover.md](docs/cutover.md) · Growth: [docs/data-growth.md](docs/data-growth.md)
 

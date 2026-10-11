@@ -1,4 +1,3 @@
-import { demoFeaturesEnabled } from "@/lib/config";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Assistant } from "@/components/assistant";
@@ -30,11 +29,9 @@ export default async function AssistantPage() {
 
   return (
     <div className="space-y-4">
-      <SectionTitle description={"Member service, with answers drawn from plan rules."}>
+      <SectionTitle description="A member asks in plain language. The agent decides which questions to put to the rules engine, and answers only with what comes back. It cannot do arithmetic, and it is not permitted to guess.">
         Member service
       </SectionTitle>
-
-      {demoFeaturesEnabled() && <Link href="/member-calls" className="inline-flex rounded-lg border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-glass-700">Simulate a member call →</Link>}
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-medium text-ink-500">Asking as</span>
@@ -79,7 +76,6 @@ export default async function AssistantPage() {
       ) : null}
 
       <Assistant
-        key={member.id}
         memberId={member.id}
         memberName={`${member.firstName} ${member.lastName}`}
         suggestions={suggestions}

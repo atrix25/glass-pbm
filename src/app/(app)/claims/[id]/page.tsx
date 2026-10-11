@@ -390,7 +390,7 @@ function MoneyPanel({
   return (
     <Card>
       <CardHeader
-        title="Payment breakdown"
+        title="Where the money went"
         description="Both sides of the same claim. Under a pass-through contract these two columns are the same number by construction."
       />
       <div className="grid gap-px bg-ink-200/60 lg:grid-cols-3">
@@ -412,7 +412,7 @@ function MoneyPanel({
           total={["Remitted to pharmacy", claim.pharmacyPaidCents]}
         />
         <Column
-          title="Cost sharing"
+          title="Who pays"
           rows={[
             ["Plan pays", claim.planPaidCents],
             ["Member pays", claim.patientPayCents],

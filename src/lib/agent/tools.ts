@@ -1,4 +1,3 @@
-import { activeEntries } from "@/lib/benefit-release";
 /**
  * The tools the member service agent is allowed to use.
  *
@@ -12,7 +11,7 @@ import { activeEntries } from "@/lib/benefit-release";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { adjudicate } from "@/lib/engine/adjudicate";
-import { loadEffectiveWorld } from "@/lib/engine/replay";
+import { loadWorld } from "@/lib/engine/replay";
 import { getSource } from "@/lib/sources";
 import { formatCents } from "@/lib/money";
 import { CRITERIA_TREES, findTreeForDrug } from "@/lib/pa/criteria";
@@ -323,10 +322,9 @@ export async function checkCoverage(
       summary: `No product matching "${args.drugName}" is listed on this plan's formulary.`,
     };
   }
-  const storedEntry = await prisma.formularyEntry.findFirst({
+  const entry = await prisma.formularyEntry.findFirst({
     where: { drugId: drug.id, formularyId: "navitus-etf-2026" },
   });
-  const entry = storedEntry ? (await activeEntries([storedEntry]))[0] : null;
   if (!entry) {
     return {
       data: { drug: tidyName(drug.name), onFormulary: false },
@@ -436,7 +434,7 @@ export async function estimateCost(
     };
   }
 
-  const world = await loadEffectiveWorld();
+  const world = await loadWorld();
   const engineDrug = world.drugs.get(drug.id);
   const entry = world.formulary.get(drug.id) ?? null;
   const member = world.members.get(args.memberId);
@@ -517,7 +515,6 @@ export async function estimateCost(
       data: {
         drug: tidyName(drug.name),
         wouldPay: false,
-        benefitReleaseId: world.releaseId,
         rejectCode: out.rejectCodes[0],
         rejectReason: out.rejectMessage,
         memberExplanation: REJECT_MEMBER_EXPLANATION[out.rejectCodes[0]],
@@ -535,7 +532,6 @@ export async function estimateCost(
       pharmacy: pharmacy.name,
       channel: out.channel,
       benefitLevel: out.formularyLevel,
-      benefitReleaseId: world.releaseId,
       totalCostOfFill: formatCents(out.totalBilledCents),
       memberPays: formatCents(out.patientPayCents),
       planPays: formatCents(out.planPaidCents),
@@ -687,10 +683,9 @@ export async function findAlternatives(
       summary: "No therapeutic class on file, so no alternatives can be listed.",
     };
   }
-  const storedEntry = await prisma.formularyEntry.findFirst({
+  const entry = await prisma.formularyEntry.findFirst({
     where: { drugId: drug.id, formularyId: "navitus-etf-2026" },
   });
-  const entry = storedEntry ? (await activeEntries([storedEntry]))[0] : null;
   const currentLevel = Number(entry?.level ?? 9);
 
   /*
@@ -701,7 +696,7 @@ export async function findAlternatives(
    * Requiring the same specialty status and the same route of administration
    * keeps the comparison inside the range a prescriber would consider.
    */
-  const storedCandidates = await prisma.formularyEntry.findMany({
+  const candidates = await prisma.formularyEntry.findMany({
     where: {
       formularyId: "navitus-etf-2026",
       level: { in: ["1", "2", "3"] },
@@ -718,7 +713,6 @@ export async function findAlternatives(
     take: 60,
   });
 
-  const candidates = await activeEntries(storedCandidates);
   const sameRoute = candidates.filter(
     (c) => routeOf(c.drug.name) === routeOf(drug.name),
   );

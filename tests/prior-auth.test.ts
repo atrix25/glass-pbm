@@ -331,13 +331,13 @@ describe("regulatory timelines", () => {
       FROM PriorAuthorization
       WHERE decidedAt IS NOT NULL
         AND requestType <> 'Grievance'
-        AND (decidedAt - CASE
+        AND EXTRACT(EPOCH FROM (decidedAt - CASE
               WHEN requestType IN ('FormularyException', 'StepException',
                                    'QuantityException', 'TieringException')
                    AND prescriberStatementAt IS NOT NULL
               THEN prescriberStatementAt
               ELSE receivedAt
-            END) / 3600000.0 >
+            END)) / 3600.0 >
             (CASE WHEN urgency = 'Expedited' THEN 24 ELSE 72 END)
     `;
     const count = Number(late[0].n);

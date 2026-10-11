@@ -69,7 +69,6 @@ export async function answerDataQuestion(opts: {
   });
 
   const plan = await planDataCalls(opts.question);
-  let usedModel = plan.brain === "model";
   run.evidence(
     `Routed as ${plan.intent} with ${plan.calls.length} planned tool call(s).`,
     "Intent routing for the sponsor question",
@@ -170,7 +169,6 @@ Rules:
       schema: NARRATIVE_SCHEMA,
       fallback: () => ({ paragraphs: answer.paragraphs }),
     });
-    usedModel ||= thought.brain === "model";
     run.absorb(
       thought,
       "Narrate only figures already returned by tools",
@@ -216,6 +214,6 @@ Rules:
     work,
     autonomy: run.autonomy,
     elapsedMs: Date.now() - started,
-    brain: usedModel ? "model" : "deterministic",
+    brain: process.env.ANTHROPIC_API_KEY ? "model" : "deterministic",
   };
 }

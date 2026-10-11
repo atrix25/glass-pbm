@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { authMode, demoFeaturesEnabled } from "@/lib/config";
+import { authMode } from "@/lib/config";
 import {
   DEMO_SESSION_COOKIE,
   validBasicHeader,
@@ -20,21 +20,9 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function nextForSponsor(request: NextRequest) {
-  if (demoFeaturesEnabled() && request.cookies.get("glass_demo_sponsor")?.value === "tennessee") {
-    const path=request.nextUrl.pathname;
-    const allowed=["/api/realistic-book","/versions","/operating-demo","/api/operating-demo","/public-data-checks","/api/public-data-checks","/api/formulary-checks","/api/drug-reference-checks","/contract-extraction","/api/contract-extraction","/contracts/wisconsin-etg0013-amendment-1.pdf","/contracts/wisconsin-etg0013-amendment-1","/sponsor","/sponsor/assurance","/rebate-protection","/contract-checks","/api/contract-checks","/api/operational-assurance","/api/operational-assurance/process","/api/demo-sponsor","/leakage-challenges","/api/leakage-challenges","/agents/leakage-challenge","/agents/rebate-protection","/data-agent-checks","/api/data-agent-checks","/agents/data-agent-tester"];
-    if (!allowed.includes(path) && !path.startsWith("/contracts/tennessee/") && !path.startsWith("/reference/tennessee/") && !path.startsWith("/reference/public-data/") && !path.startsWith("/api/auth") && !path.startsWith("/_next/") && !path.startsWith("/agents/runs/cck_") && !path.startsWith("/agents/runs/lch_") && !path.startsWith("/agents/runs/oas_") && !path.startsWith("/agents/runs/prc_")) {
-      if(path.startsWith("/api/")) return NextResponse.json({error:"This workflow is unavailable for the Tennessee demo sponsor."},{status:409});
-      return NextResponse.redirect(new URL("/rebate-protection",request.url));
-    }
-  }
-  return NextResponse.next();
-}
-
 export function proxy(request: NextRequest) {
   const mode = authMode();
-  if (mode === "open") return nextForSponsor(request);
+  if (mode === "open") return NextResponse.next();
 
   // Service API key for POS / switch adapters (Bearer or X-Api-Key).
   const apiKey =
@@ -44,18 +32,18 @@ export function proxy(request: NextRequest) {
       : null);
   if (apiKey && process.env.SERVICE_API_KEY) {
     if (constantTimeEqual(apiKey, process.env.SERVICE_API_KEY)) {
-      return nextForSponsor(request);
+      return NextResponse.next();
     }
   }
 
   if (mode === "basic") {
     const expected = process.env.DEMO_PASSWORD;
-    if (!expected) return nextForSponsor(request);
+    if (!expected) return NextResponse.next();
     if (
       validBasicHeader(request.headers.get("authorization")) ||
       validDemoSession(request.cookies.get(DEMO_SESSION_COOKIE)?.value)
     ) {
-      return nextForSponsor(request);
+      return NextResponse.next();
     }
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json(
@@ -74,7 +62,7 @@ export function proxy(request: NextRequest) {
   // session | oidc — cookie present is enough at the edge; route handlers
   // resolve the user against Postgres. Missing cookie → login.
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (token) return nextForSponsor(request);
+  if (token) return NextResponse.next();
 
   if (request.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json(

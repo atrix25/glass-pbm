@@ -1,6 +1,3 @@
-import { demoFeaturesEnabled } from "@/lib/config";
-import { recentAssurance } from "@/lib/assurance/service";
-import { selectedSponsor } from "@/lib/contract-checks/context";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -49,19 +46,6 @@ export default async function AgentDetailPage({
   params: Promise<{ agentId: string }>;
 }) {
   const { agentId } = await params;
-  if(agentId === "data-agent-tester") {
-    if(!demoFeaturesEnabled())notFound();
-    return <div className="space-y-6"><SectionTitle description="Quality assurance · Analytics. Scripted question selection; actual data-agent execution.">Data agent tester</SectionTitle><Card><div className="space-y-4 p-6"><p>Tests routine questions, alternate wording, missing records and unsupported requests. Records complete answers and tool evidence, with bounded automated checks.</p><p>Staff review relevance, completeness and factual accuracy. Test transcripts remain outside operational queues.</p><Link href="/data-agent-checks">Open data agent checks →</Link></div></Card></div>;
-  }
-  if(agentId === "leakage-challenge") {
-    if(!demoFeaturesEnabled())notFound();
-    return <div className="space-y-6"><SectionTitle description="Quality assurance · Finance controls. Scripted sandbox execution.">Leakage challenge</SectionTitle><Card><div className="space-y-4 p-6"><p>Prepares randomized synthetic errors, withholds the answer key from the detector and scores frozen findings using a separate evaluator.</p><p>No operational records, benefits, payments or staff assignments are changed. Same-application code separation is not an independent external audit.</p><Link href="/leakage-challenges">Open blind challenges →</Link></div></Card></div>;
-  }
-  if(agentId === "rebate-protection") {
-    if(!demoFeaturesEnabled())notFound();
-    const recent=await recentAssurance(await selectedSponsor(),(await getClock()).now);
-    return <div className="space-y-6"><SectionTitle description="Rebate operations · Finance. Scripted sandbox execution; no operational assignments.">Operational leakage protection</SectionTitle><Card><div className="space-y-4 p-6"><p>Checks all eight operational areas, corrects safe draft errors and verifies changed records. Network, Benefits, Clinical operations, Finance and Contract administration review consequential corrections.</p><Link href="/rebate-protection">Open leakage controls →</Link><p>Synthetic reviews and external evidence do not authorize operational changes.</p></div></Card><Card><div className="space-y-3 p-6"><h2 className="font-semibold">Assurance runs</h2>{recent.length?recent.map(r=><Link key={r.id} href={`/agents/runs/${r.id}`} className="block text-sm">{r.createdAt.toISOString()} · Open recorded work</Link>):<p>No assurance runs recorded for this sponsor.</p>}</div></Card></div>;
-  }
   const clock = await getClock();
   const detail = await getAgentDetail(agentId, clock);
   if (!detail) notFound();
@@ -90,7 +74,6 @@ export default async function AgentDetailPage({
 
   return (
     <div className="space-y-6">
-      {agentId === "account-management" && <Link href="/account-management" className="inline-flex rounded-lg bg-glass-700 px-4 py-3 text-sm text-white">Open benefit goals →</Link>}
       <div>
         <Link
           href="/agents"
@@ -183,7 +166,7 @@ export default async function AgentDetailPage({
 
       <Card>
         <CardHeader
-          title="Guardrails"
+          title="What it may never do"
           description="These hold at every autonomy level. The two enforcement points are different: the tool list is checked when a tool is called, and the consequential actions are checked when a proposal is written."
         />
         <ul className="divide-y divide-ink-100">
@@ -283,7 +266,7 @@ export default async function AgentDetailPage({
           </Table>
           <div className="border-t border-ink-200/70 bg-ink-50/50 px-5 py-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="neutral">{planDesign.status}</Badge>
+              <Badge tone="warn">Held for the plan sponsor</Badge>
               <span className="text-[13px] font-medium text-ink-900">
                 {planDesign.headline}
               </span>
@@ -292,11 +275,11 @@ export default async function AgentDetailPage({
               {planDesign.rationale}
             </p>
             <p className="mt-2 text-[12.5px] text-ink-600">
-              Review the proposal in the{" "}
+              Nothing here has been applied. Take any option to the{" "}
               <Link href="/changes" className="text-glass-700 hover:text-glass-900">
                 change console
               </Link>{" "}
-              to confirm its current workflow state.
+              to run it yourself and commit it.
             </p>
           </div>
         </Card>
@@ -328,7 +311,7 @@ export default async function AgentDetailPage({
       {escalations.length > 0 ? (
         <Card>
           <CardHeader
-            title="Escalated & refused runs"
+            title="Where it stopped"
             description="The runs where the agent declined to act. This is the half of the log worth reading: an agent that never escalates is not being careful, it is guessing."
           />
           <RunTable rows={escalations} />
@@ -385,7 +368,7 @@ function RunTable({ rows }: { rows: RunRow[] }) {
               </span>
               {r.held ? (
                 <Badge tone="warn" className="mt-1">
-                  awaiting review
+                  held for a person
                 </Badge>
               ) : null}
             </Td>

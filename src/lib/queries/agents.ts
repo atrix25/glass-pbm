@@ -8,7 +8,6 @@
  * good or not being checked, and a plan sponsor is entitled to know which.
  */
 
-import { proposalStatus } from "@/lib/agents/work";
 import { prisma } from "@/lib/db";
 import { AGENTS, type AgentDef, type Autonomy } from "@/lib/agents/registry";
 import type { SimulationClock } from "@/lib/clock";
@@ -81,7 +80,7 @@ export async function getFleet(clock: SimulationClock): Promise<FleetOverview> {
 
   const [runs, proposals, policies] = await Promise.all([
     prisma.agentRun.findMany({
-      where: { endedAt: { lte: now } },
+      where: { startedAt: { lte: now } },
       select: {
         agentId: true,
         outcome: true,
@@ -236,7 +235,7 @@ export async function getAgentDetail(
       orderBy: { effectiveFrom: "asc" },
     }),
     prisma.agentRun.findMany({
-      where: { agentId, endedAt: { lte: now } },
+      where: { agentId, startedAt: { lte: now } },
       orderBy: { startedAt: "desc" },
       take: 400,
       select: {
@@ -252,8 +251,8 @@ export async function getAgentDetail(
         subjectId: true,
         _count: { select: { steps: true } },
         proposals: {
-          where: { createdAt: { lte: now } },
-          select: { headline: true, consequential: true, status: true, createdAt: true, reviewedAt: true, appliedAt: true },
+          select: { headline: true, consequential: true },
+          take: 1,
         },
       },
     }),
@@ -261,7 +260,7 @@ export async function getAgentDetail(
 
   const counts = await prisma.agentRun.groupBy({
     by: ["autonomy"],
-    where: { agentId, endedAt: { lte: now } },
+    where: { agentId, startedAt: { lte: now } },
     _count: true,
   });
 
@@ -278,12 +277,12 @@ export async function getAgentDetail(
     subjectId: r.subjectId,
     steps: r._count.steps,
     proposalHeadline: r.proposals[0]?.headline ?? null,
-    held: r.proposals.some(p => proposalStatus(p, now) === "Awaiting review"),
+    held: r.proposals[0]?.consequential ?? false,
   });
 
   const outcomeGroups = await prisma.agentRun.groupBy({
     by: ["outcome"],
-    where: { agentId, endedAt: { lte: now } },
+    where: { agentId, startedAt: { lte: now } },
     _count: true,
   });
 
@@ -410,11 +409,11 @@ export async function getLatestPlanDesign(clock: SimulationClock) {
   const run = await prisma.agentRun.findFirst({
     where: {
       agentId: "plan-design",
-      endedAt: { lte: clock.now },
+      startedAt: { lte: clock.now },
       outcome: "Completed",
     },
     orderBy: { startedAt: "desc" },
-    include: { proposals: { where: { createdAt: { lte: clock.now } } } },
+    include: { proposals: true },
   });
   if (!run || run.proposals.length === 0) return null;
   const payload = JSON.parse(run.proposals[0].payload) as {
@@ -439,7 +438,7 @@ export async function getLatestPlanDesign(clock: SimulationClock) {
     at: run.startedAt,
     headline: run.proposals[0].headline,
     rationale: run.proposals[0].rationale,
-    status: proposalStatus(run.proposals[0], clock.now),
+    status: run.proposals[0].status,
     scored: payload.scored,
   };
 }

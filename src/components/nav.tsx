@@ -90,16 +90,15 @@ export function SideNav({ groups }: { groups: NavGroup[] }) {
               const Icon = ICONS[item.icon];
               const active =
                 pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(`${item.href}/`) && !group.items.some(other => other.href !== item.href && pathname === other.href));
+                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    aria-current={active ? "page" : undefined}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition",
                       active
-                        ? "bg-glass-50 font-medium text-glass-800"
+                        ? "bg-white font-medium text-ink-900 shadow-[0_1px_2px_rgba(18,22,31,0.06)] ring-1 ring-ink-200/70"
                         : "text-ink-600 hover:bg-white/70 hover:text-ink-900",
                     )}
                   >

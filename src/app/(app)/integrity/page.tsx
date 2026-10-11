@@ -33,7 +33,7 @@ export default async function IntegrityPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`${formatNumber(overview.claimsScreened)} claims screened for unusual billing and utilization.`}
+        description={`Every paid claim in the book, scored against the population it came from. ${formatNumber(overview.claimsScreened)} claims across ${formatNumber(overview.membersScreened)} members, ${formatNumber(overview.prescribersScreened)} prescribers and ${formatNumber(overview.pharmaciesScreened)} pharmacies, screened by four detectors in about four seconds.`}
         action={
           <Link
             href="/proof"
@@ -193,7 +193,7 @@ export default async function IntegrityPage() {
 
       <Card>
         <CardHeader
-          title="Detection rules"
+          title="What each detector asks"
           description="Two of these implement published federal criteria. The other two are conventional method — rank against peers, read the tail — and are labelled as such rather than dressed up."
         />
         <div className="divide-y divide-ink-200/70">

@@ -1,11 +1,8 @@
 #!/bin/sh
 set -e
 
-# Apply schema when DIRECT_URL / DATABASE_URL is reachable (idempotent).
-if [ -n "$DATABASE_URL" ] || [ -n "$DATABASE_URL_DIRECT" ]; then
-  export DATABASE_URL="${DATABASE_URL_DIRECT:-$DATABASE_URL}"
-  npx prisma db push --skip-generate --accept-data-loss=false 2>/dev/null || true
-fi
+# Historical application rollback: preserve the existing database schema and data.
+# Schema changes must be applied explicitly, never by an older app on startup.
 
 # Fly process group selects the command via CMD / processes in fly.toml.
 # Default: web server.

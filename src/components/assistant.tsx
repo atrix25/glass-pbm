@@ -90,6 +90,13 @@ export function Assistant({
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // A new member means a new conversation. Carrying Margaret's thread into
+  // David's view would show one member's numbers under another's name.
+  useEffect(() => {
+    setTurns([]);
+    setInput("");
+  }, [memberId]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -415,7 +422,7 @@ function WorkPanel({ answer, busy }: { answer: Answer | null; busy: boolean }) {
   );
 }
 
-export function WorkStepCard({ step, index }: { step: WorkStep; index: number }) {
+function WorkStepCard({ step, index }: { step: WorkStep; index: number }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="overflow-hidden rounded-lg border border-ink-200">

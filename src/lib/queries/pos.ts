@@ -1,4 +1,3 @@
-import { activeEntries } from "@/lib/benefit-release";
 import { prisma } from "@/lib/db";
 import { DEMO_MEMBER_STORIES } from "@/lib/demo-members";
 import type {
@@ -160,7 +159,7 @@ export async function getPosPickers(now: Date): Promise<{
 
   // One representative drug per interesting shape, so every branch of the
   // engine is reachable from the drop-down.
-  const priced = (await activeEntries(entryRows, now)).filter((e) => e.drug.prices.length > 0);
+  const priced = entryRows.filter((e) => e.drug.prices.length > 0);
   const wanted: PickerDrug[] = [];
   const pick = (
     predicate: (e: (typeof priced)[number]) => boolean,
@@ -184,7 +183,7 @@ export async function getPosPickers(now: Date): Promise<{
   pick((e) => e.level === "2" && e.drug.isBrandLabel, 4);
   pick((e) => e.level === "1", 8);
 
-  for (const e of await activeEntries(scenarioDrugRows, now)) {
+  for (const e of scenarioDrugRows) {
     if (wanted.some((w) => w.id === e.drugId)) continue;
     wanted.push(
       toPickerDrug({

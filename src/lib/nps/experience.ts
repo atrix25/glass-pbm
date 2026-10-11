@@ -96,8 +96,7 @@ async function claimSignals(cutoff: Date): Promise<Map<string, ClaimAgg>> {
       SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '69'  THEN 1 ELSE 0 END) AS rejTerm,
       SUM(CASE WHEN c.responseStatus = 'R' AND (c.rejectCodes::json->>0) = '40'  THEN 1 ELSE 0 END) AS rejOon
     FROM Claim c
-    WHERE c.dateOfService <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
-      AND c.adjudicatedAt <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
+    WHERE c.dateOfService <= ${cutoff}
     GROUP BY c.memberId
   `;
 
@@ -139,7 +138,7 @@ async function paSignals(cutoff: Date): Promise<Map<string, PaAgg>> {
                  (CASE WHEN p.urgency = 'Expedited' THEN ${expeditedMs} ELSE ${standardMs} END)
             THEN 1 ELSE 0 END) AS "onTime"
     FROM "PriorAuthorization" p
-    WHERE p."decidedAt" IS NOT NULL AND p."decidedAt" <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
+    WHERE p."decidedAt" IS NOT NULL AND p."decidedAt" <= ${cutoff}
     GROUP BY p."memberId"
   `;
 
@@ -154,7 +153,7 @@ async function durSignals(cutoff: Date): Promise<Map<string, number>> {
   >`
     SELECT memberId, COUNT(*) AS major
     FROM DurAlert
-    WHERE severity = 'Major' AND dateOfService <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
+    WHERE severity = 'Major' AND dateOfService <= ${cutoff}
     GROUP BY memberId
   `;
   return new Map(rows.map((r) => [r.memberId, n(r.major)]));
@@ -172,9 +171,9 @@ async function clawbackMembers(cutoff: Date): Promise<Set<string>> {
     JOIN EligibilitySpan e ON e.memberId = c.memberId
     WHERE c.responseStatus = 'P' AND c.transactionCode = 'B1'
       AND e.retroReportedAt IS NOT NULL
-      AND e.retroReportedAt <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
+      AND e.retroReportedAt <= ${cutoff}
       AND c.dateOfService > e.reportedTerminationDate
-      AND c.dateOfService <= (${cutoff}::timestamptz AT TIME ZONE 'UTC')
+      AND c.dateOfService <= ${cutoff}
   `;
   return new Set(rows.map((r) => r.memberId));
 }

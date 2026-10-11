@@ -125,7 +125,6 @@ interface PosResult {
     memberName: string;
     cardholderId: string;
     planName: string;
-    benefitReleaseId?: string | null;
     drugName: string;
     ndc11: string;
     pharmacyName: string;
@@ -480,7 +479,7 @@ function Response({
       {!rejected ? (
         <Card>
           <CardHeader
-            title="Response details"
+            title="What the response carried"
             description="Under a pass-through contract the amount billed to the plan and the amount allowed to the pharmacy are the same number. The difference between them is the PBM's spread, and here it is zero by construction."
           />
           <Table>
@@ -787,7 +786,6 @@ function MemberPosition({ ctx }: { ctx: PosResult["context"] }) {
       />
       <dl className="divide-y divide-ink-100">
         <Row label="Plan" value={ctx.planName} />
-        {ctx.benefitReleaseId && <Row label="Benefit release" value={ctx.benefitReleaseId} />}
         <Row
           label="Prescription out-of-pocket"
           value={`${formatCents(ctx.rxOopAccumulatedCents)} of ${formatCents(ctx.rxOopLimitCents)}`}

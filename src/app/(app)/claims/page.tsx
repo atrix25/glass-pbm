@@ -71,7 +71,7 @@ export default async function ClaimsPage({
 
   return (
     <div className="space-y-5">
-      <SectionTitle description={"Paid and rejected claims, with pricing details and source rules."}>
+      <SectionTitle description="Every claim the engine has adjudicated, paid and rejected. Open one to see the rules that fired, the benchmarks they read, and the published document behind each.">
         Claim ledger
       </SectionTitle>
 

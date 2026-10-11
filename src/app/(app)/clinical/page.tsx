@@ -31,7 +31,7 @@ export default async function ClinicalPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`${formatNumber(overview.claimsScreened)} claims screened for interactions, duplicate therapy and opioid dose.`}
+        description={`Every paid fill screened against the member's active therapy: interactions, duplicate therapy, and cumulative opioid dose. ${formatNumber(overview.claimsScreened)} claims screened, ${formatNumber(overview.totalAlerts)} conflicts raised across ${formatNumber(overview.membersAffected)} members.`}
         action={
           <Link
             href="/pos"
@@ -297,7 +297,7 @@ export default async function ClinicalPage() {
       </Card>
 
       <Card>
-        <CardHeader title="Scope & limits" />
+        <CardHeader title="What this is, and what it is not" />
         <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed text-ink-600">
           <p>
             Commercial adjudication screens against a licensed clinical database
