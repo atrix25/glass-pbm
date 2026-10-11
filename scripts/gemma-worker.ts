@@ -16,7 +16,7 @@ async function main(){
  const lock=await connection.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS acquired',[JSON.stringify(scope)]);
  if(lock.rows[0].acquired){
  await enqueueTick(scope);
- const job=await claimNextJob(owner,'gemma');if(job){const heartbeat=setInterval(()=>{void Promise.all([renewJobLease(job.id,owner),prisma.gemmaMonitor.updateMany({where:scope,data:{heartbeatAt:new Date()}})]).catch(()=>{});},30000);try{const result=await processTick(scope);await completeJob(job.id,result,owner);console.log('Gemma cycle completed',job.id);}catch(e){const message=e instanceof Error?e.message:'Cycle failed';await failJob(job.id,message,owner);await prisma.gemmaMonitor.updateMany({where:scope,data:{lastError:message}});console.error(message)}finally{clearInterval(heartbeat)}}
+ const job=await claimNextJob(owner,'gemma',scope);if(job){const heartbeat=setInterval(()=>{void Promise.all([renewJobLease(job.id,owner),prisma.gemmaMonitor.updateMany({where:scope,data:{heartbeatAt:new Date()}})]).catch(()=>{});},30000);try{const result=await processTick(scope);await completeJob(job.id,result,owner);console.log('Gemma cycle completed',job.id);}catch(e){const message=e instanceof Error?e.message:'Cycle failed';await failJob(job.id,message,owner);await prisma.gemmaMonitor.updateMany({where:scope,data:{lastError:message}});console.error(message)}finally{clearInterval(heartbeat)}}
  }
  await connection.query('COMMIT');
  }catch(e){await connection.query('ROLLBACK').catch(()=>{});console.error(e instanceof Error?e.message:'Worker error')}

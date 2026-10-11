@@ -4,8 +4,8 @@ export type JobType='replay'|'nps_snapshot'|'rollup_refresh'|'enrich_batch'|'gem
 export type EnqueueJobInput={type:JobType|string;payload?:Record<string,unknown>;createdById?:string|null;maxAttempts?:number};
 export async function enqueueJob(input:EnqueueJobInput){return prisma.job.create({data:{type:input.type,payload:JSON.stringify(input.payload??{}),createdById:input.createdById,maxAttempts:input.maxAttempts??3}})}
 export async function getJob(id:string){return prisma.job.findUnique({where:{id},include:{runs:true}})}
-export async function claimNextJob(workerId:string,queue:'default'|'gemma'='default'){
- const now=new Date(),scope=queue==='gemma'?{type:'gemma-tick'}:{type:{not:'gemma-tick'}};
+export async function claimNextJob(workerId:string,queue:'default'|'gemma'='default',tenantScope?:{sponsorId:string;contractId:string}){
+ const now=new Date(),scope=queue==='gemma'?{type:'gemma-tick',...(tenantScope?{payload:{contains:JSON.stringify({scope:tenantScope}).slice(1,-1)}}:{})}:{type:{not:'gemma-tick'}};
  return prisma.$transaction(async tx=>{
  const stale=await tx.job.findMany({where:{...scope,status:'running',OR:[{leaseUntil:{lt:now}},{leaseUntil:null,startedAt:{lt:new Date(now.getTime()-300000)}}]},select:{id:true,attempts:true,maxAttempts:true}});
  for(const job of stale){const changed=await tx.job.updateMany({where:{id:job.id,status:'running',OR:[{leaseUntil:{lt:now}},{leaseUntil:null,startedAt:{lt:new Date(now.getTime()-300000)}}]},data:{status:job.attempts>=job.maxAttempts?'failed':'pending',leaseOwner:null,leaseUntil:null,error:'Worker lease expired; interrupted execution recovered.'}});if(changed.count)await tx.jobRun.updateMany({where:{jobId:job.id,finishedAt:null},data:{finishedAt:now,error:'Lease expired'}})}
