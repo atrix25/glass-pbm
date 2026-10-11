@@ -2,7 +2,8 @@ import {cookies} from 'next/headers';
 import {authMode,demoFeaturesEnabled,tenantSponsorId,tenantContractId} from '@/lib/config';
 import {getSessionUser,getClock} from '@/lib/session';
 import {validBasicHeader,validDemoSession,DEMO_SESSION_COOKIE} from '@/lib/demo-auth';
-export class ServiceError extends Error { constructor(message:string,public status=400){super(message)} }
+export {ServiceError} from "./identity";
+import {ServiceError} from "./identity";
 export async function serviceAccess(request:Request){
  if(!demoFeaturesEnabled())throw new ServiceError('Member service cases are available in the demo only.',403);
  const mode=authMode();let actor='Demo reviewer';
@@ -11,5 +12,5 @@ export async function serviceAccess(request:Request){
  if(request.method!=='GET'){const origin=request.headers.get('origin');if(origin&&new URL(origin).host!==(request.headers.get('x-forwarded-host')??request.headers.get('host')))throw new ServiceError('Invalid origin.',403);}
  return {sponsorId:tenantSponsorId(),contractId:tenantContractId(),actor,at:(await getClock()).now};
 }
-export type Access=Awaited<ReturnType<typeof serviceAccess>>;
+export type {Access} from "./identity";
 export function serviceError(e:unknown){return Response.json({error:e instanceof Error?e.message:'Request failed.'},{status:e instanceof ServiceError?e.status:400})}

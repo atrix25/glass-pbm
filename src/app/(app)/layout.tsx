@@ -1,4 +1,6 @@
 import Link from "next/link";
+import {GemmaHeader} from "@/components/gemma";
+import {demoFeaturesEnabled} from "@/lib/config";
 import { Suspense } from "react";
 import { ReferenceContext, ReferenceOnly } from "@/components/reference-context";
 import { getClock, getRole } from "@/lib/session";
@@ -12,6 +14,7 @@ import { getCopyOverrides, copyIsPersistable } from "@/lib/copy";
 
 const GROUPS: NavGroup[] = [
   {title: "Offering", items: [
+    {href:"/gemma",label:"Gemma activity",icon:"agents"},
     {href:"/sponsor",label:"Plan outlook",icon:"sponsor"},
     {href:"/savings",label:"Find savings",icon:"trends"},
     {href:"/offering",label:"Pricing & benefits",icon:"changes"},
@@ -86,6 +89,7 @@ export default async function AppLayout({
   return (
     <AppShell sidebar={sidebar}>
       <DemoRail />
+      {demoFeaturesEnabled()&&<Suspense fallback={null}><GemmaHeader/></Suspense>}
       <ReferenceContext />
       <ReferenceOnly><div className="border-b border-ink-200/70 bg-white/60 px-4 py-2 sm:px-6 lg:px-8">
         <ClockBar clock={clock} />

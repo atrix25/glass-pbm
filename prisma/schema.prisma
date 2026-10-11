@@ -1960,6 +1960,8 @@ model TenantConfig {
 
 /// Async work claimed by workers with FOR UPDATE SKIP LOCKED.
 model Job {
+  leaseOwner String?
+  leaseUntil DateTime?
   id          String    @id @default(cuid())
   type        String
   status      String    @default("pending") // pending | running | succeeded | failed | cancelled
@@ -2132,4 +2134,141 @@ model MemberServiceAction {
   payload String @default("{}")
   createdAt DateTime @default(now())
   @@unique([caseId, requestId])
+}
+
+model GemmaMonitor {
+ id String @id
+ sponsorId String
+ contractId String
+ enabled Boolean @default(false)
+ revision Int @default(0)
+ heartbeatAt DateTime?
+ checkedAt DateTime?
+ cutoff DateTime?
+ cursor String @default("")
+ generatorCursor String @default("")
+ scanned Int @default(0)
+ population Int @default(0)
+ claims Int @default(0)
+ lastError String?
+ updatedAt DateTime @default(now())
+ @@unique([sponsorId, contractId])
+}
+model GemmaSignal {
+ id String @id
+ sponsorId String
+ contractId String
+ kind String
+ provenance String
+ sourceKey String @unique
+ payload String
+ state String @default("Pending")
+ error String?
+ attempts Int @default(0)
+ workflowId String?
+ evidenceAt DateTime
+ createdAt DateTime @default(now())
+ @@index([sponsorId, contractId, state, createdAt])
+}
+model GemmaWorkflow {
+ id String @id
+ sponsorId String
+ contractId String
+ sourceKey String @unique
+ kind String
+ title String
+ status String @default("Detected")
+ team String
+ memberCount Int @default(0)
+ revision Int @default(0)
+ data String @default("{}")
+ proposalHash String?
+ savingsJobId String?
+ evidenceAt DateTime
+ createdAt DateTime @default(now())
+ updatedAt DateTime @default(now())
+ subjects GemmaSubject[]
+ activity GemmaActivity[]
+ communications GemmaCommunication[]
+ decisions GemmaDecision[]
+ policies GemmaPolicy[]
+ @@index([sponsorId, contractId, status, updatedAt])
+}
+model GemmaSubject {
+ id String @id
+ workflowId String
+ workflow GemmaWorkflow @relation(fields:[workflowId],references:[id])
+ memberId String
+ memberName String
+ claimId String
+ caseId String?
+ evidenceAt DateTime
+ @@unique([workflowId, memberId])
+ @@index([memberId, workflowId])
+ @@index([caseId])
+}
+model GemmaActivity {
+ id String @id
+ workflowId String
+ workflow GemmaWorkflow @relation(fields:[workflowId],references:[id])
+ key String @unique
+ type String
+ status String
+ summary String
+ agentId String
+ runId String?
+ parentRunId String?
+ dependsOn String?
+ payload String @default("{}")
+ evidenceAt DateTime
+ createdAt DateTime @default(now())
+ @@index([workflowId, evidenceAt, createdAt])
+}
+model GemmaCommunication {
+ id String @id
+ workflowId String
+ workflow GemmaWorkflow @relation(fields:[workflowId],references:[id])
+ memberId String
+ template String
+ content String
+ status String @default("Prepared")
+ simulationOutcome String
+ preparedAt DateTime
+ sentAt DateTime?
+ deliveredAt DateTime?
+ acknowledgedAt DateTime?
+ failedAt DateTime?
+ @@unique([workflowId, memberId, template])
+ @@index([status, preparedAt])
+}
+model GemmaPolicy {
+ id String @id
+ workflowId String
+ workflow GemmaWorkflow @relation(fields:[workflowId],references:[id])
+ sponsorId String
+ contractId String
+ kind String
+ target String
+ payload String
+ contentHash String
+ status String @default("Approved")
+ approvedBy String
+ approvedAt DateTime
+ effectiveAt DateTime?
+ validation String @default("{}")
+ @@unique([workflowId, contentHash])
+ @@index([sponsorId, contractId, kind, target, effectiveAt])
+}
+model GemmaDecision {
+ id String @id
+ workflowId String
+ workflow GemmaWorkflow @relation(fields:[workflowId],references:[id])
+ requestId String
+ inputHash String
+ decision String
+ actor String
+ note String
+ proposalHash String
+ createdAt DateTime @default(now())
+ @@unique([workflowId, requestId])
 }

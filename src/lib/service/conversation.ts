@@ -3,7 +3,7 @@ import {answerMember} from '@/lib/agents/member-service/agent';
 import {extractDrug} from '@/lib/agent/plan';
 import {serviceToolContext} from './tool-context';
 import {mutate,getCase,uid} from './store';
-import {type Access,ServiceError} from './access';
+import {type Access,ServiceError} from './identity';
 import type {Kind} from './state';
 export async function askCase(a:Access,id:string,input:{requestId:string;revision:number;question:string}){
  let started=false;

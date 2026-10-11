@@ -70,6 +70,7 @@ export function brainLabel(): string {
  */
 export async function judge<T>(opts: {
   system: string;
+  timeoutMs?: number;
   prompt: string;
   schema: z.ZodType<T>;
   fallback: () => T | Promise<T>;
@@ -98,6 +99,7 @@ export async function judge<T>(opts: {
       prompt: opts.prompt,
       schema: opts.schema as z.ZodType<T> & z.ZodTypeAny,
       temperature: 0,
+      ...(opts.timeoutMs ? {abortSignal:AbortSignal.timeout(opts.timeoutMs),maxRetries:0} : {}),
     });
     const inputTokens = res.usage?.inputTokens ?? 0;
     const outputTokens = res.usage?.outputTokens ?? 0;

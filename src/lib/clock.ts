@@ -3,10 +3,9 @@
  *
  * The book is seeded across the whole 2026 plan year, but a claim dated next
  * month has not happened yet. "Now" is a cut line through that year: rows on
- * the past side are history, rows on the future side do not exist. Nothing is
- * generated at request time and no job writes rows on a timer — the plan is
- * fully determined in advance and the clock only decides how much of it has
- * come true.
+ * the past side are history, rows on the future side do not exist. The reference book is determined in advance. Gemma separately records
+ * synthetic events and sandbox outcomes on its own background clock; pinning
+ * this view never rewinds that scheduler.
  *
  * That buys three things a background generator would not. The book advances
  * on its own, one simulated day per real day, with no infrastructure. Any

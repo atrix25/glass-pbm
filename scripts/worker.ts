@@ -10,10 +10,12 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import {
   claimNextJob,
+  renewJobLease,
   completeJob,
   failJob,
   setJobProgress,
 } from "../src/lib/jobs";
+import {validateGemma} from "../src/lib/gemma/validate";
 import { runSavings } from "../src/lib/savings/run";
 import type { Goals } from "../src/lib/savings/types";
 import { replay } from "../src/lib/engine/replay";
@@ -26,6 +28,7 @@ const POLL_MS = Number(process.env.WORKER_POLL_MS ?? 2000);
 
 async function handleJob(type: string, payload: Record<string, unknown>, jobId: string) {
   switch (type) {
+    case "gemma-validate": return validateGemma(payload as Parameters<typeof validateGemma>[0]);
     case "savings-v1": {
       return runSavings(payload as {cutoff:string;goals:Goals},jobId);
     }
@@ -73,16 +76,17 @@ async function tick() {
   const job = await claimNextJob(WORKER_ID);
   if (!job) return false;
   console.log(`[worker ${WORKER_ID}] claimed ${job.id} (${job.type})`);
+  const heartbeat=setInterval(()=>{void renewJobLease(job.id,WORKER_ID).catch(()=>{});},30000);
   try {
     const payload = JSON.parse(job.payload || "{}") as Record<string, unknown>;
     const result = await handleJob(job.type, payload, job.id);
-    await completeJob(job.id, (result as Record<string, unknown>) ?? {});
+    await completeJob(job.id, (result as Record<string, unknown>) ?? {},WORKER_ID);
     console.log(`[worker ${WORKER_ID}] completed ${job.id}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[worker ${WORKER_ID}] failed ${job.id}:`, message);
-    await failJob(job.id, message);
-  }
+    await failJob(job.id, message,WORKER_ID);
+  } finally {clearInterval(heartbeat)}
   return true;
 }
 

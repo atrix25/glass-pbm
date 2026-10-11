@@ -40,7 +40,7 @@ export default async function RunPage({
   const run = await getRun(runId);
   if (!run) notFound();
 
-  const subjectHref = subjectLink(run.subjectType, run.subjectId);
+  const subjectHref = run.subjectType === "GemmaWorkflow" ? `/gemma?work=${run.subjectId}` : subjectLink(run.subjectType, run.subjectId);
 
   return (
     <div className="space-y-6">

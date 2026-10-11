@@ -15,3 +15,5 @@ const child = spawn("npx", ["tsx", worker], {
   cwd: path.join(here, ".."),
 });
 child.on("exit", (code) => process.exit(code ?? 1));
+
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>child.kill(signal));

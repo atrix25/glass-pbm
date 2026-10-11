@@ -603,10 +603,10 @@ async function* streamClaimsByMember(
        JOIN Member m ON m.id = c.memberId
        JOIN Drug d   ON d.id = c.drugId
        WHERE c.memberId IN (${ids.map(() => "?").join(",")})
-         AND c.dateOfService <= ?
+         AND c.dateOfService <= ?::timestamp
        ORDER BY c.memberId, c.dateOfService, c.claimNumber`,
       ...ids,
-      cutoff,
+      cutoff.toISOString(),
     );
     if (rows.length > 0) yield rows;
   }
@@ -719,6 +719,8 @@ export async function replay(
     trackDisruption?: boolean;
     /** Explicit single-member scenario, retaining their complete claim history. */
     memberId?: string;
+    /** Isolated validation input. Never writes a prior-authorization record. */
+    sandboxPA?: {memberId:string;drugId:string;effectiveDate:Date;terminationDate:Date};
   } = {},
 ): Promise<ReplayResult> {
   const disruption = opts.trackDisruption ? new DisruptionTracker() : null;
@@ -947,7 +949,7 @@ export async function replay(
       contract,
       priorFills,
       accumulators: { ...acc },
-      approvedPAs: world.approvedPAs.get(row.memberId) ?? [],
+      approvedPAs: [...(world.approvedPAs.get(row.memberId) ?? []),...(opts.sandboxPA?.memberId===row.memberId?[opts.sandboxPA]:[])],
       assumptions,
       refillThreshold: override.refillThreshold,
     };

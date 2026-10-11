@@ -9,11 +9,12 @@ primary_region = "ord"
 # No volume mount — the SQLite book file is retired.
 
 [deploy]
-  release_command = "node /app/scripts/migrate-member-service.mjs"
+  release_command = "node /app/scripts/migrate-gemma.mjs"
 
 [processes]
   app = "node /app/server.js"
   worker = "node /app/scripts/worker-entry.mjs"
+  gemma = "node /app/scripts/gemma-worker-entry.mjs"
 
 [http_service]
   internal_port = 3000
@@ -39,3 +40,8 @@ primary_region = "ord"
   size = "shared-cpu-2x"
   memory = "2gb"
   processes = ["worker"]
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "1gb"
+  processes = ["gemma"]

@@ -1,7 +1,7 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {prisma} from '@/lib/db';
 import type {Prisma} from '@/generated/prisma';
-import {ServiceError,type Access} from './access';
+import {ServiceError,type Access} from './identity';
 import {caseState,transition,outcomes,type Kind,type Context,type Command,type Event} from './state';
 import {replay} from '@/lib/engine/replay';
 import type {SavingsResult} from '@/lib/savings/types';
