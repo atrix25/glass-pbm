@@ -127,6 +127,30 @@ describe("a rate limit against a single fill", () => {
     expect(v.allowed).toBe(120);
   });
 
+  it("keeps a true daily rate even when days supply is one", () => {
+    // periodDays === daysSupply must not push a /day limit onto the cumulative
+    // path, or yesterday's four capsules would refuse today's four.
+    const v = evaluate(
+      { quantity: 4, periodDays: 1 },
+      {
+        quantityDispensed: 4,
+        daysSupply: 1,
+        priorFills: [
+          {
+            dateOfService: new Date("2026-06-14T00:00:00Z"),
+            quantityDispensed: 4,
+            daysSupply: 1,
+          },
+        ],
+      },
+    );
+    expect(v.enforceable).toBe(true);
+    if (!v.enforceable) return;
+    expect(v.withinLimit).toBe(true);
+    expect(v.allowed).toBe(4);
+    expect(v.window).toContain("per day");
+  });
+
   it("holds a per-fill limit against the fill and not against a rate", () => {
     const v = evaluate(
       { quantity: 9, unit: "tabs", periodDays: null, rawText: "QL= 9 tabs/fill" },
@@ -225,6 +249,44 @@ describe("a limit spent over a period longer than the fill", () => {
     if (!v.enforceable) return;
     expect(v.used).toBe(3);
     expect(v.withinLimit).toBe(false);
+    expect(v.window).toContain("trailing 28 days");
+  });
+
+  it("still uses history when days supply equals the rolling period", () => {
+    /*
+     * The common retail shape: "1 pack / 28 days" with a 28-day supply. Treating
+     * periodDays <= daysSupply as a rate ignored the prior pack still inside the
+     * window, so a refill that only cleared the 75% refill-too-soon edit paid.
+     */
+    const packPer28 = {
+      quantity: 1,
+      unit: "pack",
+      basis: "package" as const,
+      periodDays: 28,
+      rawText: "QL= 1 pack/28 days",
+    };
+    const v = evaluateQuantityLimit({
+      limit: packPer28,
+      quantityDispensed: 1,
+      daysSupply: 28,
+      dateOfService: new Date("2026-06-22T00:00:00Z"),
+      packageSize: 1,
+      unitOfMeasure: "EA",
+      packageContainers: null,
+      priorFills: [
+        {
+          dateOfService: new Date("2026-06-01T00:00:00Z"),
+          quantityDispensed: 1,
+          daysSupply: 28,
+        },
+      ],
+      planYearStart: PLAN_YEAR_START,
+    });
+    expect(v.enforceable).toBe(true);
+    if (!v.enforceable) return;
+    expect(v.withinLimit).toBe(false);
+    expect(v.used).toBe(2);
+    expect(v.allowed).toBe(1);
     expect(v.window).toContain("trailing 28 days");
   });
 });

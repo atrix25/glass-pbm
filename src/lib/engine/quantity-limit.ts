@@ -570,12 +570,14 @@ export function evaluateQuantityLimit(
 /**
  * A limit on billed quantity.
  *
- * Two shapes, and the difference matters. A limit whose period is no longer
- * than the fill — four a day, thirty per fill — is a rate, and the fill is
- * allowed its own days supply worth. A limit whose period is longer than the
- * fill — twelve tubes a year — is a budget, and prorating it would cap a single
- * fill at one tube when the member is entitled to twelve across the year.
- * Budgets are checked against history; rates are checked against the fill.
+ * Two shapes, and the difference matters. A true daily rate — four a day —
+ * scales with the fill's days supply and is checked against the fill alone.
+ * A rolling budget — twelve tubes a year, one pack per twenty-eight days —
+ * is checked against history inside the window. Prorating a budget onto one
+ * fill would cap a year's entitlement at a single tube; treating a rolling
+ * window whose period equals the fill length as a rate would ignore the prior
+ * pack still inside the window and pay a mid-window refill that only cleared
+ * refill-too-soon.
  */
 function byQuantity(
   req: QuantityLimitRequest,
@@ -597,7 +599,10 @@ function byQuantity(
     };
   }
 
-  if (limit.periodDays <= daysSupply) {
+  // Rate when the period is shorter than the fill (daily rate scaled up to a
+  // longer supply) or is a true per-day limit even on a one-day fill. Equality
+  // (1 pack / 28 days with daysSupply 28) is a rolling budget: use history.
+  if (limit.periodDays < daysSupply || limit.periodDays === 1) {
     const perDay = allowedUnits / limit.periodDays;
     const allowedForFill = perDay * daysSupply;
     return {
