@@ -1,3 +1,7 @@
+import Link from "next/link";
+import { tenantSponsorId,tenantContractId,demoFeaturesEnabled } from "@/lib/config";
+import type {SavingsResult} from "@/lib/savings/types";
+import { getClock } from "@/lib/session";
 import { Suspense } from "react";
 import { SectionTitle } from "@/components/ui";
 import {
@@ -35,7 +39,9 @@ function patchFor(lever: Lever): ConsoleRecommendation["patch"] {
   }
 }
 
-export default async function ChangesPage() {
+export default async function ChangesPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
+  const params=await searchParams;
+  const clock=await getClock();
   const plan = await prisma.benefitPlan.findUnique({
     where: { id: "wi-iyc-2026" },
     include: { costShareRules: { where: { channel: "Retail" } } },
@@ -91,7 +97,7 @@ export default async function ChangesPage() {
    * came from.
    */
   const recommendations: ConsoleRecommendation[] = (
-    await getRecommendations(resolveClock(null))
+    (params.recommend || params.recommendations === "1") ? await getRecommendations(clock) : []
   ).slice(0, 6).map((r) => ({
     id: r.id,
     title: r.title,
@@ -101,16 +107,32 @@ export default async function ChangesPage() {
     patch: patchFor(r.lever),
   }));
 
+  let imported: ConsoleRecommendation | null = null;
+  if (demoFeaturesEnabled() && params.savings?.startsWith('sav_')) {
+    const job=await prisma.job.findUnique({where:{id:params.savings}});
+    if(job?.type==='savings-v1' && job.status==='succeeded' && job.result) {
+      const payload=JSON.parse(job.payload);
+      if(payload.sponsor===tenantSponsorId() && payload.contract===tenantContractId()) {
+        const result=JSON.parse(job.result) as SavingsResult;
+        const option=result.options.find(o=>o.id===params.option);
+        if(option) imported={id:'savings',title:option.title,rationale:option.description,membersAffected:option.disruptions.length,caution:`Saved 1% sample through ${result.cutoff.slice(0,10)}. Re-run the full book at the selected clock before any decision. Negotiated pricing requires contracting review.`,patch:{...option.patch,savingsOverride:option.override} as ConsoleRecommendation['patch']};
+      }
+    }
+  }
   return (
     <div className="space-y-5">
       <SectionTitle description="Change the benefit and see the consequence before it is real. Every stored claim is re-adjudicated against the proposed configuration, in date order, with each member's accumulators rebuilt from scratch. Projections run the same engine over a sample and say so; a measured run is the whole book, with no trend factor anywhere.">
         Change console
       </SectionTitle>
 
+      <div className="flex flex-wrap gap-4 text-sm"><Link href="/savings" className="font-medium text-glass-700">Find savings →</Link><Link href="/changes?recommendations=1" className="text-ink-500 underline">Load experience suggestions</Link></div>
+      {imported && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><strong>{imported.title}</strong><p className="mt-2">{imported.rationale}</p><p className="mt-2 text-ink-600">{imported.caution}</p><details className="mt-3"><summary className="cursor-pointer">Exact proposed configuration</summary><pre className="mt-2 overflow-x-auto text-xs">{JSON.stringify(imported.patch.savingsOverride,null,2)}</pre></details></div>}
       {/* useSearchParams needs a boundary, and a console this heavy should not
           block on the query string being read. */}
       <Suspense fallback={null}>
         <ChangeConsole
+          key={imported?.title ?? "default"}
+          initialPatch={imported?.patch}
           baseline={baseline}
           history={history}
           recommendations={recommendations}

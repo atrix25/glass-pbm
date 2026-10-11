@@ -1,0 +1,8 @@
+import type {ConfigOverride} from '@/lib/engine/replay';
+import type {Disruption} from './impact';
+export type Goals={savingsPercent:number;maxDisruptedPercent:number;maxNpsLoss:number;allowHigherCost:boolean};
+export const DEFAULT_GOALS:Goals={savingsPercent:1,maxDisruptedPercent:5,maxNpsLoss:1,allowHigherCost:false};
+export type SavingsOption={id:string;title:string;description:string;override:ConfigOverride;patch:Record<string,unknown>;savingsCents:number;savingsPercent:number;memberCostDeltaCents:number;npsBefore:number;npsAfter:number;membersEvaluated:number;disruptions:Disruption[];newRejects:number;eligible:boolean;reasons:string[]};
+export type SavingsResult={version:string;cutoff:string;sampleRate:number;claimsEvaluated:number;membersEvaluated:number;baselineNetCents:number;goals:Goals;options:SavingsOption[];recommendedId:string|null;completedAt:string};
+export function qualify(option:SavingsOption,goals:Goals){const reasons:string[]=[];if(option.savingsCents<=0||option.savingsPercent<goals.savingsPercent)reasons.push('Below savings goal');if(option.disruptions.length/Math.max(1,option.membersEvaluated)*100>goals.maxDisruptedPercent)reasons.push('Above disruption limit');if(Math.round((option.npsAfter-option.npsBefore)*10)/10 < -goals.maxNpsLoss)reasons.push('Above NPS loss limit');if(!goals.allowHigherCost&&option.disruptions.some(d=>d.higherCost))reasons.push('Increases member costs');if(option.newRejects>0)reasons.push('New rejected fills require clinical review');return reasons;}
+export function rankOptions(options:SavingsOption[]){return [...options].sort((a,b)=>Number(b.eligible)-Number(a.eligible)||a.disruptions.length-b.disruptions.length||b.savingsCents-a.savingsCents||a.id.localeCompare(b.id));}

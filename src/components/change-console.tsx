@@ -35,6 +35,8 @@ export interface BaselineConfig {
 }
 
 interface Draft extends BaselineConfig {
+  negotiatedRates?: ConfigOverride["rateOverrides"];
+  savingsOverride?: ConfigOverride;
   /*
    * Utilisation edits, expressed as a drug-name match rather than a drug list.
    *
@@ -188,7 +190,9 @@ export function ChangeConsole({
   baseline,
   history,
   recommendations = [],
+  initialPatch,
 }: {
+  initialPatch?: Partial<Draft>;
   baseline: BaselineConfig;
   history: {
     id: string;
@@ -206,6 +210,7 @@ export function ChangeConsole({
     paRemovedFor: "",
     quantityLimitRemovedFor: "",
     stepTherapyRemovedFor: "",
+    ...initialPatch,
   };
   const [draft, setDraft] = useState<Draft>(initial);
   const [result, setResult] = useState<ReplayResponse | null>(null);
@@ -233,7 +238,7 @@ export function ChangeConsole({
   };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }));
+    setDraft((d) => ({ ...d, savingsOverride:undefined, [key]: value }));
     clearResults();
   };
 
@@ -244,7 +249,7 @@ export function ChangeConsole({
   };
 
   const applyDraft = (patch: Partial<Draft>, presetId: string | null) => {
-    const next = { ...initial, ...patch };
+    const next = { ...initial, savingsOverride: undefined, negotiatedRates: undefined, ...patch };
     setDraft(next);
     clearResults();
     setAppliedPreset(presetId);
@@ -304,7 +309,7 @@ export function ChangeConsole({
     if (!rec) return;
 
     setIntake(requested);
-    const next = { ...initial, ...rec.patch };
+    const next = { ...initial, savingsOverride: undefined, negotiatedRates: undefined, ...rec.patch };
     setDraft(next);
     clearResults();
     setAppliedPreset(`rec:${rec.id}`);
@@ -927,7 +932,9 @@ function Results({
 // ---------------------------------------------------------------------------
 
 function buildOverride(base: BaselineConfig, d: Draft): ConfigOverride {
+  if(d.savingsOverride) return d.savingsOverride;
   const o: ConfigOverride = {
+    ...(d.negotiatedRates ? {rateOverrides:d.negotiatedRates} : {}),
     costShare: [
       { level: "1", copayCents: d.level1CopayCents },
       {
@@ -976,6 +983,8 @@ function buildOverride(base: BaselineConfig, d: Draft): ConfigOverride {
 
 function describeChanges(b: BaselineConfig, d: Draft): string[] {
   const out: string[] = [];
+  if(d.savingsOverride)out.push("Saved savings option: exact scope retained. Editing any field switches to the console’s custom configuration.");
+  if(d.negotiatedRates) out.push("Hypothetical negotiated AWP discounts loaded from savings analysis; contracting review required.");
   const m = (c: number) => formatCents(c);
   const p = (bps: number) => `${(bps / 100).toFixed(0)}%`;
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { enqueueJob, getJob } from "@/lib/jobs";
 import { replay, type ConfigOverride } from "@/lib/engine/replay";
+import { getClock } from "@/lib/session";
 import { recordAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
@@ -14,6 +15,7 @@ interface ReplayBody {
 }
 
 export async function POST(request: Request) {
+  const clock = await getClock();
   const body = (await request.json()) as ReplayBody | ConfigOverride;
   const isWrapped = typeof body === "object" && body !== null && "override" in body;
   const override = (isWrapped ? (body as ReplayBody).override : body) ?? {};
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
   if (wantAsync) {
     const job = await enqueueJob({
       type: "replay",
-      payload: { override, sampleRate, nps: true, maxDiffs: projecting ? 0 : 200 },
+      payload: { override, asOf:clock.today.toISOString(), sampleRate, nps: true, maxDiffs: projecting ? 0 : 200 },
     });
     await recordAudit({
       action: "job.enqueue",
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
   }
 
   const result = await replay(override, {
+    asOf:clock.today,
     maxDiffs: projecting ? 0 : 200,
     nps: true,
     sampleRate,

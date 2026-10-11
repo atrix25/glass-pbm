@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 export const DEMO_STEPS = [
   { href: "/offering", label: "Choose", claim: "Compare pricing and benefit assumptions." },
   { href: "/sponsor", label: "Employer value", claim: "Plan costs and member tradeoffs." },
+  { href: "/savings", label: "Find savings", claim: "Savings, member disruption, and modeled NPS." },
   { href: "/business", label: "Economics", claim: "Cost to serve and account contribution." },
   { href: "/agents", label: "Agents", claim: "Recorded work on the reference book." },
   { href: "/assistant", label: "Member service", claim: "Grounded answers from reference benefits." },

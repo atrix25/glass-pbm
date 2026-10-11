@@ -1,0 +1,14 @@
+const {chromium}=require('playwright');const assert=require('node:assert/strict');const fs=require('node:fs');
+(async()=>{const base=process.env.GLASS_BASE_URL||'http://127.0.0.1:3000';const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000},...(process.env.DEMO_PASSWORD?{httpCredentials:{username:process.env.DEMO_USERNAME||'josh',password:process.env.DEMO_PASSWORD}}:{})});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base+'/savings');await page.getByRole('heading',{name:'Find savings',exact:true}).waitFor();
+await page.getByLabel('Allow recommendations that increase member costs').check();await page.getByRole('button',{name:'Find savings',exact:true}).click();await page.waitForURL(/run=sav_/);const run=new URL(page.url()).searchParams.get('run');
+await page.getByText('Net employer savings',{exact:true}).first().waitFor({timeout:120000});
+assert.equal(await page.getByText('Members disrupted',{exact:true}).count(),3);assert.equal(await page.getByText('Estimated NPS change',{exact:true}).count(),3);
+const response=await page.request.get(base+'/api/savings?id='+run);const {result}=await response.json();assert.equal(result.options.length,3);assert.ok(result.membersEvaluated>0);assert.ok(result.options.some(o=>o.disruptions.length>0));
+fs.mkdirSync('/tmp/glass-savings-qa',{recursive:true});await page.screenshot({path:'/tmp/glass-savings-qa/desktop.png',fullPage:true});
+const withMembers=result.options.find(o=>o.disruptions.length>0);await page.locator('summary').filter({hasText:`Disrupted members (${withMembers.disruptions.length})`}).click();await page.getByRole('link',{name:withMembers.disruptions[0].memberName,exact:true}).waitFor();
+await page.getByRole('link',{name:'Review in change console'}).first().click();await page.getByText('Exact proposed configuration',{exact:true}).waitFor();
+const initial=await page.locator('body').innerText();assert.match(initial,/Saved savings option: exact scope retained/);
+await page.goto(base+'/savings?run='+run);await page.getByText('Net employer savings',{exact:true}).first().waitFor();await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:'/tmp/glass-savings-qa/mobile.png',fullPage:true});
+await page.getByLabel('Minimum savings · %').focus();await page.keyboard.press('Tab');assert.equal(await page.locator(':focus').getAttribute('type'),'number');assert.deepEqual(errors,[]);
+console.log(JSON.stringify({ok:true,run,claims:result.claimsEvaluated,members:result.membersEvaluated,options:result.options.map(o=>({id:o.id,savings:o.savingsCents,disrupted:o.disruptions.length,npsDelta:Math.round((o.npsAfter-o.npsBefore)*10)/10})),recommended:result.recommendedId}));await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

@@ -81,7 +81,7 @@ export function OfferingWorkspace({input,view}:{input:OfferingInput;view:'sponso
     {view==='sponsor' && <div className="grid gap-4 md:grid-cols-3">
       <NextCard title="Member impact" text="Compare employer and member costs before choosing a benefit approach." href={link('/offering')} label="Compare benefits"/>
       <NextCard title="Service performance" text="No service history for this concept yet. Explore member service on the reference book." href="/assistant" label="Try member service"/>
-      <NextCard title="Benefit decisions" text="Preview claim-level effects using the existing reference replay workflow." href="/changes" label="Open reference workflow"/>
+      <NextCard title="Find savings" text="Compare savings, disrupted members, and estimated NPS on the reference claims." href="/savings" label="Compare options"/>
     </div>}
     {view==='business' && <Card><CardHeader title="Work and ownership" description="Existing reference workflows · No Caremark systems connected"/><div className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-4">{[
       ['Quote','Account team','Compare approved commercial options. This prototype uses illustrative assumptions.','/offering'],

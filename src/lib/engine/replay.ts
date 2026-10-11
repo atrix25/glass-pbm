@@ -8,6 +8,7 @@
  * hollow.
  */
 
+import { DisruptionTracker, type Disruption } from "@/lib/savings/impact";
 import { prisma } from "@/lib/db";
 import { PLAN_YEAR_END } from "@/lib/clock";
 import { hashString } from "@/lib/hash";
@@ -48,6 +49,7 @@ import {
 
 export interface CostShareOverride {
   level: string;
+  channel?: Channel;
   costShareType?: "Copay" | "Coinsurance" | "NotCovered" | "Zero";
   copayCents?: number;
   coinsuranceRateBps?: number;
@@ -328,7 +330,7 @@ function applyPlanOverride(
   o: ConfigOverride,
 ): EngineBenefitPlan {
   const rules = plan.costShareRules.map((r) => {
-    const patch = o.costShare?.find((c) => c.level === r.level);
+    const patch = o.costShare?.find((c) => c.level === r.level && (!c.channel || c.channel === r.channel));
     if (!patch) return r;
     return {
       ...r,
@@ -447,6 +449,8 @@ export interface ClaimDiff {
 }
 
 export interface ReplayResult {
+  memberDisruptions?: Disruption[];
+  membersEvaluated?: number;
   claimsEvaluated: number;
   claimsChanged: number;
   membersAffected: number;
@@ -710,8 +714,11 @@ export async function replay(
      * checked against the full run a minute later.
      */
     sampleRate?: number;
+    trackDisruption?: boolean;
   } = {},
 ): Promise<ReplayResult> {
+  const disruption = opts.trackDisruption ? new DisruptionTracker() : null;
+  const evaluatedMembers = new Set<string>();
   const started = Date.now();
   const world = await loadWorld();
   const maxDiffs = opts.maxDiffs ?? 250;
@@ -843,6 +850,7 @@ export async function replay(
      * against fills as they were priced.
      */
     if (row.transactionCode === "B2") {
+      disruption?.reverse(row.reversalOfClaimId ?? "");
       /*
        * Counted on both sides before anything else happens. A reversal exists
        * because a fill was undone, and re-pricing the book does not un-undo
@@ -987,6 +995,8 @@ export async function replay(
     result.rebateBeforeCents += row.estimatedRebateCents;
     result.rebateAfterCents += out.estimatedRebateCents;
 
+    evaluatedMembers.add(row.memberId);
+    disruption?.record(row.id,row.memberId,`${row.firstName} ${row.lastName}`,row,out);
     const totals = memberTotals.get(row.memberId) ?? {
       name: `${row.firstName} ${row.lastName}`,
       before: 0,
@@ -1086,6 +1096,8 @@ export async function replay(
       (Math.abs(a.planDeltaCents) + Math.abs(a.memberDeltaCents)),
   );
 
+  if (disruption) result.memberDisruptions = disruption.result();
+  result.membersEvaluated = evaluatedMembers.size;
   result.elapsedMs = Date.now() - started;
   return result;
 }

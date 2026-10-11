@@ -14,6 +14,8 @@ import {
   failJob,
   setJobProgress,
 } from "../src/lib/jobs";
+import { runSavings } from "../src/lib/savings/run";
+import type { Goals } from "../src/lib/savings/types";
 import { replay } from "../src/lib/engine/replay";
 import { getCurrentReading, saveSnapshot } from "../src/lib/queries/nps";
 import { resolveClock } from "../src/lib/clock";
@@ -24,9 +26,13 @@ const POLL_MS = Number(process.env.WORKER_POLL_MS ?? 2000);
 
 async function handleJob(type: string, payload: Record<string, unknown>, jobId: string) {
   switch (type) {
+    case "savings-v1": {
+      return runSavings(payload as {cutoff:string;goals:Goals},jobId);
+    }
     case "replay": {
       await setJobProgress(jobId, 0.05);
       const result = await replay((payload.override as object) ?? {}, {
+        asOf: typeof payload.asOf === "string" ? new Date(payload.asOf) : undefined,
         maxDiffs: typeof payload.maxDiffs === "number" ? payload.maxDiffs : 200,
         nps: payload.nps !== false,
         sampleRate: typeof payload.sampleRate === "number" ? payload.sampleRate : undefined,

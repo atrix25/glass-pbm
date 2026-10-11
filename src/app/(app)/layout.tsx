@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ReferenceContext, ReferenceOnly } from "@/components/reference-context";
 import { getClock, getRole } from "@/lib/session";
 import { RoleSwitcher } from "@/components/role-switcher";
@@ -12,6 +13,7 @@ import { getCopyOverrides, copyIsPersistable } from "@/lib/copy";
 const GROUPS: NavGroup[] = [
   {title: "Offering", items: [
     {href:"/sponsor",label:"Plan outlook",icon:"sponsor"},
+    {href:"/savings",label:"Find savings",icon:"trends"},
     {href:"/offering",label:"Pricing & benefits",icon:"changes"},
     {href:"/business",label:"Caremark economics",icon:"reports"},
     {href:"/pitch",label:"Product overview",icon:"pitch"},
@@ -52,12 +54,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [role, clock, copy, copyPersistable] = await Promise.all([
-    getRole(),
-    getClock(),
-    getCopyOverrides(),
-    copyIsPersistable(),
-  ]);
+  const [role, clock] = await Promise.all([getRole(), getClock()]);
 
   const sidebar = (
     <>
@@ -97,7 +94,9 @@ export default async function AppLayout({
         <div className="mx-auto w-full max-w-[1180px]">{children}</div>
       </main>
 
-      <CopyLayer overrides={copy} persistable={copyPersistable} />
+      <Suspense fallback={null}><CopySettings /></Suspense>
     </AppShell>
   );
 }
+
+async function CopySettings(){const [copy,persistable]=await Promise.all([getCopyOverrides(),copyIsPersistable()]);return <CopyLayer overrides={copy} persistable={persistable}/>;}
