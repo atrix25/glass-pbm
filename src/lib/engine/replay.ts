@@ -553,6 +553,7 @@ async function* streamClaimsByMember(
   cutoff: Date,
   blockSize = 400,
   sampleRate = 1,
+  memberId?: string,
 ): AsyncGenerator<ReplayClaimRow[]> {
   let cursor: string | null = null;
   // Paging over the member table is cheap; pulling their claims is not. When
@@ -562,6 +563,7 @@ async function* streamClaimsByMember(
 
   for (;;) {
     const page: { id: string }[] = await prisma.member.findMany({
+      ...(memberId ? {where:{id:memberId}} : {}),
       select: { id: true },
       orderBy: { id: "asc" },
       take,
@@ -715,6 +717,8 @@ export async function replay(
      */
     sampleRate?: number;
     trackDisruption?: boolean;
+    /** Explicit single-member scenario, retaining their complete claim history. */
+    memberId?: string;
   } = {},
 ): Promise<ReplayResult> {
   const disruption = opts.trackDisruption ? new DisruptionTracker() : null;
@@ -814,7 +818,7 @@ export async function replay(
   let medicalEncounters: MedicalEncounter[] | null = null;
   let medicalCursor = 0;
 
-  for await (const block of streamClaimsByMember(cutoff, 400, sampleRate)) {
+  for await (const block of streamClaimsByMember(cutoff, 400, sampleRate, opts.memberId)) {
   for (const row of block) {
     if (row.memberId !== currentMember) {
       if (npsOn) {

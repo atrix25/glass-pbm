@@ -2079,3 +2079,57 @@ model ApiKey {
 
   @@index([active])
 }
+
+/// Isolated, demo-only servicing. Operational member/claim records are read-only.
+model MemberServiceCase {
+  id String @id
+  sponsorId String
+  contractId String
+  memberId String
+  memberName String
+  title String
+  kind String
+  team String
+  status String @default("Open")
+  sessionId String @unique
+  sourceKey String @unique
+  context String
+  revision Int @default(0)
+  evidenceAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  events MemberServiceEvent[]
+  actions MemberServiceAction[]
+  @@index([sponsorId, contractId, evidenceAt])
+}
+
+model MemberServiceEvent {
+  id String @id
+  caseId String
+  case MemberServiceCase @relation(fields: [caseId], references: [id])
+  seq Int
+  type String
+  status String
+  team String
+  summary String
+  actor String
+  simulated Boolean @default(false)
+  payload String @default("{}")
+  evidenceAt DateTime
+  createdAt DateTime @default(now())
+  @@unique([caseId, seq])
+  @@index([caseId, evidenceAt])
+}
+
+model MemberServiceAction {
+  id String @id
+  caseId String
+  case MemberServiceCase @relation(fields: [caseId], references: [id])
+  requestId String
+  inputHash String
+  kind String
+  status String
+  payload String @default("{}")
+  createdAt DateTime @default(now())
+  @@unique([caseId, requestId])
+}

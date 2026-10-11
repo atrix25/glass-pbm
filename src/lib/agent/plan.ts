@@ -11,6 +11,7 @@
  * because neither path is allowed to compute anything.
  */
 
+import { claimScope } from "@/lib/service/tool-context";
 import { prisma } from "@/lib/db";
 import { TOOL_REGISTRY, type ToolName } from "./tools";
 
@@ -65,6 +66,7 @@ export interface DrugMention {
    * question was understood.
    */
   unrecognised: string | null;
+  ambiguous?: boolean;
 }
 
 /**
@@ -83,11 +85,13 @@ export async function extractDrug(
   const upper = text.toUpperCase();
 
   const memberDrugs = await prisma.claim.findMany({
-    where: { memberId },
+    where: { memberId, ...claimScope() },
     select: { drug: { select: { name: true } } },
     distinct: ["drugId"],
     take: 200,
   });
+  const named=new Set([...DRUG_HINTS,...memberDrugs.map(r=>r.drug.name.split(/[\s(]/)[0])].filter(n=>n.length>=5&&new RegExp('\\b'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(text)).map(n=>n.toUpperCase()));
+  if(named.size>1)return {drug:null,unrecognised:null,ambiguous:true};
   for (const row of memberDrugs) {
     const first = row.drug.name.split(/[\s(]/)[0];
     if (first.length >= 5 && upper.includes(first)) {

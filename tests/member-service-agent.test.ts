@@ -1,0 +1,11 @@
+import {vi,it,expect,beforeEach} from 'vitest';
+const m=vi.hoisted(()=>({finish:vi.fn(),execute:vi.fn(),fail:false}));
+vi.mock('@/lib/db',()=>({prisma:{member:{findUnique:async()=>({firstName:'Test',lastName:'Member',cardholderId:'test'})}}}));
+vi.mock('@/lib/agents/runtime',()=>({startRun:async()=>({id:'run',autonomy:'Act',tool:async(_t:unknown,_b:unknown,fn:()=>unknown)=>fn(),propose:vi.fn(),finish:m.finish,refuse:vi.fn()})}));
+vi.mock('@/lib/agent/plan',()=>({planCalls:async()=>({intent:'coverage',drug:'SKYRIZI',calls:[{tool:'checkCoverage',args:{memberId:'m',drugName:'SKYRIZI'},because:'Check coverage'}]})}));
+vi.mock('@/lib/agent/compose',()=>({clinicalRefusal:()=>null,compose:()=>({paragraphs:['Coverage explanation'],citations:[],links:[],handoff:null})}));
+vi.mock('@/lib/agent/tools',()=>({TOOL_REGISTRY:{checkCoverage:{schema:{safeParse:(a:unknown)=>({success:true,data:a})},execute:async()=>{if(m.fail)throw Error('Offline');return {data:{priorAuthorizationRequired:true},summary:'Needs authorization',citations:[]}}},getPriorAuthStatus:{schema:{safeParse:(a:unknown)=>({success:true,data:a})},execute:async(a:unknown)=>{m.execute(a);return {data:{requests:[{status:'Approved'}]},summary:'Approved',citations:[]}}}}}));
+import {answerMember} from '../src/lib/agents/member-service/agent';
+beforeEach(()=>{vi.clearAllMocks();m.fail=false});
+it('targets the coverage follow-up to the same drug',async()=>{await answerMember({question:'Covered?',memberId:'m'});expect(m.execute).toHaveBeenCalledWith({memberId:'m',drugName:'SKYRIZI'})});
+it('records a tool failure as unresolved and finishes the run as escalated',async()=>{m.fail=true;const a=await answerMember({question:'Covered?',memberId:'m'});expect(a.work[0].error).toBeTruthy();expect(a.handoffPacket).not.toBeNull();expect(m.finish.mock.calls[0][0]).toBe('Escalated')});

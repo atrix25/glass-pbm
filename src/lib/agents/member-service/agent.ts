@@ -63,7 +63,7 @@ const FOLLOW_UPS: FollowUp[] = [
       d.priorAuthorizationRequired === true && !c.called.has("getPriorAuthStatus"),
     build: (_d, c) => ({
       tool: "getPriorAuthStatus",
-      args: { memberId: c.memberId },
+      args: { memberId: c.memberId, ...(c.drug ? {drugName:c.drug} : {}) },
       because:
         "The formulary says this product needs prior authorisation, so the next thing the member needs to know is whether theirs is already approved.",
     }),
@@ -110,17 +110,6 @@ const FOLLOW_UPS: FollowUp[] = [
       args: { memberId: c.memberId, drugName: c.drug ?? "" },
       because:
         "A request was denied. The member's next question is always what the plan will cover instead, so answer it before it is asked.",
-    }),
-  },
-  {
-    id: "too-soon",
-    after: "refillEligibility",
-    when: (d, c) => d.eligible === false && !c.called.has("findPharmacies"),
-    build: () => ({
-      tool: "findPharmacies",
-      args: { limit: 4 },
-      because:
-        "The refill is too early at the usual pharmacy. A vacation supply is handled at the counter, so the member needs somewhere to take that request.",
     }),
   },
   {
@@ -178,6 +167,7 @@ export async function answerMember(opts: {
   memberId: string;
   at?: Date;
   persist?: boolean;
+  context?: {claimId:string|null;drugName:string|null};
 }): Promise<MemberAnswer> {
   const started = Date.now();
   const run = await startRun({
@@ -188,6 +178,11 @@ export async function answerMember(opts: {
   });
 
   const plan = await planCalls(opts.question, opts.memberId);
+  if(opts.context?.drugName&&!plan.drug)plan.drug=opts.context.drugName.split(/[\s(]/)[0];
+  if(opts.context?.claimId){
+    plan.calls.unshift({tool:"explainClaim",args:{claimId:opts.context.claimId},because:"Read the selected claim and its recorded calculation."});
+    for(const call of plan.calls){if(["getPriorAuthStatus","getClaims","checkCoverage","findAlternatives","estimateCost","explainCriteria"].includes(call.tool)&&plan.drug)call.args.drugName=plan.drug;if(call.tool==="explainClaim")call.args.claimId=opts.context.claimId;}
+  }
   const ctx: Ctx = { memberId: opts.memberId, drug: plan.drug, called: new Set() };
 
   const refusal = clinicalRefusal(opts.question);
@@ -207,7 +202,7 @@ export async function answerMember(opts: {
       subjectType: "MemberQuestion",
       subjectId: opts.memberId,
       action: "handoff",
-      headline: "Refused and handed off: clinical question.",
+      headline: "Clinical handoff prepared.",
       rationale:
         "The question asks whether a medication is appropriate for this person. The agent has coverage data, not a clinical relationship, and says so.",
       payload: packet,
@@ -260,12 +255,18 @@ export async function answerMember(opts: {
     }
 
     const exec = def.execute as (a: unknown) => Promise<ToolResult<Data>>;
-    const result = await run.tool(
+    let result:ToolResult<Data>;
+    try { result = await run.tool(
       call.tool,
       call.because,
       () => exec(parsed.data),
       (r) => r.summary,
-    );
+    ); } catch {
+      const error="The requested data could not be retrieved.";
+      runs.push({tool:call.tool,args:parsed.data,because:call.because,error,result:null});
+      work.push({tool:call.tool,args:parsed.data,because:call.because,error,summary:null,data:null,citations:[],followUp:Boolean(call.followUp)});
+      continue;
+    }
 
     runs.push({
       tool: call.tool,
@@ -299,7 +300,7 @@ export async function answerMember(opts: {
   const answer = compose(opts.question, plan.intent, runs);
 
   const answered =
-    answer.paragraphs.length > 0 && !answer.handoff && runs.some((r) => !r.error);
+    answer.paragraphs.length > 0 && !answer.handoff && runs.some((r) => !r.error) && runs.every(r=>!r.error);
   let packet: HandoffPacket | null = null;
   if (!answered) {
     packet = await buildPacket(
@@ -313,7 +314,7 @@ export async function answerMember(opts: {
       subjectType: "MemberQuestion",
       subjectId: opts.memberId,
       action: "handoff",
-      headline: "Handed to a person, with the context attached.",
+      headline: "Handoff prepared, with context attached.",
       rationale:
         "Everything the agent established is on the ticket, so the member is not asked the same questions again.",
       payload: packet,
@@ -326,7 +327,7 @@ export async function answerMember(opts: {
       answered ? "Completed" : "Escalated",
       answered
         ? `${plan.intent}: answered from ${work.length} tool ${work.length === 1 ? "call" : "calls"}.`
-        : "Could not answer from the plan's data. Handed off with context.",
+        : "Could not answer from the plan's data. Handoff prepared; receipt not recorded.",
     );
   }
 

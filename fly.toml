@@ -8,6 +8,9 @@ primary_region = "ord"
 # Stateless app + async worker. Database is networked Postgres (DATABASE_URL).
 # No volume mount — the SQLite book file is retired.
 
+[deploy]
+  release_command = "node /app/scripts/migrate-member-service.mjs"
+
 [processes]
   app = "node /app/server.js"
   worker = "node /app/scripts/worker-entry.mjs"

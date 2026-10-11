@@ -8,6 +8,7 @@
  * question to ask, and the rules engine answers it.
  */
 
+import { claimScope, evidenceNow, serviceToolContext } from "@/lib/service/tool-context";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { adjudicate } from "@/lib/engine/adjudicate";
@@ -100,7 +101,7 @@ export async function getMemberProfile(
   const m = await prisma.member.findUnique({
     where: { id: args.memberId },
     include: {
-      eligibilitySpans: { include: { benefitPlan: true } },
+      eligibilitySpans: { where:{effectiveDate:{lte:evidenceNow()},OR:[{terminationDate:null},{terminationDate:{gte:evidenceNow()}}]}, orderBy:{effectiveDate:"desc"}, include: { benefitPlan: true } },
       sponsor: true,
     },
   });
@@ -145,11 +146,12 @@ export async function getAccumulators(
   args: z.infer<typeof getAccumulatorsSchema>,
 ): Promise<ToolResult> {
   const claims = await prisma.claim.findMany({
-    where: { memberId: args.memberId, responseStatus: "P" },
+    where: { memberId: args.memberId, ...claimScope(), responseStatus: {in:["P","A"]} },
     select: { patientPayCents: true, formularyLevel: true },
   });
   const span = await prisma.eligibilitySpan.findFirst({
-    where: { memberId: args.memberId },
+    where: { memberId: args.memberId, effectiveDate:{lte:evidenceNow()},OR:[{terminationDate:null},{terminationDate:{gte:evidenceNow()}}] },
+    orderBy:{effectiveDate:"desc"},
     include: { benefitPlan: true },
   });
   const plan = span?.benefitPlan;
@@ -204,6 +206,7 @@ export async function getClaims(
   const claims = await prisma.claim.findMany({
     where: {
       memberId: args.memberId,
+      ...claimScope(),
       ...(args.onlyRejected ? { responseStatus: "R" } : {}),
       ...(args.drugName
         ? { drug: { name: { contains: args.drugName } } }
@@ -247,7 +250,7 @@ export async function explainClaim(
   args: z.infer<typeof explainClaimSchema>,
 ): Promise<ToolResult> {
   const c = await prisma.claim.findFirst({
-    where: { OR: [{ id: args.claimId }, { claimNumber: args.claimId }] },
+    where: { ...claimScope(), OR: [{ id: args.claimId }, { claimNumber: args.claimId }] },
     include: { drug: true, pharmacy: true },
   });
   if (!c) {
@@ -389,7 +392,7 @@ async function typicalQuantity(
   daysSupply: number,
 ): Promise<number | null> {
   const rows = await prisma.claim.findMany({
-    where: { drugId, responseStatus: "P" },
+    where: { drugId, ...claimScope(), responseStatus: "P" },
     select: { quantityDispensed: true, daysSupply: true },
     take: 50,
   });
@@ -472,7 +475,7 @@ export async function estimateCost(
 
   const out = adjudicate({
     request: {
-      dateOfService: new Date(),
+      dateOfService: evidenceNow(),
       cardholderId: "",
       personCode: "01",
       serviceProviderId: pharmacy.npi,
@@ -499,7 +502,7 @@ export async function estimateCost(
       federalOopAccumulatedCents: 0,
       deductibleAccumulatedCents: 0,
     },
-    approvedPAs: world.approvedPAs.get(args.memberId) ?? [],
+    approvedPAs: serviceToolContext.getStore() ? (await prisma.priorAuthorization.findMany({where:{memberId:args.memberId,determination:"Approved",decidedAt:{lte:evidenceNow()},approvedEffectiveDate:{lte:evidenceNow()},approvedTerminationDate:{gte:evidenceNow()}},select:{drugId:true,approvedEffectiveDate:true,approvedTerminationDate:true}})).map(p=>({drugId:p.drugId,effectiveDate:p.approvedEffectiveDate!,terminationDate:p.approvedTerminationDate!})) : world.approvedPAs.get(args.memberId) ?? [],
   });
 
   const citations = Array.from(
@@ -555,9 +558,10 @@ export const getPriorAuthStatusSchema = z.object({
 export async function getPriorAuthStatus(
   args: z.infer<typeof getPriorAuthStatusSchema>,
 ): Promise<ToolResult> {
-  const pas = await prisma.priorAuthorization.findMany({
+  const rawPas = await prisma.priorAuthorization.findMany({
     where: {
       memberId: args.memberId,
+      receivedAt: {lte:evidenceNow()},
       ...(args.drugName ? { drug: { name: { contains: args.drugName } } } : {}),
     },
     include: {
@@ -568,6 +572,7 @@ export async function getPriorAuthStatus(
     orderBy: { receivedAt: "desc" },
   });
 
+  const pas = rawPas.map(pa => pa.decidedAt && pa.decidedAt <= evidenceNow() ? pa : {...pa,status:"InReview",determination:null,decidedAt:null,decidedBy:null,decidingStepNumber:null,denyReason:null,approvedDays:null,approvedTerminationDate:null,decisionSteps:[]});
   if (pas.length === 0) {
     return {
       data: { requests: [] },
@@ -778,6 +783,7 @@ export async function refillEligibility(
     const reject = await prisma.claim.findFirst({
       where: {
         memberId: args.memberId,
+      ...claimScope(),
         responseStatus: "R",
         rejectCodes: { contains: "79" },
       },
@@ -801,9 +807,10 @@ export async function refillEligibility(
   const last = await prisma.claim.findFirst({
     where: {
       memberId: args.memberId,
+      ...claimScope(),
       responseStatus: "P",
       drug: { name: { contains: drugName } },
-      ...(rejectedAt ? { dateOfService: { lt: rejectedAt } } : {}),
+      ...(rejectedAt ? { dateOfService: { lt: rejectedAt, lte:evidenceNow() } } : {}),
     },
     include: { drug: true },
     orderBy: { dateOfService: "desc" },
@@ -820,7 +827,7 @@ export async function refillEligibility(
   const eligible = new Date(
     last.dateOfService.getTime() + requiredDays * 86_400_000,
   );
-  const now = new Date();
+  const now = evidenceNow();
   return {
     data: {
       drug: tidyName(last.drug.name),
