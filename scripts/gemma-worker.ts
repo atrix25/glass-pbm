@@ -9,13 +9,17 @@ const connection=new pg.Client({connectionString:process.env.DATABASE_URL_DIRECT
 connection.on('error',()=>{console.error('Gemma coordinator connection lost. Stopping to preserve single-worker ownership.');process.exit(1)});
 async function main(){
  if(!demoFeaturesEnabled())throw Error('Gemma requires the demo gate.');await connection.connect();
- // The dedicated connection holds a session lock; standby workers never mutate this scope.
- for(;;){const lock=await connection.query('SELECT pg_try_advisory_lock(hashtext($1)) AS acquired',[JSON.stringify(scope)]);if(lock.rows[0].acquired)break;await new Promise(r=>setTimeout(r,60000))}
  await ensureMonitor(scope);console.log('Gemma worker ready; scheduler state is persisted.');
  for(;;){const cycleStarted=Date.now();try{
+ await connection.query('BEGIN');
+ // Transaction locks pin the backend safely through PgBouncer as well as direct Postgres.
+ const lock=await connection.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS acquired',[JSON.stringify(scope)]);
+ if(lock.rows[0].acquired){
  await enqueueTick(scope);
  const job=await claimNextJob(owner,'gemma');if(job){const heartbeat=setInterval(()=>{void Promise.all([renewJobLease(job.id,owner),prisma.gemmaMonitor.updateMany({where:scope,data:{heartbeatAt:new Date()}})]).catch(()=>{});},30000);try{const result=await processTick(scope);await completeJob(job.id,result,owner);console.log('Gemma cycle completed',job.id);}catch(e){const message=e instanceof Error?e.message:'Cycle failed';await failJob(job.id,message,owner);await prisma.gemmaMonitor.updateMany({where:scope,data:{lastError:message}});console.error(message)}finally{clearInterval(heartbeat)}}
- }catch(e){console.error(e instanceof Error?e.message:'Worker error')}
+ }
+ await connection.query('COMMIT');
+ }catch(e){await connection.query('ROLLBACK').catch(()=>{});console.error(e instanceof Error?e.message:'Worker error')}
  await new Promise(r=>setTimeout(r,Math.max(1000,60000-(Date.now()-cycleStarted))));
  }
 }
