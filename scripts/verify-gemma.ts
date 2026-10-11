@@ -31,7 +31,7 @@ async function main(){
  w=await advance(w.id);assert.equal(w.status,'Validating');const data=JSON.parse(w.data);const result=await validateGemma({workflowId:w.id,policyId:data.policyId,scope});console.log(w.kind,'validation',JSON.stringify(result).slice(0,1500));
  assert(result.passed,'Validation must actually pass for complete journey');await prisma.job.update({where:{id:data.validationJobId},data:{status:'succeeded',result:JSON.stringify(result)}});w=await advance(w.id);assert.equal(w.status,'Applied');w=await advance(w.id);
  // Explicitly simulate responses at advancing recorded times; deterministic failures remain unresolved.
- const now=new Date();await simulateCommunications(scope,now);await simulateCommunications(scope,new Date(+now+31000));await simulateCommunications(scope,new Date(+now+92000));
+ const now=new Date();await simulateCommunications(scope,now);
  w=await advance(w.id);console.log(w.kind,w.status,w.id);
  const history=await detail({...a,at:atGate},w.id,new URLSearchParams(),true);assert.equal(history.status,'Awaiting approval');assert(history.decisions.length===0);assert(history.messages.every(m=>m.acknowledgedAt===null));
  const once=await prisma.gemmaCommunication.count({where:{workflowId:w.id}});if(w.status==='Applied')await advance(w.id);assert.equal(await prisma.gemmaCommunication.count({where:{workflowId:w.id}}),once);

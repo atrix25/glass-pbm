@@ -9,7 +9,7 @@ import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const worker = path.join(here, "worker.ts");
-const child = spawn("npx", ["tsx", worker], {
+const child = spawn(process.execPath, ["--import", "tsx", worker], {
   stdio: "inherit",
   env: process.env,
   cwd: path.join(here, ".."),

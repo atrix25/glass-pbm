@@ -102,14 +102,14 @@ export async function advanceWorkflow(w:WF){
  if(w.kind==='access'){
  const validation=data.validation as {members:{memberId:string;claimId:string;passed:boolean;after:unknown}[]};
  for(const s of subjects){const result=validation.members.find(x=>x.memberId===s.memberId&&x.claimId===s.claimId);if(!result?.passed)throw Error('Missing member validation');await recordServiceOutcome(w,s,result);}
- const messages=await prisma.gemmaCommunication.findMany({where:{workflowId:w.id}});if(messages.some(m=>!m.acknowledgedAt))return; // Waiting remains explicit until separate simulator events arrive.
+ const messages=await prisma.gemmaCommunication.findMany({where:{workflowId:w.id}});if(messages.some(m=>!m.acknowledgedAt||m.acknowledgedAt>new Date()))return; // Waiting remains explicit until separate simulator events arrive.
  for(const s of subjects)await resolveService(w,s);
  return updateWorkflow(w,'Verified',data,'All linked sandbox fill checks passed and simulated member acknowledgments were recorded.','gemma-member','verified');
  }
  // Prepare support once per member; reuse the saved analysis rather than re-running the employer analysis.
  for(const s of subjects){if(s.caseId)continue;await createSupportDraft(w,s,data);}
  await prepareMessages(w,subjects,'benefit-v1');
- const messages=await prisma.gemmaCommunication.findMany({where:{workflowId:w.id}});if(messages.some(m=>!m.deliveredAt))return;
+ const messages=await prisma.gemmaCommunication.findMany({where:{workflowId:w.id}});if(messages.some(m=>!m.deliveredAt||m.deliveredAt>new Date()))return;
  return updateWorkflow(w,'Verified',data,'Benefit overlay validation passed, support cases were prepared and simulated delivery was recorded. Savings remain modeled.','gemma-employer','verified');
  }
 }

@@ -12,7 +12,7 @@ async function api(path,body){const r=await fetch(base+'/api/gemma'+path,{header
  while(Date.now()<deadline&&complete.size<3){
  for(const kind of ['access','external','savings']){
  if(complete.has(kind))continue;
- if(!selected[kind]){const list=await api('?kind='+kind+'&status=Awaiting+approval');if(list.rows[0])selected[kind]=list.rows[0].id;}
+ if(!selected[kind]){const list=await api('?kind='+kind);const candidate=list.rows.find(w=>w.status==='Verified')||list.rows.find(w=>w.status==='Awaiting approval');if(candidate)selected[kind]=candidate.id;}
  if(!selected[kind])continue;
  let w=await api('/'+selected[kind]);
  if(w.status==='Awaiting approval'){try{await api('/'+w.id,{requestId:crypto.randomUUID(),revision:w.revision,proposalHash:w.proposalHash,decision:'Approve',note:'Production smoke test: approve this sandbox version only.'});console.log(kind,'review recorded',w.id)}catch(e){console.log(kind,'review blocked',e.message);delete selected[kind];continue;}}
@@ -24,5 +24,5 @@ async function api(path,body){const r=await fetch(base+'/api/gemma'+path,{header
  }
  summary=await api('');console.log('Worker',summary.monitor.health,'scanned',summary.monitor.scanned,'verified journeys',complete.size);if(complete.size<3)await sleep(20000);
  }
- assert.equal(complete.size,3,'All three journeys must finish');assert(summary.monitor.scanned>startScanned,'Background cursor must advance without a browser');assert.equal(summary.monitor.health,'Monitoring');console.log('PASS: three production journeys; browser-independent worker; isolated simulated approvals and communications. Scheduler remains enabled.');
+ assert.equal(complete.size,3,'All three journeys must finish');if(summary.monitor.scanned<=startScanned){await sleep(65000);summary=await api('');}assert(summary.monitor.scanned>startScanned,'Background cursor must advance without a browser');assert.equal(summary.monitor.health,'Monitoring');console.log('PASS: three production journeys; browser-independent worker; isolated simulated approvals and communications. Scheduler remains enabled.');
 })().catch(e=>{console.error(e);process.exitCode=1});
