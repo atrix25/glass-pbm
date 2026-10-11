@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Presentation, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,50 +11,19 @@ import { cn } from "@/lib/utils";
  * objection, so the sequence matters more than the page list.
  */
 export const DEMO_STEPS = [
-  {
-    href: "/operations",
-    label: "The plan today",
-    claim: "A hundred thousand lives, and what happened on them this morning.",
-  },
-  {
-    href: "/sponsor",
-    label: "The book of business",
-    claim: "What the plan spent, and where it went.",
-  },
-  {
-    href: "/claims",
-    label: "One claim, fully derived",
-    claim: "Open any claim and read the arithmetic that produced it.",
-  },
-  {
-    href: "/changes",
-    label: "Change the benefit",
-    claim: "Move a copay and see every affected claim re-priced before you commit.",
-  },
-  {
-    href: "/assistant",
-    label: "Service a member",
-    claim: "The agent answers from the rules engine, and shows its work.",
-  },
-  {
-    href: "/pa",
-    label: "Decide a prior authorization",
-    claim: "Traverse the published criteria and cite the deciding step.",
-  },
-  {
-    href: "/reports",
-    label: "Reconcile the contract",
-    claim: "Guarantees, rebates, and the counterfactual against a spread PBM.",
-  },
-  {
-    href: "/proof",
-    label: "Prove it is correct",
-    claim: "Golden cases, book-wide invariants, and criteria branch coverage.",
-  },
+  { href: "/offering", label: "Choose", claim: "Compare pricing and benefit assumptions." },
+  { href: "/sponsor", label: "Employer value", claim: "Plan costs and member tradeoffs." },
+  { href: "/business", label: "Economics", claim: "Cost to serve and account contribution." },
+  { href: "/agents", label: "Agents", claim: "Recorded work on the reference book." },
+  { href: "/assistant", label: "Member service", claim: "Grounded answers from reference benefits." },
+  { href: "/changes", label: "Benefit review", claim: "Preview reference claims before a change." },
 ];
 
 export function DemoRail() {
   const pathname = usePathname();
+  const query = useSearchParams().toString();
+  const offeringPages = ["/sponsor", "/offering", "/business"];
+  const preserve = (href: string) => query && offeringPages.includes(pathname) && offeringPages.includes(href) ? `${href}?${query}` : href;
   const [dismissed, setDismissed] = useState(false);
 
   const index = DEMO_STEPS.findIndex(
@@ -98,7 +67,7 @@ export function DemoRail() {
             return (
               <li key={step.href} className="shrink-0">
                 <Link
-                  href={step.href}
+                  href={preserve(step.href)}
                   title={step.claim}
                   className={cn(
                     "flex items-center gap-1.5 rounded-full px-2.5 py-2 text-[12px] transition sm:py-1",
@@ -131,7 +100,7 @@ export function DemoRail() {
         <div className="flex shrink-0 items-center gap-1">
           {prev ? (
             <Link
-              href={prev.href}
+              href={preserve(prev.href)}
               className="rounded-md p-2.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700 sm:p-1"
               title={`Back: ${prev.label}`}
             >
@@ -140,7 +109,7 @@ export function DemoRail() {
           ) : null}
           {next ? (
             <Link
-              href={next.href}
+              href={preserve(next.href)}
               className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-[12px] font-medium text-glass-700 transition hover:bg-glass-50 sm:py-1"
               title={next.claim}
             >

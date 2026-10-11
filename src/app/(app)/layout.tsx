@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReferenceContext, ReferenceOnly } from "@/components/reference-context";
 import { getClock, getRole } from "@/lib/session";
 import { RoleSwitcher } from "@/components/role-switcher";
 import { SideNav, type NavGroup } from "@/components/nav";
@@ -9,68 +10,41 @@ import { CopyLayer } from "@/components/copy-layer";
 import { getCopyOverrides, copyIsPersistable } from "@/lib/copy";
 
 const GROUPS: NavGroup[] = [
-  {
-    title: "Start here",
-    items: [
-      { href: "/pitch", label: "Plan sponsor pitch", icon: "pitch" },
-      { href: "/walkthrough", label: "Guided walkthrough", icon: "walkthrough" },
-    ],
-  },
-  {
-    title: "Plan sponsor",
-    items: [
-      { href: "/sponsor", label: "Dashboard", icon: "sponsor" },
-      { href: "/claims", label: "Claim ledger", icon: "claims" },
-      { href: "/members", label: "Membership", icon: "members" },
-      { href: "/experience", label: "Member experience", icon: "experience" },
-      { href: "/reports", label: "Reports", icon: "reports" },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      { href: "/operations", label: "Live operations", icon: "operations" },
-      { href: "/eligibility", label: "Eligibility feed", icon: "eligibility" },
-      { href: "/trends", label: "Trend management", icon: "trends" },
-      { href: "/pa", label: "Prior authorization", icon: "pa" },
-      { href: "/pa/review", label: "Pharmacist review", icon: "paReview" },
-      { href: "/changes", label: "Change console", icon: "changes" },
-      { href: "/pos", label: "Pharmacy point of sale", icon: "pos" },
-    ],
-  },
-  {
-    title: "Clinical and integrity",
-    items: [
-      { href: "/clinical", label: "Clinical safety", icon: "clinical" },
-      { href: "/integrity", label: "Program integrity", icon: "integrity" },
-    ],
-  },
-  {
-    title: "Money movement",
-    items: [
-      { href: "/settlement", label: "Settlement", icon: "settlement" },
-      { href: "/reversals", label: "Reversals and recoveries", icon: "reversals" },
-      { href: "/mac", label: "MAC and appeals", icon: "mac" },
-      { href: "/reconciliation", label: "Guarantee reconciliation", icon: "reconciliation" },
-    ],
-  },
-  {
-    title: "Agents",
-    items: [
-      { href: "/agents", label: "Agent operations", icon: "agents" },
-      { href: "/assistant", label: "AI member service", icon: "assistant" },
-      { href: "/data-agent", label: "Data agent", icon: "dataAgent" },
-    ],
-  },
-  {
-    title: "Evidence",
-    items: [
-      { href: "/proof", label: "Correctness proof", icon: "proof" },
-      { href: "/throughput", label: "Throughput", icon: "throughput" },
-      { href: "/sources", label: "Source documents", icon: "sources" },
-      { href: "/methodology", label: "Methodology", icon: "methodology" },
-    ],
-  },
+  {title: "Offering", items: [
+    {href:"/sponsor",label:"Plan outlook",icon:"sponsor"},
+    {href:"/offering",label:"Pricing & benefits",icon:"changes"},
+    {href:"/business",label:"Caremark economics",icon:"reports"},
+    {href:"/pitch",label:"Product overview",icon:"pitch"},
+  ]},
+  {title:"Reference operations",items:[
+    {href:"/agents",label:"Agent operations",icon:"agents"},
+    {href:"/operations",label:"Work queues",icon:"operations"},
+    {href:"/eligibility",label:"Enrollment",icon:"eligibility"},
+    {href:"/changes",label:"Benefit changes",icon:"changes"},
+    {href:"/trends",label:"Trend & renewal",icon:"trends"},
+    {href:"/assistant",label:"Member service",icon:"assistant"},
+    {href:"/pa",label:"Prior authorization",icon:"pa"},
+    {href:"/pa/review",label:"Clinical review",icon:"paReview"},
+    {href:"/clinical",label:"Clinical safety",icon:"clinical"},
+    {href:"/integrity",label:"Program integrity",icon:"integrity"},
+    {href:"/data-agent",label:"Data agent",icon:"dataAgent"},
+  ]},
+  {title:"Reference book",items:[
+    {href:"/sponsor/reference",label:"Book overview",icon:"sponsor"},
+    {href:"/claims",label:"Claims",icon:"claims"},
+    {href:"/members",label:"Members",icon:"members"},
+    {href:"/experience",label:"Member experience",icon:"experience"},
+    {href:"/pos",label:"Point of sale",icon:"pos"},
+    {href:"/settlement",label:"Settlement",icon:"settlement"},
+    {href:"/reversals",label:"Reversals",icon:"reversals"},
+    {href:"/mac",label:"MAC & appeals",icon:"mac"},
+    {href:"/reconciliation",label:"Reconciliation",icon:"reconciliation"},
+    {href:"/reports",label:"Reports",icon:"reports"},
+    {href:"/sources",label:"Source documents",icon:"sources"},
+    {href:"/proof",label:"Engine tests",icon:"proof"},
+    {href:"/throughput",label:"Throughput",icon:"throughput"},
+    {href:"/methodology",label:"Methodology",icon:"methodology"},
+  ]},
 ];
 
 export default async function AppLayout({
@@ -98,7 +72,7 @@ export default async function AppLayout({
           Glass
         </span>
         <span className="mr-8 ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 lg:mr-0">
-          ETG0013
+          Concept
         </span>
       </Link>
 
@@ -115,9 +89,10 @@ export default async function AppLayout({
   return (
     <AppShell sidebar={sidebar}>
       <DemoRail />
-      <div className="border-b border-ink-200/70 bg-white/60 px-4 py-2 sm:px-6 lg:px-8">
+      <ReferenceContext />
+      <ReferenceOnly><div className="border-b border-ink-200/70 bg-white/60 px-4 py-2 sm:px-6 lg:px-8">
         <ClockBar clock={clock} />
-      </div>
+      </div></ReferenceOnly>
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
         <div className="mx-auto w-full max-w-[1180px]">{children}</div>
       </main>

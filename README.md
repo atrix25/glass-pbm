@@ -1,6 +1,6 @@
 # Glass
 
-Transparent PBM proof of concept (Wisconsin ETF / Navitus ETG0013), evolving into a **single-tenant production** deploy.
+Glass is a **Caremark small-employer offering concept** with an illustrative commercial model and a separate working Wisconsin/Navitus reference book. See [offering scope and assumptions](docs/caremark-offering.md).
 
 ## Architecture (foundation)
 

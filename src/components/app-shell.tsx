@@ -99,7 +99,7 @@ export function AppShell({
             Glass
           </span>
           <span className="ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600">
-            ETG0013
+            Concept
           </span>
         </div>
 

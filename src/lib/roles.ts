@@ -12,25 +12,25 @@ export const ROLES: RoleDefinition[] = [
   {
     id: "sponsor",
     label: "Plan sponsor",
-    who: "Steel Potatoes LLC — Benefits Director",
+    who: "Employer benefits team",
     blurb:
-      "See the whole book: what the plan paid, what the pharmacy received, what the contract guaranteed, and where the two diverge.",
+      "Compare employer costs, member costs, and benefit choices.",
     landing: "/sponsor",
   },
   {
     id: "admin",
-    label: "Benefit administrator",
-    who: "Glass — Account Management",
+    label: "Caremark team",
+    who: "Commercial and operations",
     blurb:
-      "Change the benefit and watch every affected claim re-adjudicate before the change is committed.",
-    landing: "/changes",
+      "Model account economics and explore agent-assisted operations.",
+    landing: "/business",
   },
   {
     id: "member",
     label: "Member",
     who: "Margaret Olson — Madison, WI",
     blurb:
-      "Ask a question in plain language and get an answer with the rule, the number, and the source behind it.",
+      "Explore grounded member support using the synthetic reference book.",
     landing: "/assistant",
   },
   {
@@ -38,7 +38,7 @@ export const ROLES: RoleDefinition[] = [
     label: "Pharmacy",
     who: "Walgreens #4471 — point of sale",
     blurb:
-      "Submit a claim the way a pharmacy does and read the full adjudication response.",
+      "Submit a reference claim and inspect its adjudication.",
     landing: "/pos",
   },
 ];

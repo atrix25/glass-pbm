@@ -1,27 +1,3 @@
-import { getClock } from "@/lib/session";
-import {
-  getPitchBookStats,
-  getPitchExperiences,
-} from "@/lib/pitch/experiences";
-import { buildPitchSlides } from "@/lib/pitch/slides";
-import { PitchDeck } from "@/components/pitch-deck";
-
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-  title: "Plan sponsor pitch",
-};
-
-export default async function PitchPage() {
-  const clock = await getClock();
-  const [stats, experiences] = await Promise.all([
-    getPitchBookStats(clock),
-    getPitchExperiences(clock),
-  ]);
-  const { slides, byId } = buildPitchSlides(experiences);
-  const experienceMap = Object.fromEntries(byId.entries());
-
-  return (
-    <PitchDeck slides={slides} experiences={experienceMap} stats={stats} />
-  );
-}
+import Link from 'next/link';
+export const metadata={title:'Glass · Caremark offering'};
+export default function Pitch(){return <main className="min-h-screen bg-[#f7f8fa] px-6 py-12 text-ink-900"><div className="mx-auto max-w-5xl"><Link href="/" className="text-xl font-semibold">glass.</Link><p className="mt-14 text-xs uppercase tracking-widest text-glass-700">Caremark small-employer concept</p><h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl">A simpler benefit.<br/>An efficient business.</h1><p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-500">Combine Caremark pricing options with automated administration, practical member support, and accountable human decisions.</p><div className="mt-12 grid gap-5 md:grid-cols-3">{[['01','Choose the offering','Compare pricing, service fees and benefit approaches.','/offering','Build the offering'],['02','See employer value','Understand annual cost and the effect on members.','/sponsor','Plan outlook'],['03','Run the business','Model cost to serve and inspect the existing agent workflows.','/business','Business outlook']].map(([n,title,body,href,label])=><section key={n} className="rounded-xl border border-ink-200 bg-white p-6"><p className="text-xs text-glass-600">{n}</p><h2 className="mt-4 text-xl font-semibold">{title}</h2><p className="mt-3 text-sm leading-relaxed text-ink-500">{body}</p><Link href={href} className="mt-8 inline-block text-sm font-medium text-glass-800">{label} →</Link></section>)}</div><p className="mt-8 text-xs text-ink-500">Illustrative concept, not an announced product. Rates and benefits require approved Caremark terms. Reference workflows use Wisconsin/Navitus fixtures.</p></div></main>}

@@ -37,7 +37,7 @@ export default async function AgentsPage() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        description={`Six agents, ${formatNumber(fleet.totalRuns)} runs against this book, ${formatNumber(fleet.totalProposals)} proposals written and ${formatNumber(fleet.totalHeld)} of them held for a person because they would have moved money or denied care. Every run below is a real invocation against the real database, recorded as it happened.`}
+        description={`${fleet.agents.length} registered agents · ${formatNumber(fleet.totalRuns)} recorded runs on the synthetic reference book. Open an agent to inspect its responsibility, permissions and history.`}
       >
         Agent operations
       </SectionTitle>
@@ -47,18 +47,18 @@ export default async function AgentsPage() {
           <Stat
             label="Runs recorded"
             value={formatNumber(fleet.totalRuns)}
-            sub={`Across ${active.length} agents in production`}
+            sub={`Across ${active.length} agents in the reference book`}
           />
           <Stat
-            label="Held for a person"
+            label="Consequential proposals"
             value={formatNumber(fleet.totalHeld)}
-            sub="Actions that move money or deny care. Never auto-applied."
+            sub="Historical total, including resolved proposals. Not a pending-work count."
             tone="accent"
           />
           <Stat
-            label="Human hours displaced"
+            label="Estimated staff hours"
             value={formatNumber(Math.round(fleet.hoursDisplaced))}
-            sub="At the per-task times published in each agent's register entry"
+            sub="Modeled task time, not measured staffing savings."
           />
           <Stat
             label="Model spend"
@@ -71,28 +71,7 @@ export default async function AgentsPage() {
           />
         </div>
 
-        <div className="px-5 py-4 text-[13px] leading-relaxed text-ink-600">
-          {fleet.modelConfigured ? (
-            <>
-              A language model is configured on this deployment, and the runs
-              that used it say so on their own trace. Where a model was
-              unreachable or returned something off-schema, the scripted planner
-              answered instead and the step records that too.
-            </>
-          ) : (
-            <>
-              No language model is configured on this deployment, so every run
-              below was reasoned by the scripted planner that each agent ships
-              with. That is deliberate rather than a limitation: an agent whose
-              tools return structured, cited data does most of its work in the
-              tool layer, and several of these tasks — reading a templated fax,
-              answering a 21-day appeal against a price file — do not need a
-              model at all. Set an <code className="rounded bg-ink-100 px-1 py-0.5 text-[12px]">ANTHROPIC_API_KEY</code>{" "}
-              and the same agents run the same tools with a model doing the
-              judgement, and every step is labelled with which one ran.
-            </>
-          )}
-        </div>
+        <details className="px-5 py-4 text-[13px] text-ink-600"><summary className="cursor-pointer font-medium">Execution detail</summary><p className="mt-2">Runs identify whether a language model or scripted planner executed the work. Calculations use deterministic tools. Recorded proposals do not establish completed actions or verified savings.</p></details>
       </Card>
 
       <Card>
@@ -107,7 +86,7 @@ export default async function AgentsPage() {
               <Th>Autonomy</Th>
               <Th align="right">Runs</Th>
               <Th align="right">Escalated</Th>
-              <Th align="right">Held</Th>
+              <Th align="right">Consequential</Th>
               <Th align="right">Overridden</Th>
               <Th align="right">Median</Th>
               <Th>Reasoned by</Th>
@@ -126,6 +105,7 @@ export default async function AgentsPage() {
                   <div className="mt-0.5 max-w-md text-[12px] leading-snug text-ink-500">
                     {a.def.purpose}
                   </div>
+                  <div className="mt-1 text-xs text-glass-700">Responsible role: {a.def.owner}</div>
                 </Td>
                 <Td>
                   <Badge tone={TONE[a.autonomy]}>{a.autonomy}</Badge>

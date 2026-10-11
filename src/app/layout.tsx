@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Glass — transparent PBM",
+  title: "Glass — simpler pharmacy benefits",
   description:
-    "An end-to-end transparent pharmacy benefit manager running a hundred thousand lives on the published Wisconsin ETF / Navitus contract. Every number shows its derivation.",
+    "A Caremark small-employer offering concept: pricing choices, member support, and automated benefit administration.",
 };
 
 export default function RootLayout({

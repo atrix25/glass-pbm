@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Activity,
   BarChart3,
@@ -77,6 +77,9 @@ export interface NavGroup {
 
 export function SideNav({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
+  const query = useSearchParams().toString();
+  const offeringPages = ["/sponsor", "/offering", "/business"];
+  const preserve = (href: string) => query && offeringPages.includes(pathname) && offeringPages.includes(href) ? `${href}?${query}` : href;
 
   return (
     <nav className="flex flex-col gap-6 px-3 py-5">
@@ -90,11 +93,11 @@ export function SideNav({ groups }: { groups: NavGroup[] }) {
               const Icon = ICONS[item.icon];
               const active =
                 pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+                (item.href !== "/" && item.href !== "/sponsor" && pathname.startsWith(`${item.href}/`));
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    href={preserve(item.href)}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition",
                       active
