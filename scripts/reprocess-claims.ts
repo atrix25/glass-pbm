@@ -28,6 +28,7 @@
 import { prisma } from "../src/lib/db.js";
 import { replay } from "../src/lib/engine/replay.js";
 import { formatCents } from "../src/lib/money.js";
+import { b1MoneyWriteFromDiff } from "./reprocess-claim-money.js";
 
 const WRITE = process.argv.includes("--write");
 
@@ -93,32 +94,13 @@ async function main() {
   console.log("\nWriting corrected adjudications...");
   let written = 0;
   for (const d of result.diffs) {
-    const rejected = d.after.status === "R";
+    // Persist every money column from the corrected adjudication. Writing only
+    // plan/member/billed left pharmacyPaid/allowed/rebate at the pre-correction
+    // (or zero) values on cost and newly-paid diffs, breaking remittance nets
+    // and pass-through even when status/plan dollars looked right.
     await prisma.claim.update({
       where: { id: d.claimId },
-      data: {
-        responseStatus: d.after.status,
-        rejectCodes: d.after.rejectCode ? JSON.stringify([d.after.rejectCode]) : "[]",
-        totalBilledCents: d.after.totalBilledCents,
-        planPaidCents: d.after.planPaidCents,
-        patientPayCents: d.after.patientPayCents,
-        // A refused claim moves no money anywhere, so the pharmacy side has to
-        // come back to zero too or the pass-through invariant breaks.
-        ...(rejected
-          ? {
-              allowedIngredientCostCents: 0,
-              allowedDispensingFeeCents: 0,
-              totalAllowedCents: 0,
-              pharmacyPaidCents: 0,
-              billedIngredientCostCents: 0,
-              billedDispensingFeeCents: 0,
-              copayCoinsuranceCents: 0,
-              appliedToDeductibleCents: 0,
-              brandSelectionPenaltyCents: 0,
-              estimatedRebateCents: 0,
-            }
-          : {}),
-      },
+      data: b1MoneyWriteFromDiff(d.after),
     });
     written++;
     if (written % 50 === 0) console.log(`  ${written} of ${result.diffs.length}`);
