@@ -237,4 +237,68 @@ describe("an emergency supply at the point of sale", () => {
     expect(result.responseStatus).toBe("P");
     expect(result.patientPayCents).toBeGreaterThan(0);
   });
+
+  it("pays the authorized fill on the next business day after an emergency bridge", () => {
+    // Saturday emergency (DS=5) would otherwise hold refill-too-soon until
+    // ceil(5 * 0.75) = 4 days later — Wednesday — and reject Monday with 79
+    // even though the published process works the authorization next business
+    // day. The bridge must not block that authorized continuation.
+    const shared = {
+      drug: paDrug,
+      formularyEntry: paEntry,
+      quantityDispensed: 2,
+    } as const;
+
+    const emergency = claim({
+      ...shared,
+      dateOfService: SATURDAY,
+      daysSupply: 5,
+      levelOfService: "3",
+    });
+    expect(emergency.responseStatus).toBe("P");
+
+    const mondayWithPa = claim({
+      ...shared,
+      dateOfService: MONDAY,
+      daysSupply: 28,
+      quantityDispensed: 4,
+      priorAuthNumber: "PA-AFTER-BRIDGE",
+      priorFills: [
+        {
+          dateOfService: SATURDAY,
+          daysSupply: 5,
+          quantityDispensed: 2,
+          drugId: paDrug.id,
+          therapeuticClass: paDrug.therapeuticClass,
+        },
+      ],
+    });
+    expect(mondayWithPa.responseStatus).toBe("P");
+    expect(mondayWithPa.rejectCodes).not.toContain("79");
+    expect(mondayWithPa.patientPayCents).toBeGreaterThan(0);
+  });
+
+  it("still holds the ordinary refill-too-soon threshold when the prior was not a bridge", () => {
+    // A five-day supply on a business day with PA already on file is an
+    // ordinary short fill, not an emergency bridge. Monday is too soon.
+    const result = claim({
+      drug: paDrug,
+      formularyEntry: paEntry,
+      dateOfService: MONDAY,
+      daysSupply: 28,
+      quantityDispensed: 4,
+      priorAuthNumber: "PA-ON-FILE",
+      priorFills: [
+        {
+          dateOfService: day("2026-03-13"), // Friday
+          daysSupply: 5,
+          quantityDispensed: 2,
+          drugId: paDrug.id,
+          therapeuticClass: paDrug.therapeuticClass,
+        },
+      ],
+    });
+    expect(result.responseStatus).toBe("R");
+    expect(result.rejectCodes).toContain("79");
+  });
 });

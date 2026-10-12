@@ -23,7 +23,9 @@ import { priceClaim, type RateTerms } from "./pricing";
 import { TraceBuilder } from "./trace";
 import {
   EMERGENCY_SUPPLY,
+  closureOn,
   emergencySupplyEligibility,
+  nextBusinessDay,
   type EmergencySupplyDecision,
 } from "@/lib/pa/emergency-supply";
 import { PLAN_YEAR_START } from "@/lib/clock";
@@ -655,16 +657,61 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
     .filter((f) => f.drugId === drug.id && f.dateOfService < dos)
     .sort((a, b) => b.dateOfService.getTime() - a.dateOfService.getTime());
 
+  /*
+   * Whether an approved authorization already covers this fill. Computed here
+   * so refill-too-soon can recognise the weekend/holiday emergency bridge: a
+   * short closure-day prior must not block the authorized fill on the next
+   * business day (when the published process says the PA is worked).
+   */
+  const approvedPaForFill = approvedPAs.find(
+    (pa) =>
+      pa.drugId === drug.id &&
+      pa.effectiveDate <= dos &&
+      (!pa.terminationDate || pa.terminationDate >= dos),
+  );
+  const hasPaForFill =
+    Boolean(approvedPaForFill) || Boolean(request.priorAuthNumber);
+
   if (sameDrugFills.length > 0) {
     const last = sameDrugFills[0];
     const elapsedDays = Math.floor(
       (dos.getTime() - last.dateOfService.getTime()) / 86_400_000,
     );
-    const requiredDays = Math.ceil(last.daysSupply * refillThreshold);
-    const tooSoon = elapsedDays < requiredDays;
-    const eligibleDate = new Date(
-      last.dateOfService.getTime() + requiredDays * 86_400_000,
-    );
+
+    /*
+     * Claims do not persist NCPDP 418-DK, so a prior looks like an emergency
+     * bridge when it is at most the published max days supply and landed on a
+     * day the prescriber cannot be reached. That shape only overrides RTS
+     * when this fill is itself for a PA drug with authorization on file —
+     * the path the emergency rule exists to unlock.
+     */
+    const priorLooksLikeEmergencyBridge =
+      Boolean(formularyEntry?.requiresPA) &&
+      hasPaForFill &&
+      last.daysSupply <= EMERGENCY_SUPPLY.maxDaysSupply &&
+      closureOn(last.dateOfService) !== null;
+
+    let requiredDays: number;
+    let eligibleDate: Date;
+    let tooSoon: boolean;
+    let bridgeDetail: string | null = null;
+
+    if (priorLooksLikeEmergencyBridge) {
+      eligibleDate = nextBusinessDay(last.dateOfService);
+      requiredDays = Math.floor(
+        (eligibleDate.getTime() - last.dateOfService.getTime()) / 86_400_000,
+      );
+      tooSoon = dos.getTime() < eligibleDate.getTime();
+      bridgeDetail = tooSoon
+        ? `The prior fill looks like a weekend/holiday emergency bridge (${last.daysSupply}-day supply on a closure day). The authorization is worked on the next business day (${eligibleDate.toISOString().slice(0, 10)}), so this fill is early.`
+        : `The prior fill looks like a weekend/holiday emergency bridge; the authorized fill on or after ${eligibleDate.toISOString().slice(0, 10)} is not held to the ordinary ${Math.round(refillThreshold * 100)}% days-supply threshold.`;
+    } else {
+      requiredDays = Math.ceil(last.daysSupply * refillThreshold);
+      tooSoon = elapsedDays < requiredDays;
+      eligibleDate = new Date(
+        last.dateOfService.getTime() + requiredDays * 86_400_000,
+      );
+    }
 
     trace.internal({
       ruleId: "um.refill-too-soon",
@@ -676,15 +723,18 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
         thresholdPct: refillThreshold,
         elapsedDays,
         requiredDays,
+        emergencyBridge: priorLooksLikeEmergencyBridge,
       },
       output: {
         tooSoon,
         eligibleRefillDate: eligibleDate.toISOString().slice(0, 10),
       },
       fired: tooSoon,
-      detail: tooSoon
-        ? `Only ${elapsedDays} of the required ${requiredDays} days have elapsed. Eligible for refill on ${eligibleDate.toISOString().slice(0, 10)}.`
-        : `${elapsedDays} days elapsed since the last fill, which clears the ${Math.round(refillThreshold * 100)}% threshold.`,
+      detail: bridgeDetail
+        ? bridgeDetail
+        : tooSoon
+          ? `Only ${elapsedDays} of the required ${requiredDays} days have elapsed. Eligible for refill on ${eligibleDate.toISOString().slice(0, 10)}.`
+          : `${elapsedDays} days elapsed since the last fill, which clears the ${Math.round(refillThreshold * 100)}% threshold.`,
     });
 
     if (tooSoon) {
@@ -726,13 +776,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
   let emergencySupply: EmergencySupplyDecision | null = null;
 
   if (formularyEntry.requiresPA) {
-    const approved = approvedPAs.find(
-      (pa) =>
-        pa.drugId === drug.id &&
-        pa.effectiveDate <= dos &&
-        (!pa.terminationDate || pa.terminationDate >= dos),
-    );
-    const hasPA = Boolean(approved) || Boolean(request.priorAuthNumber);
+    const hasPA = hasPaForFill;
 
     trace.cited({
       ruleId: "um.prior-authorization",
@@ -740,7 +784,7 @@ export function adjudicate(ctx: AdjudicationContext): AdjudicationOutcome {
       question: "Does this drug require prior authorization, and is one on file?",
       inputs: {
         requiresPA: true,
-        approvedPaOnFile: Boolean(approved),
+        approvedPaOnFile: Boolean(approvedPaForFill),
         paNumberSubmitted: request.priorAuthNumber ?? null,
       },
       output: { satisfied: hasPA },
