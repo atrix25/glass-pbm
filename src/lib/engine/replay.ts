@@ -417,6 +417,23 @@ function applyFormularyOverride(
 // The replay
 // ---------------------------------------------------------------------------
 
+/** Money columns a reprocess write must persist, not only plan/member/billed. */
+export interface ClaimDiffMoney {
+  totalBilledCents: number;
+  planPaidCents: number;
+  patientPayCents: number;
+  totalAllowedCents: number;
+  pharmacyPaidCents: number;
+  allowedIngredientCostCents: number;
+  allowedDispensingFeeCents: number;
+  billedIngredientCostCents: number;
+  billedDispensingFeeCents: number;
+  appliedToDeductibleCents: number;
+  copayCoinsuranceCents: number;
+  brandSelectionPenaltyCents: number;
+  estimatedRebateCents: number;
+}
+
 export interface ClaimDiff {
   claimId: string;
   claimNumber: string;
@@ -436,10 +453,7 @@ export interface ClaimDiff {
   after: {
     status: string;
     rejectCode: string | null;
-    totalBilledCents: number;
-    planPaidCents: number;
-    patientPayCents: number;
-  };
+  } & ClaimDiffMoney;
   planDeltaCents: number;
   memberDeltaCents: number;
   /** What kind of change this is, for grouping in the UI. */
@@ -1040,6 +1054,18 @@ export async function replay(
             totalBilledCents: out.totalBilledCents,
             planPaidCents: out.planPaidCents,
             patientPayCents: out.patientPayCents,
+            // Full money: reprocess --write must persist pharmacy/allowed/rebate
+            // too, or remittance and pass-through drift from corrected plan $.
+            totalAllowedCents: out.totalAllowedCents,
+            pharmacyPaidCents: out.pharmacyPaidCents,
+            allowedIngredientCostCents: out.allowedIngredientCostCents,
+            allowedDispensingFeeCents: out.allowedDispensingFeeCents,
+            billedIngredientCostCents: out.billedIngredientCostCents,
+            billedDispensingFeeCents: out.billedDispensingFeeCents,
+            appliedToDeductibleCents: out.appliedToDeductibleCents,
+            copayCoinsuranceCents: out.copayCoinsuranceCents,
+            brandSelectionPenaltyCents: out.brandSelectionPenaltyCents,
+            estimatedRebateCents: out.estimatedRebateCents,
           },
           planDeltaCents: out.planPaidCents - row.planPaidCents,
           memberDeltaCents: out.patientPayCents - row.patientPayCents,
