@@ -1294,9 +1294,13 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
   }
 
   // --- DAW 1 brand selection penalty ---------------------------------------
+  // CoC §F Level 3 row + ETF FAQ: the brand/generic differential applies only
+  // to Level 3 DAW-1 fills. §M covers DAW brands at whatever formulary tier
+  // they already sit on — Level 1/2/4 keep their ordinary cost share alone.
   let brandPenaltyMicros = 0;
   if (
     plan.dawPenaltyEnabled &&
+    level === "3" &&
     dawCode === "1" &&
     brandGeneric === "Brand" &&
     genericReferenceMicros > 0 &&
@@ -1308,13 +1312,14 @@ function computeCostShare(args: CostShareArgs): CostShareResult {
       stage: "costshare",
       question: "Does the brand selection penalty apply?",
       inputs: {
+        level,
         dawCode,
         brandCost: formatCents(toCents(totalAllowedMicros)),
         genericCost: formatCents(toCents(genericReferenceMicros)),
       },
       output: { penalty: formatCents(toCents(brandPenaltyMicros)) },
       fired: true,
-      detail: `Dispense as written was requested. The member pays coinsurance plus the ${formatCents(toCents(brandPenaltyMicros))} difference between the brand and the generic, unless a MedWatch form is on file with Navitus.`,
+      detail: `Dispense as written was requested on a Level 3 drug. The member pays coinsurance plus the ${formatCents(toCents(brandPenaltyMicros))} difference between the brand and the generic, unless a MedWatch form is on file with Navitus.`,
       sourceDocumentId: SRC_COC,
       citation:
         "Certificate of Coverage 2026: for Level 3 Dispense as Written drugs the member pays 40% coinsurance plus the brand/generic cost difference unless a one-time FDA MedWatch form is on file.",
