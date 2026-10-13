@@ -325,7 +325,7 @@ export async function loadWorld(force = false): Promise<ReplayWorld> {
 // Applying an override
 // ---------------------------------------------------------------------------
 
-function applyPlanOverride(
+export function applyPlanOverride(
   plan: EngineBenefitPlan,
   o: ConfigOverride,
 ): EngineBenefitPlan {
@@ -388,7 +388,7 @@ function applyContractOverride(
   };
 }
 
-function applyFormularyOverride(
+export function applyFormularyOverride(
   entry: EngineFormularyEntry,
   drugName: string,
   drugId: string,
@@ -554,6 +554,7 @@ async function* streamClaimsByMember(
   blockSize = 400,
   sampleRate = 1,
   memberId?: string,
+  scope?: {sponsorId:string;contractId:string},
 ): AsyncGenerator<ReplayClaimRow[]> {
   let cursor: string | null = null;
   // Paging over the member table is cheap; pulling their claims is not. When
@@ -563,7 +564,7 @@ async function* streamClaimsByMember(
 
   for (;;) {
     const page: { id: string }[] = await prisma.member.findMany({
-      ...(memberId ? {where:{id:memberId}} : {}),
+      where:{...(memberId?{id:memberId}:{}),...(scope?{sponsorId:scope.sponsorId}:{})},
       select: { id: true },
       orderBy: { id: "asc" },
       take,
@@ -604,9 +605,11 @@ async function* streamClaimsByMember(
        JOIN Drug d   ON d.id = c.drugId
        WHERE c.memberId IN (${ids.map(() => "?").join(",")})
          AND c.dateOfService <= ?::timestamp
+         ${scope ? "AND c.sponsorId = ? AND c.contractId = ?" : ""}
        ORDER BY c.memberId, c.dateOfService, c.claimNumber`,
       ...ids,
       cutoff.toISOString(),
+      ...(scope?[scope.sponsorId,scope.contractId]:[]),
     );
     if (rows.length > 0) yield rows;
   }
@@ -703,6 +706,8 @@ async function loadFixedSignals(
 export async function replay(
   override: ConfigOverride = {},
   opts: {
+    scope?: {sponsorId:string;contractId:string};
+    baselineOverride?: ConfigOverride;
     maxDiffs?: number;
     asOf?: Date;
     nps?: boolean;
@@ -788,6 +793,9 @@ export async function replay(
     tallyAfter = null;
   };
 
+  let baselineAcc = {rxOopAccumulatedCents:0,federalOopAccumulatedCents:0,deductibleAccumulatedCents:0};
+  let baselineFills: PriorFill[] = [];
+  let baselineOutcomes = new Map<string, ReturnType<typeof adjudicate>>();
   let currentMember = "";
   let priorFills: PriorFill[] = [];
   let acc = {
@@ -820,7 +828,7 @@ export async function replay(
   let medicalEncounters: MedicalEncounter[] | null = null;
   let medicalCursor = 0;
 
-  for await (const block of streamClaimsByMember(cutoff, 400, sampleRate, opts.memberId)) {
+  for await (const block of streamClaimsByMember(cutoff, 400, sampleRate, opts.memberId, opts.scope)) {
   for (const row of block) {
     if (row.memberId !== currentMember) {
       if (npsOn) {
@@ -829,6 +837,8 @@ export async function replay(
         tallyBefore = new ExperienceTally(row.memberId, fixed);
         tallyAfter = new ExperienceTally(row.memberId, fixed);
       }
+      baselineAcc = {rxOopAccumulatedCents:0,federalOopAccumulatedCents:0,deductibleAccumulatedCents:0};
+      baselineFills=[];baselineOutcomes=new Map();
       currentMember = row.memberId;
       priorFills = [];
       replayed = new Map();
@@ -856,6 +866,7 @@ export async function replay(
      * against fills as they were priced.
      */
     if (row.transactionCode === "B2") {
+      if(opts.baselineOverride){const original=baselineOutcomes.get(row.reversalOfClaimId??'');if(original){row.planPaidCents=-original.planPaidCents;row.patientPayCents=-original.patientPayCents;row.totalBilledCents=-original.totalBilledCents;row.estimatedRebateCents=-original.estimatedRebateCents;}}
       disruption?.reverse(row.reversalOfClaimId ?? "");
       /*
        * Counted on both sides before anything else happens. A reversal exists
@@ -921,6 +932,7 @@ export async function replay(
     ) {
       acc.deductibleAccumulatedCents +=
         medicalEncounters[medicalCursor]!.amountCents;
+      baselineAcc.deductibleAccumulatedCents += medicalEncounters[medicalCursor]!.amountCents;
       medicalCursor++;
     }
 
@@ -954,6 +966,13 @@ export async function replay(
       refillThreshold: override.refillThreshold,
     };
 
+    if(opts.baselineOverride){
+      const b=opts.baselineOverride;
+      const before=adjudicate({...ctx,plan:applyPlanOverride(basePlan,b),formularyEntry:baseEntry?applyFormularyOverride(baseEntry,drug.name,drug.id,b):null,contract:applyContractOverride(world.contract,b),priorFills:baselineFills,accumulators:{...baselineAcc},refillThreshold:b.refillThreshold});
+      baselineOutcomes.set(row.id,before);
+      if(before.responseStatus==='P'){baselineFills.push({dateOfService:new Date(row.dateOfService),daysSupply:row.daysSupply,quantityDispensed:row.quantityDispensed,drugId:row.drugId,therapeuticClass:drug.therapeuticClass});for(const d of before.costShare?.accumulatorDeltas??[]){const cents=Math.round(d.amountMicros/10000);if(d.accumulatorType==='RxOopIndividual')baselineAcc.rxOopAccumulatedCents+=cents;if(d.accumulatorType==='FederalOopIndividual')baselineAcc.federalOopAccumulatedCents+=cents;if(d.accumulatorType==='DeductibleIndividual')baselineAcc.deductibleAccumulatedCents+=cents;}}
+      Object.assign(row,{responseStatus:before.responseStatus,rejectCodes:JSON.stringify(before.rejectCodes),planPaidCents:before.planPaidCents,patientPayCents:before.patientPayCents,totalBilledCents:before.totalBilledCents,estimatedRebateCents:before.estimatedRebateCents,appliedToDeductibleCents:before.appliedToDeductibleCents,brandSelectionPenaltyCents:before.brandSelectionPenaltyCents});
+    }
     const out = adjudicate(ctx);
     result.claimsEvaluated++;
 

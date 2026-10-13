@@ -6,6 +6,7 @@
  * On Fly this is the `worker` process group in fly.toml.
  */
 
+import {analyze as analyzeBenefitChange} from "../src/lib/benefit-changes/store";
 import { randomBytes } from "node:crypto";
 import { prisma } from "../src/lib/db";
 import {
@@ -28,6 +29,7 @@ const POLL_MS = Number(process.env.WORKER_POLL_MS ?? 2000);
 
 async function handleJob(type: string, payload: Record<string, unknown>, jobId: string) {
   switch (type) {
+    case "benefit-impact": return analyzeBenefitChange(payload as Parameters<typeof analyzeBenefitChange>[0]);
     case "gemma-validate": return validateGemma(payload as Parameters<typeof validateGemma>[0]);
     case "savings-v1": {
       return runSavings(payload as {cutoff:string;goals:Goals},jobId);

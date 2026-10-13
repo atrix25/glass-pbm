@@ -2272,3 +2272,50 @@ model GemmaDecision {
  createdAt DateTime @default(now())
  @@unique([workflowId, requestId])
 }
+
+// Isolated benefit-change demonstration. Immutable revisions live in events.
+model BenefitChange {
+  id String @id
+  sponsorId String
+  contractId String
+  title String
+  status String @default("Draft")
+  revision Int @default(0)
+  data String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([sponsorId, contractId, updatedAt])
+}
+model BenefitChangeEvent {
+  id String @id
+  changeId String
+  requestKey String @unique
+  revision Int
+  kind String
+  actor String
+  data String
+  createdAt DateTime @default(now())
+  @@index([changeId, createdAt])
+}
+model BenefitDeployment {
+  id String @id
+  sponsorId String
+  contractId String
+  revision Int @default(0)
+  changeId String?
+  versionId String?
+  payload String @default("{}")
+  updatedAt DateTime @updatedAt
+  @@unique([sponsorId, contractId])
+}
+model BenefitChangeSource {
+  id String @id
+  sponsorId String
+  contractId String
+  data String
+  createdAt DateTime @default(now())
+}
+model BenefitSourceRevision {
+  id String @id
+  revision Int @default(0)
+}

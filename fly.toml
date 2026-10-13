@@ -9,7 +9,7 @@ primary_region = "ord"
 # No volume mount — the SQLite book file is retired.
 
 [deploy]
-  release_command = "node /app/scripts/migrate-gemma.mjs"
+  release_command = "node /app/scripts/migrate-benefit-changes.mjs"
 
 [processes]
   app = "node /app/server.js"

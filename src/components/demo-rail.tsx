@@ -11,14 +11,14 @@ import { cn } from "@/lib/utils";
  * objection, so the sequence matters more than the page list.
  */
 export const DEMO_STEPS = [
-  {href:"/gemma",label:"Gemma",claim:"Signals, actions and verified simulated outcomes."},
+  {href:"/gemma",label:"Glass",claim:"Signals, actions and verified simulated outcomes."},
   { href: "/offering", label: "Choose", claim: "Compare pricing and benefit assumptions." },
   { href: "/sponsor", label: "Employer value", claim: "Plan costs and member tradeoffs." },
   { href: "/savings", label: "Find savings", claim: "Savings, member disruption, and modeled NPS." },
   { href: "/business", label: "Economics", claim: "Cost to serve and account contribution." },
   { href: "/agents", label: "Agents", claim: "Recorded work on the reference book." },
   { href: "/assistant", label: "Member service", claim: "Grounded answers from reference benefits." },
-  { href: "/changes", label: "Benefit review", claim: "Preview reference claims before a change." },
+  { href: "/benefit-changes", label: "Benefit changes", claim: "Propose, test, deploy and monitor a sandbox benefit." },
 ];
 
 export function DemoRail() {

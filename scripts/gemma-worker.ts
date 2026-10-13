@@ -1,4 +1,5 @@
 import pg from 'pg';
+import {monitorBenefits} from '../src/lib/benefit-changes/store';
 import {prisma} from '../src/lib/db';
 import {demoFeaturesEnabled} from '../src/lib/config';
 import {claimNextJob,renewJobLease,completeJob,failJob} from '../src/lib/jobs';
@@ -15,6 +16,7 @@ async function main(){
  // Transaction locks pin the backend safely through PgBouncer as well as direct Postgres.
  const lock=await connection.query('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS acquired',[JSON.stringify(scope)]);
  if(lock.rows[0].acquired){
+ if((await ensureMonitor(scope)).enabled)await monitorBenefits();
  await enqueueTick(scope);
  const job=await claimNextJob(owner,'gemma',scope);if(job){const heartbeat=setInterval(()=>{void Promise.all([renewJobLease(job.id,owner),prisma.gemmaMonitor.updateMany({where:scope,data:{heartbeatAt:new Date()}})]).catch(()=>{});},30000);try{const result=await processTick(scope);await completeJob(job.id,result,owner);console.log('Gemma cycle completed',job.id);}catch(e){const message=e instanceof Error?e.message:'Cycle failed';await failJob(job.id,message,owner);await prisma.gemmaMonitor.updateMany({where:scope,data:{lastError:message}});console.error(message)}finally{clearInterval(heartbeat)}}
  }

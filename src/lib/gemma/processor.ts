@@ -8,7 +8,7 @@ import {resolveClock} from '@/lib/clock';
 import {collectSignals,ensureMonitor} from './monitor';
 import type {GemmaSubject,Prisma} from '@/generated/prisma';
 const scopeOf=(w:WF)=>({sponsorId:w.sponsorId,contractId:w.contractId});
-const accessOf=(w:WF)=>({...scopeOf(w),actor:'Gemma · simulated workflow',at:new Date()});
+const accessOf=(w:WF)=>({...scopeOf(w),actor:'Glass · simulated workflow',at:new Date()});
 export async function consumeSignals(scope:Scope){
  const signals=await prisma.gemmaSignal.findMany({where:{...scope,state:'Pending',attempts:{lt:3}},orderBy:[{provenance:'desc'},{createdAt:'asc'}],take:12});
  for(const signal of signals){
@@ -39,7 +39,7 @@ export async function advanceWorkflow(w:WF){
  let data=JSON.parse(w.data) as Data;const scope=scopeOf(w),subjects=await prisma.gemmaSubject.findMany({where:{workflowId:w.id}});
  if(w.status==='Detected'){
  await activity(w,'detected','Detected',`${data.provenance}. ${w.memberCount} affected members identified.`, 'gemma',{provenance:data.provenance});
- return updateWorkflow(w,'Investigating',data,'Gemma routed the signal to the responsible specialist.','gemma','route');
+ return updateWorkflow(w,'Investigating',data,'Glass routed the signal to the responsible specialist.','gemma','route');
  }
  if(w.status==='Investigating'){
  const thought=await interpretation(w.kind as Kind,{provenance:data.provenance,members:w.memberCount});await activity(w,'interpretation','Investigating',thought.value.summary,w.kind==='external'?'gemma-market':w.kind==='savings'?'gemma-employer':'gemma-member',thought.value,thought);
@@ -91,7 +91,7 @@ export async function advanceWorkflow(w:WF){
  await assertSources(w);
  // Publish only a validated, reviewed version. Operational configuration is never updated.
  await prisma.$transaction(async tx=>{const current=await tx.gemmaWorkflow.findUniqueOrThrow({where:{id:w.id}});if(current.revision!==w.revision||current.proposalHash!==w.proposalHash)throw Error('Approved version changed');await tx.gemmaPolicy.update({where:{id:String(data.policyId)},data:{status:'Active',effectiveAt:new Date(),validation:JSON.stringify(result)}})});
- return updateWorkflow(w,'Applied',{...data,validation:result},'Validated version activated in the isolated Gemma simulation.','gemma-operations','applied');
+ return updateWorkflow(w,'Applied',{...data,validation:result},'Validated version activated in the isolated Glass simulation.','gemma-operations','applied');
  }
  if(w.status==='Applied'){
  const policy=await prisma.gemmaPolicy.findUniqueOrThrow({where:{id:String(data.policyId)}});if(policy.status!=='Active')throw Error('Policy is not effective');
@@ -126,19 +126,19 @@ async function recordServiceOutcome(w:WF,s:GemmaSubject,result:unknown){
  if(await tx.memberServiceEvent.findUnique({where:{id:eventId}}))return;
  const c=await tx.memberServiceCase.findUniqueOrThrow({where:{id:s.caseId!}});
  const changed=await tx.memberServiceCase.updateMany({where:{id:c.id,revision:c.revision},data:{revision:{increment:3},status:'In progress',updatedAt:new Date()}});if(!changed.count)throw Error('Service case changed. Retry required.');
- const events=[{type:'approve',summary:'Linked Gemma review approved this exact sandbox authorization version.',actor:policy.approvedBy},{type:'authorization-response',summary:'Synthetic prescriber and authorization response recorded for the selected drug.',actor:'Gemma · simulator'},{type:'fill-response',summary:'Reviewed authorization overlay produced a paid replay for the linked claim. No real fill occurred.',actor:'Gemma · outcome verifier'}];
+ const events=[{type:'approve',summary:'Linked Glass review approved this exact sandbox authorization version.',actor:policy.approvedBy},{type:'authorization-response',summary:'Synthetic prescriber and authorization response recorded for the selected drug.',actor:'Glass · simulator'},{type:'fill-response',summary:'Reviewed authorization overlay produced a paid replay for the linked claim. No real fill occurred.',actor:'Glass · outcome verifier'}];
  for(let i=0;i<events.length;i++)await tx.memberServiceEvent.create({data:{id:i===2?eventId:key(eventId,i),caseId:c.id,seq:c.revision+i+1,status:'In progress',team:'Member services',...events[i],simulated:true,evidenceAt:new Date(),payload:JSON.stringify({workflowId:w.id,result,policyId:policy.id,simulated:true})}});
  });
 }
 async function resolveService(w:WF,s:GemmaSubject){
- if(!s.caseId)return;await prisma.$transaction(async tx=>{const eventId=key(w.id,s.id,'resolved');if(await tx.memberServiceEvent.findUnique({where:{id:eventId}}))return;const c=await tx.memberServiceCase.findUniqueOrThrow({where:{id:s.caseId!}});const last=await tx.memberServiceEvent.findFirst({where:{caseId:c.id},orderBy:{seq:'desc'}});if(last?.type!=='fill-response')return;const contact=await tx.memberServiceEvent.findFirst({where:{caseId:c.id,type:{in:['question','answer','failure','clarification']}},orderBy:{seq:'desc'}});if(contact?.type==='question')return;const changed=await tx.memberServiceCase.updateMany({where:{id:c.id,revision:c.revision},data:{revision:{increment:1},status:'Resolved',updatedAt:new Date()}});if(!changed.count)throw Error('Service case changed.');await tx.memberServiceEvent.create({data:{id:eventId,caseId:c.id,seq:c.revision+1,type:'resolve',status:'Resolved',team:'Member services',summary:'Access restored in simulation: linked paid replay and simulated member acknowledgment recorded.',actor:'Gemma · outcome verifier',simulated:true,evidenceAt:new Date(),payload:JSON.stringify({workflowId:w.id})}})});
+ if(!s.caseId)return;await prisma.$transaction(async tx=>{const eventId=key(w.id,s.id,'resolved');if(await tx.memberServiceEvent.findUnique({where:{id:eventId}}))return;const c=await tx.memberServiceCase.findUniqueOrThrow({where:{id:s.caseId!}});const last=await tx.memberServiceEvent.findFirst({where:{caseId:c.id},orderBy:{seq:'desc'}});if(last?.type!=='fill-response')return;const contact=await tx.memberServiceEvent.findFirst({where:{caseId:c.id,type:{in:['question','answer','failure','clarification']}},orderBy:{seq:'desc'}});if(contact?.type==='question')return;const changed=await tx.memberServiceCase.updateMany({where:{id:c.id,revision:c.revision},data:{revision:{increment:1},status:'Resolved',updatedAt:new Date()}});if(!changed.count)throw Error('Service case changed.');await tx.memberServiceEvent.create({data:{id:eventId,caseId:c.id,seq:c.revision+1,type:'resolve',status:'Resolved',team:'Member services',summary:'Access restored in simulation: linked paid replay and simulated member acknowledgment recorded.',actor:'Glass · outcome verifier',simulated:true,evidenceAt:new Date(),payload:JSON.stringify({workflowId:w.id})}})});
 }
 async function createSupportDraft(w:WF,s:GemmaSubject,data:Data){
  const c=await prisma.claim.findUniqueOrThrow({where:{id:s.claimId},include:{drug:true,benefitPlan:true}}),o=data.option as SavingsOption;const id=key(w.id,s.id,'support'),sessionId=key(id,'chat');
  await prisma.$transaction(async tx=>{
  await tx.chatSession.upsert({where:{id:sessionId},create:{id:sessionId,memberId:s.memberId,title:'Benefit change support'},update:{}});
  await tx.memberServiceCase.upsert({where:{id},create:{id,...scopeOf(w),memberId:s.memberId,memberName:s.memberName,title:'Benefit change support',kind:'benefit',team:'Member services',sessionId,sourceKey:id,evidenceAt:new Date(),context:JSON.stringify({claimId:c.id,claimNumber:c.claimNumber,drugId:c.drugId,drugName:c.drug.name,benefitPlanId:c.benefitPlanId,benefitName:c.benefitPlan.name,patientPayCents:c.patientPayCents,rejectReason:c.rejectMessage,gemmaWorkflowId:w.id,source:{runId:w.savingsJobId,optionId:o.id,title:o.title,claimIds:o.disruptions.find(x=>x.memberId===s.memberId)?.claimIds??[c.id],higherCost:o.disruptions.find(x=>x.memberId===s.memberId)?.higherCost??false,accessChange:o.disruptions.find(x=>x.memberId===s.memberId)?.accessChange??false,beforeCents:null,afterCents:null,deltaCents:null,override:o.override}})},update:{}});
- await tx.memberServiceEvent.upsert({where:{id:key(id,'created')},create:{id:key(id,'created'),caseId:id,seq:0,type:'created',status:'Open',team:'Member services',summary:'Gemma prepared member support for a reviewed sandbox benefit version. Individual cost estimate is not yet calculated.',actor:'Gemma',simulated:true,evidenceAt:new Date()},update:{}});
+ await tx.memberServiceEvent.upsert({where:{id:key(id,'created')},create:{id:key(id,'created'),caseId:id,seq:0,type:'created',status:'Open',team:'Member services',summary:'Glass prepared member support for a reviewed sandbox benefit version. Individual cost estimate is not yet calculated.',actor:'Glass',simulated:true,evidenceAt:new Date()},update:{}});
  await tx.gemmaSubject.update({where:{id:s.id},data:{caseId:id}});
  });
 }
@@ -154,10 +154,10 @@ export async function simulateCommunications(scope:Scope,now=new Date()){
  }
 }
 export async function processTick(scope:Scope){
- if(await autonomyAt('gemma',new Date())==='Suspended')throw Error('Gemma is suspended.');
+ if(await autonomyAt('gemma',new Date())==='Suspended')throw Error('Glass is suspended.');
  const monitor=await ensureMonitor(scope);if(!monitor.enabled)return {paused:true};
  await collectSignals(scope);await consumeSignals(scope);
- const work=await prisma.gemmaWorkflow.findMany({where:{...scope,status:{in:['Detected','Investigating','Action prepared','Analyzing','Approved','Validating','Applied']}},orderBy:{updatedAt:'asc'},take:12});
+ const work=await prisma.gemmaWorkflow.findMany({where:{...scope,kind:{not:'benefit'},status:{in:['Detected','Investigating','Action prepared','Analyzing','Approved','Validating','Applied']}},orderBy:{updatedAt:'asc'},take:12});
  for(const w of work){try{let current=w;for(let i=0;i<4;i++){await advanceWorkflow(current);const next=await prisma.gemmaWorkflow.findUniqueOrThrow({where:{id:current.id}});if(next.revision===current.revision||['Awaiting approval','Verified','Failed','Blocked','Rejected'].includes(next.status))break;current=next;}await prisma.gemmaWorkflow.updateMany({where:{id:w.id,revision:w.revision},data:{updatedAt:new Date()}})}catch(e){const message=e instanceof Error?e.message:'Workflow failed';if(/^(Workflow revision changed\.|Workflow changed|Service case changed\.?)( Retry required\.)?$/.test(message))continue;const current=await prisma.gemmaWorkflow.findUniqueOrThrow({where:{id:w.id}});if(!['Verified','Rejected','Awaiting approval'].includes(current.status))await updateWorkflow(current,'Failed',{...JSON.parse(current.data),error:message},message,'gemma','failed-'+current.revision);}}
  await simulateCommunications(scope);
  await prisma.gemmaMonitor.update({where:{id:monitor.id},data:{checkedAt:new Date(),heartbeatAt:new Date(),lastError:null}});

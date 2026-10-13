@@ -14,7 +14,8 @@ import { getCopyOverrides, copyIsPersistable } from "@/lib/copy";
 
 const GROUPS: NavGroup[] = [
   {title: "Offering", items: [
-    {href:"/gemma",label:"Gemma activity",icon:"agents"},
+    {href:"/benefit-changes",label:"Benefit changes",icon:"changes"},
+    {href:"/gemma",label:"Glass activity",icon:"agents"},
     {href:"/sponsor",label:"Plan outlook",icon:"sponsor"},
     {href:"/savings",label:"Find savings",icon:"trends"},
     {href:"/offering",label:"Pricing & benefits",icon:"changes"},
@@ -25,7 +26,7 @@ const GROUPS: NavGroup[] = [
     {href:"/agents",label:"Agent operations",icon:"agents"},
     {href:"/operations",label:"Work queues",icon:"operations"},
     {href:"/eligibility",label:"Enrollment",icon:"eligibility"},
-    {href:"/changes",label:"Benefit changes",icon:"changes"},
+    {href:"/changes",label:"Change console",icon:"changes"},
     {href:"/trends",label:"Trend & renewal",icon:"trends"},
     {href:"/assistant",label:"Member service",icon:"assistant"},
     {href:"/pa",label:"Prior authorization",icon:"pa"},

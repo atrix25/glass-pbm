@@ -38,6 +38,7 @@ export async function detail(a:Access,id:string,p:URLSearchParams,historical=fal
 export async function review(a:Access,id:string,input:{requestId:string;revision:number;proposalHash:string;decision:'Approve'|'Reject';note:string}){
  const requestHash=hash(input),scope={sponsorId:a.sponsorId,contractId:a.contractId};
  const w=await prisma.gemmaWorkflow.findFirst({where:{id,...scope}});if(!w)throw new ServiceError('Work not found.',404);
+ if(w.kind==='benefit')throw new ServiceError('Review this change in Benefit changes.',409);
  const prior=await prisma.gemmaDecision.findUnique({where:{workflowId_requestId:{workflowId:id,requestId:input.requestId}}});if(prior){if(prior.inputHash!==requestHash)throw new ServiceError('Request ID already used.',409);return prior;}
  decisionAllowed(w.status,input.proposalHash,w.proposalHash,input.revision,w.revision);if(input.decision==='Approve')await assertSources(w);
  const data=JSON.parse(w.data),now=new Date(),approved=input.decision==='Approve';

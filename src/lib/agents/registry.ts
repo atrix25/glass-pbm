@@ -51,14 +51,14 @@ export interface AgentDef {
 
 export const AGENTS: AgentDef[] = [
   ...[
-    ["gemma","Gemma","Coordinates monitored signals, specialist work and verified outcomes.","PBM operations"],
+    ["gemma","Glass","Coordinates monitored signals, specialist work and verified outcomes.","PBM operations"],
     ["gemma-member","Member experience","Identifies member access issues and prepares service work.","Member services"],
     ["gemma-communications","Communications","Sends approved templates to the simulated member inbox and records simulator responses.","Member services"],
     ["gemma-clinical","Clinical policy","Prepares and validates isolated clinical-policy versions for review.","Clinical operations"],
     ["gemma-market","Market intelligence","Assesses labeled synthetic external events against the reference book.","Clinical operations"],
     ["gemma-employer","Employer strategy","Coordinates savings analysis, employer decisions and member support.","Account team"],
     ["gemma-operations","Operations","Coordinates enrollment, integrity and appeal dependencies.","PBM operations"],
-  ].map(([id,name,purpose,owner]):AgentDef=>({id,name,purpose,owner,surface:"Gemma activity",autonomy:"Act",tools:["inspect-signal","prepare-action","verify-outcome","route-work"],mayNot:["Send real communications or change operational benefits, clinical criteria or payments.","Apply consequential sandbox changes without a recorded review of the exact version."],consequential:["apply-policy","activate-benefit"],incumbent:"No staff-time saving claimed without measurement.",measure:{name:"Work with verified outcomes",target:"Evidence required"}})),
+  ].map(([id,name,purpose,owner]):AgentDef=>({id,name,purpose,owner,surface:"Glass activity",autonomy:"Act",tools:["inspect-signal","prepare-action","verify-outcome","route-work"],mayNot:["Send real communications or change operational benefits, clinical criteria or payments.","Apply consequential sandbox changes without a recorded review of the exact version."],consequential:["apply-policy","activate-benefit"],incumbent:"No staff-time saving claimed without measurement.",measure:{name:"Work with verified outcomes",target:"Evidence required"}})),
 
   {
     id: "pa-intake",
