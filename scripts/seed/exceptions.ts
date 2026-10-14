@@ -25,7 +25,10 @@
  */
 
 import type { PrismaClient } from "../../src/generated/prisma/index.js";
-import { paDeadlines } from "../../src/lib/pa/engine.js";
+import {
+  filingDecisionDueAt,
+  paDeadlines,
+} from "../../src/lib/pa/engine.js";
 import { DEMO_MEMBERS } from "./scenarios.js";
 
 /** A second pharmacist, because an appeal cannot be decided by the first one. */
@@ -253,10 +256,7 @@ export async function seedExceptions(
       // A grievance is a complaint about conduct, so it has no determination
       // deadline; an exception with no supporting statement has not started
       // one yet. Both are null for different reasons and neither is late.
-      decisionDueAt:
-        c.kind === "Grievance" || sla.awaitingSupportingStatement
-          ? null
-          : sla.dueAt,
+      decisionDueAt: filingDecisionDueAt(c.kind, sla),
       decidedAt,
       decidedBy: c.decidedBy ?? null,
       escalated: true,

@@ -429,3 +429,21 @@ export function paDeadlines(
     bindingSource: contractBinds ? "contractual" : "regulatory",
   };
 }
+
+/**
+ * What to persist on `decisionDueAt` when a request is filed.
+ *
+ * `paDeadlines` still computes a hypothetical `dueAt` while the clock is
+ * waiting on a supporting statement — callers that write that timestamp make
+ * the queue report itself late on requests it cannot lawfully decide yet.
+ * Grievances never carry a determination deadline at all.
+ */
+export function filingDecisionDueAt(
+  requestType: string | null | undefined,
+  binding: Pick<SlaClock, "dueAt" | "awaitingSupportingStatement">,
+): Date | null {
+  if (requestType === "Grievance" || binding.awaitingSupportingStatement) {
+    return null;
+  }
+  return binding.dueAt;
+}

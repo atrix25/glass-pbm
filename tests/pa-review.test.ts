@@ -17,9 +17,11 @@ import { describe, expect, it } from "vitest";
 import {
   contractualSla,
   computeSla,
+  filingDecisionDueAt,
   isExceptionRequest,
   paDeadlines,
 } from "@/lib/pa/engine";
+import { paLiveState } from "@/lib/pa/status";
 import {
   dispositionFor,
   EXCEPTION_KINDS,
@@ -234,6 +236,42 @@ describe("the exception clock", () => {
     });
     expect(d.binding.awaitingSupportingStatement).toBe(true);
     expect(d.regulatory.awaitingSupportingStatement).toBe(true);
+  });
+
+  it("persists no decisionDueAt while the supporting statement is missing", () => {
+    // paDeadlines still returns a hypothetical dueAt (measured from receipt as
+    // a fallback). Writing that timestamp is what made live exception filings
+    // breach on /operations while the intake UI said the clock had not started.
+    const d = paDeadlines(received, "Standard", "Commercial", {
+      requestType: "FormularyException",
+      supportingStatementAt: null,
+    });
+    expect(d.binding.dueAt.getTime()).toBeGreaterThan(received.getTime());
+    expect(filingDecisionDueAt("FormularyException", d.binding)).toBeNull();
+    expect(filingDecisionDueAt("Grievance", d.binding)).toBeNull();
+
+    const withStatement = paDeadlines(received, "Standard", "Commercial", {
+      requestType: "FormularyException",
+      supportingStatementAt: statement,
+    });
+    expect(filingDecisionDueAt("FormularyException", withStatement.binding)).toEqual(
+      withStatement.binding.dueAt,
+    );
+
+    // Downstream: a null due date cannot breach, even weeks after filing.
+    const weeksLater = new Date(received.getTime() + 21 * 86_400_000);
+    const live = paLiveState(
+      {
+        receivedAt: received,
+        decisionDueAt: filingDecisionDueAt("StepException", d.binding),
+        decidedAt: null,
+        prescriberStatementAt: null,
+        determination: null,
+      },
+      weeksLater,
+    );
+    expect(live.breached).toBe(false);
+    expect(live.msToDue).toBeNull();
   });
 
   it("does not move the clock on an ordinary authorization", () => {

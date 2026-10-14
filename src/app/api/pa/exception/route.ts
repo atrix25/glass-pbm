@@ -15,7 +15,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { paDeadlines } from "@/lib/pa/engine";
+import { filingDecisionDueAt, paDeadlines } from "@/lib/pa/engine";
 import { exceptionKind, mayAppeal, type ExceptionKind } from "@/lib/pa/review";
 import { getClock } from "@/lib/session";
 
@@ -110,6 +110,10 @@ export async function POST(request: Request) {
     supportingStatementAt,
   });
   const sla = deadlines.binding;
+  // Match seed/exceptions.ts: no due date while awaiting a supporting
+  // statement (and never for grievances). Persisting sla.dueAt here made the
+  // queue breach on requests the plan could not yet lawfully decide.
+  const decisionDueAt = filingDecisionDueAt(body.kind, sla);
 
   const count = await prisma.priorAuthorization.count();
   const created = await prisma.priorAuthorization.create({
@@ -125,9 +129,7 @@ export async function POST(request: Request) {
         : "PendingInfo",
       receivedAt: now,
       prescriberStatementAt: supportingStatementAt,
-      // A grievance is a complaint about conduct, not a coverage request, so it
-      // never carries a determination deadline.
-      decisionDueAt: body.kind === "Grievance" ? null : sla.dueAt,
+      decisionDueAt,
       reviewerNote: [
         against ? `Contests ${against.paNumber}.` : null,
         body.rationale ?? null,
@@ -148,7 +150,7 @@ export async function POST(request: Request) {
     status: created.status,
     kind: info.label,
     clockStarted: !sla.awaitingSupportingStatement,
-    dueAt: body.kind === "Grievance" ? null : sla.dueAt,
+    dueAt: decisionDueAt,
     citation: info.citation,
     note: sla.awaitingSupportingStatement
       ? "Filed. The regulatory clock has not started, because an exception request needs the prescriber's supporting statement before the plan can decide it."
