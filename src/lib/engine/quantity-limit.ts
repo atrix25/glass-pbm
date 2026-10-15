@@ -570,12 +570,18 @@ export function evaluateQuantityLimit(
 /**
  * A limit on billed quantity.
  *
- * Two shapes, and the difference matters. A limit whose period is no longer
- * than the fill — four a day, thirty per fill — is a rate, and the fill is
- * allowed its own days supply worth. A limit whose period is longer than the
- * fill — twelve tubes a year — is a budget, and prorating it would cap a single
- * fill at one tube when the member is entitled to twelve across the year.
- * Budgets are checked against history; rates are checked against the fill.
+ * Two shapes, and the difference matters. A true daily rate — four a day —
+ * scales with the fill's days supply and is checked against the fill alone.
+ * A multi-period supply (mail / Retail90 covering two or more printed windows)
+ * is also a dosing rate: one pack per twenty-eight days across eighty-four days
+ * is three packs, checked against the fill. Everything else is a rolling
+ * budget — including the common retail case where days supply equals the
+ * period, and the one-day calendar overrun (thirty-one days against a
+ * thirty-day clause) — and is checked against history inside the window.
+ *
+ * Treating periodDays <= daysSupply as a rate was wrong twice: equality
+ * dropped the prior pack still inside a twenty-eight-day window, and a
+ * thirty-one-day retail fill of a thirty-day limit did the same.
  */
 function byQuantity(
   req: QuantityLimitRequest,
@@ -597,7 +603,9 @@ function byQuantity(
     };
   }
 
-  if (limit.periodDays <= daysSupply) {
+  const multiPeriodSupply =
+    limit.periodDays > 1 && daysSupply >= limit.periodDays * 2;
+  if (limit.periodDays === 1 || multiPeriodSupply) {
     const perDay = allowedUnits / limit.periodDays;
     const allowedForFill = perDay * daysSupply;
     return {
