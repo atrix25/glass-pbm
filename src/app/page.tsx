@@ -1,13 +1,13 @@
+import { LandingAutopilot } from '@/components/landing-autopilot';
 import { LandingStudio } from '@/components/landing-studio';
 import { LandingLedger } from '@/components/landing-ledger';
 import Link from 'next/link';
-import { ArrowDown, ArrowRight, Check, Diamond, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, Diamond, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
 import { ROLES } from '@/lib/roles';
 import { signIn } from '@/app/actions/session';
 
 const action = 'inline-flex items-center justify-center gap-3 rounded-full bg-blue-700 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700';
 const textLink = 'inline-flex items-center gap-2 rounded text-sm font-medium text-blue-800 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4';
-const preview = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_48px_-24px_rgba(30,64,175,0.22)] sm:p-7';
 
 export default function Home() {
   return <main className="min-h-dvh bg-[#fafbfe] text-slate-900 selection:bg-blue-100">
@@ -46,16 +46,12 @@ export default function Home() {
           <LandingLedger/>
         </section>
         <section id="autopilot" aria-labelledby="autopilot-title" className="grid scroll-mt-8 items-center gap-10 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
-          <div><Sparkles size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">03 / Improve</p><h2 id="autopilot-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Autopilot</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Keep costs in check. Keep your people in mind.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Sapphire watches spending and changing drug options, recommends savings with fewer member disruptions, and tracks results after approved changes.</p><div className="mt-7 flex flex-col items-start gap-4"><Link prefetch={false} href="/gemma" className={textLink}>See Sapphire at work <ArrowRight size={16}/></Link><Link prefetch={false} href="/savings" className="rounded text-sm text-slate-600 underline underline-offset-4">Explore savings</Link></div></div>
-          <div className={preview}><PreviewLabel title="A plan that keeps improving" label="Simulated workflow preview"/><ol className="mt-6 space-y-3">{[['New drug options','Assess generics and biosimilars.'],['Better dispensing options','Compare available pharmacy and channel costs.'],['Changing spending patterns','Reassess benefit and clinical-program choices.']].map(([title,body],i)=><li key={title} className="flex items-start gap-3 rounded-xl bg-slate-50 px-4 py-3"><span className="mt-0.5 text-xs font-medium text-blue-700">0{i+1}</span><div><h3 className="text-sm font-medium">{title}</h3><p className="mt-1 text-xs text-slate-500">{body}</p></div></li>)}</ol><p className="mt-5 flex items-start gap-2 text-xs leading-relaxed text-slate-500"><Check size={14} className="mt-0.5 shrink-0"/>Compare the impact. Approve the change. Track the result.</p></div>
+          <div><Sparkles size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">03 / Improve</p><h2 id="autopilot-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Autopilot</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Your plan keeps getting smarter.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Sapphire spots opportunities, tests the tradeoffs and learns from results.</p><div className="mt-7 flex flex-col items-start gap-4"><Link prefetch={false} href="/gemma" className={textLink}>See Sapphire at work <ArrowRight size={16}/></Link><Link prefetch={false} href="/savings" className="rounded text-sm text-slate-600 underline underline-offset-4">Explore savings</Link></div></div>
+          <LandingAutopilot/>
         </section>
       </div>
       <section id="demo-access" className="scroll-mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8"><div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-lg font-medium">Explore by role</h2><p className="text-xs text-slate-500">Choose a starting point in the demonstration.</p></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{ROLES.map(role=><form key={role.id} action={signIn}><input type="hidden" name="role" value={role.id}/><button type="submit" className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-4 text-left text-sm font-medium transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-700">{role.label}<ArrowRight size={15} className="text-blue-700"/></button></form>)}</div></section>
       <footer className="mt-12 flex flex-col justify-between gap-5 border-t border-slate-200 py-8 sm:flex-row"><span className="text-sm font-semibold tracking-tight">sapphire.</span><p className="max-w-2xl text-xs leading-relaxed text-slate-500">Concept demonstration, not an announced Caremark product. Workflows use a synthetic reference book; external actions are simulated. No Caremark systems are connected. <Link prefetch={false} href="/sources" className="underline underline-offset-2">Sources</Link></p></footer>
     </div>
   </main>;
-}
-
-function PreviewLabel({title,label}:{title:string;label:string}) {
-  return <div className="border-b border-slate-100 pb-4"><p className="mb-3 text-[11px] text-slate-500">Steel Potatoes · Example employer</p><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{title}</h3><span className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</span></div></div>;
 }
