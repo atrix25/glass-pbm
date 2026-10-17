@@ -198,7 +198,7 @@ export const DUPIXENT: CriteriaTreeDef = {
   drugPatterns: ["DUPIXENT"],
   formId: DUPIXENT_FORM,
   url: NAVITUS_DOC(DUPIXENT_FORM),
-  defaultApprovalDays: 365,
+  defaultApprovalDays: 122,
   startStep: 1,
   steps: [
     {
@@ -297,28 +297,70 @@ export const DUPIXENT: CriteriaTreeDef = {
     {
       step: 6,
       question:
-        "Has the member had a trial of a medium to high potency topical corticosteroid, or a topical calcineurin inhibitor, which was ineffective or not tolerated?",
+        "Have trials of at least two of the following been ineffective or not tolerated: azathioprine, cyclosporine, a medium to very high potency topical steroid, methotrexate, mycophenolate, narrow-band UVB phototherapy, or a topical calcineurin inhibitor?",
       predicate: "member.hasTrialOf",
       args: {
-        drugPatterns: [
-          "triamcinolone",
-          "clobetasol",
-          "fluocinonide",
-          "betamethasone",
-          "mometasone",
-          "tacrolimus",
-          "pimecrolimus",
+        minGroups: 2,
+        trialGroups: [
+          { id: "azathioprine", drugPatterns: ["azathioprine"] },
+          { id: "cyclosporine", drugPatterns: ["cyclosporine"] },
+          {
+            id: "topical-steroid",
+            drugPatterns: [
+              "triamcinolone",
+              "clobetasol",
+              "fluocinonide",
+              "betamethasone",
+              "mometasone",
+            ],
+          },
+          { id: "methotrexate", drugPatterns: ["methotrexate"] },
+          {
+            id: "mycophenolate",
+            drugPatterns: ["mycophenolate", "mycophenolic"],
+          },
+          // Phototherapy has no NDC fill; attestation-only via alsoAccept.
+          { id: "phototherapy", drugPatterns: [] },
+          {
+            id: "calcineurin",
+            drugPatterns: ["tacrolimus", "pimecrolimus"],
+          },
         ],
-        alsoAcceptAnswer: "topicalTrialDocumented",
+        alsoAcceptAnswer: "twoAdTrialsDocumented",
       },
-      yes: { outcome: "approve", days: 365 },
+      yes: { outcome: "step", step: 7 },
+      no: { outcome: "step", step: 8 },
+      citation:
+        "DUPIXENT prior authorization form, step 10. Trials of at least TWO of the listed therapies.",
+    },
+    {
+      step: 7,
+      question:
+        "Will dupilumab (DUPIXENT) be used in combination with another targeted immunomodulator product used for atopic dermatitis?",
+      predicate: "request.answerYes",
+      args: { field: "combinationImmunomodulator" },
+      yes: {
+        outcome: "deny",
+        reason:
+          "Dupilumab may not be used in combination with another targeted immunomodulator for atopic dermatitis. Form complete here (Deny).",
+      },
+      no: { outcome: "approve", days: 122 },
+      citation:
+        "DUPIXENT prior authorization form, step 12. Form complete here (Approve - 4 months).",
+    },
+    {
+      step: 8,
+      question:
+        "If none of the required trials were completed, are all of those therapies contraindicated for the member?",
+      predicate: "request.answerYes",
+      args: { field: "allAdTrialsContraindicated" },
+      yes: { outcome: "step", step: 7 },
       no: {
         outcome: "deny",
         reason:
-          "No documented trial of a medium to high potency topical corticosteroid or topical calcineurin inhibitor.",
+          "Fewer than two required AD trial classes are documented, and they are not all contraindicated. Form complete here (Deny).",
       },
-      citation:
-        "DUPIXENT prior authorization form, atopic dermatitis step therapy requirement",
+      citation: "DUPIXENT prior authorization form, step 11",
     },
   ],
 };

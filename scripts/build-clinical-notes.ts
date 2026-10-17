@@ -35,7 +35,9 @@ const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
     diagnosisProvided: "early",
     diagnosisCriteria: "early",
     phototherapyTrial: "middle",
-    topicalTrialDocumented: "middle",
+    twoAdTrialsDocumented: "middle",
+    combinationImmunomodulator: "late",
+    allAdTrialsContraindicated: "late",
     conventionalTherapyTrial: "middle",
     preferredBiosimilarOrFailure: "middle",
     allAlternativesContraindicated: "late",
@@ -328,7 +330,7 @@ async function main() {
     const decoyEligible =
       truth.diagnosisCriteria === "__none" ||
       truth.phototherapyTrial === false ||
-      truth.topicalTrialDocumented === false ||
+      truth.twoAdTrialsDocumented === false ||
       truth.conventionalTherapyTrial === false;
     if (decoyEligible && rng.next() < 0.28) {
       filler.push(rng.pick(DECOYS));

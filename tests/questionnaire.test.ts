@@ -214,7 +214,7 @@ const SCENARIOS: Scenario[] = [
     }),
   },
   {
-    name: "Dupixent approved with a topical trial in the record",
+    name: "Dupixent approved with two trial classes in the record",
     tree: DUPIXENT,
     answers: {
       "step-1": ["maintenance-ad-asthma"],
@@ -222,15 +222,17 @@ const SCENARIOS: Scenario[] = [
       "step-4": "atopic-dermatitis-initial",
       "step-5": true,
       "step-6": true,
+      "step-7": false,
     },
     facts: facts({
       condition: "atopic-dermatitis-initial",
       answers: {
         quantityLimitBasis: ["maintenance-ad-asthma"],
         diagnosisProvided: true,
+        combinationImmunomodulator: false,
       },
       memberDiagnosisCodes: ["L20.9"],
-      filledDrugNames: ["triamcinolone cream"],
+      filledDrugNames: ["triamcinolone cream", "tacrolimus ointment"],
     }),
   },
   {
@@ -243,6 +245,7 @@ const SCENARIOS: Scenario[] = [
       "step-4": "atopic-dermatitis-initial",
       "step-5": true,
       "step-6": true,
+      "step-7": false,
     },
     facts: facts({
       condition: "atopic-dermatitis-initial",
@@ -250,9 +253,32 @@ const SCENARIOS: Scenario[] = [
         quantityLimitBasis: ["none-of-the-above"],
         quantityDosingProvided: true,
         diagnosisProvided: true,
+        combinationImmunomodulator: false,
       },
       memberDiagnosisCodes: ["L20.9"],
-      filledDrugNames: ["tacrolimus ointment"],
+      filledDrugNames: ["methotrexate tab", "tacrolimus ointment"],
+    }),
+  },
+  {
+    name: "Dupixent refused when only one trial class is on file",
+    tree: DUPIXENT,
+    answers: {
+      "step-1": ["maintenance-ad-asthma"],
+      "step-3": true,
+      "step-4": "atopic-dermatitis-initial",
+      "step-5": true,
+      "step-6": false,
+      "step-8": false,
+    },
+    facts: facts({
+      condition: "atopic-dermatitis-initial",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        allAdTrialsContraindicated: false,
+      },
+      memberDiagnosisCodes: ["L20.9"],
+      filledDrugNames: ["triamcinolone cream"],
     }),
   },
   {
