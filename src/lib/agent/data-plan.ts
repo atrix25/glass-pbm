@@ -625,7 +625,7 @@ export async function planDataCalls(question: string): Promise<DataPlan> {
   };
 
   const thought = await judge({
-    system: `You route plan-sponsor analytics questions for Glass, a transparent PBM.
+    system: `You route plan-sponsor analytics questions for Sapphire, a pharmacy benefit platform.
 Choose exactly one intent. Do not invent numbers. claimRef is only a claim id/number if the user named one.
 Intents: book-totals, guarantees, rebates, spread, awp, trends, top-spend, settlement, scorecard, prior-auth, mac, member-experience, integrity, claim-rejects, clinical, eligibility, formulary-um, formulary-search, claim-lookup, claim-detail, full-report, unknown.
 Use formulary-um for step therapy / PA / UM on high-cost or top-spend drugs.

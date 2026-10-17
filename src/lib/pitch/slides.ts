@@ -47,7 +47,7 @@ export const PITCH_SPINE: PitchSlide[] = [
     kind: "title",
     id: "title",
     eyebrow: "Transparent pharmacy benefit management",
-    title: "Glass for plan sponsors",
+    title: "Sapphire for plan sponsors",
     lede:
       "Best-in-class reporting, radical transparency without locking you into one fee model, and member service that answers in chat and text — from the same rules that adjudicate the claim.",
   },

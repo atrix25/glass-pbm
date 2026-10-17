@@ -432,7 +432,7 @@ async function composeReportBriefing(
 ): Promise<ToolResult> {
   const asOf = clock.today.toISOString().slice(0, 10);
   const lines: string[] = [];
-  lines.push(`# Glass report briefing — ${args.kind}`);
+  lines.push(`# Sapphire report briefing — ${args.kind}`);
   lines.push(`As of ${asOf} (plan year ${asOf.slice(0, 4)}, ${(clock.yearElapsed * 100).toFixed(0)}% elapsed).`);
   lines.push("");
 

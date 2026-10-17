@@ -96,7 +96,7 @@ export function AppShell({
             <span className="h-2.5 w-2.5 rounded-[2px] border-[1.5px] border-white/90" />
           </span>
           <span className="text-[14px] font-semibold tracking-tight text-ink-900">
-            Glass
+            Sapphire
           </span>
           <span className="ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600">
             Concept

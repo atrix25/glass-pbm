@@ -63,7 +63,7 @@ export function PitchDeck({
     <div className="flex min-h-dvh flex-col bg-ink-950 text-white">
       <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3 sm:px-6">
         <Presentation className="h-4 w-4 text-glass-300" />
-        <span className="text-[14px] font-semibold tracking-tight">Glass</span>
+        <span className="text-[14px] font-semibold tracking-tight">Sapphire</span>
         <span className="hidden text-[12.5px] text-white/45 sm:inline">
           Plan sponsor pitch
         </span>

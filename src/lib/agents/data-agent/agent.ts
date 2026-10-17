@@ -159,7 +159,7 @@ export async function answerDataQuestion(opts: {
       .map((w) => `${w.tool}: ${w.summary}`)
       .join("\n");
     const thought = await judge({
-      system: `You narrate Glass PBM analytics for a plan sponsor.
+      system: `You narrate Sapphire PBM analytics for a plan sponsor.
 Rules:
 - Use ONLY figures that already appear in the draft paragraphs or tool summaries below.
 - Do not compute, round creatively, or invent dollars, percentages, or claim counts.

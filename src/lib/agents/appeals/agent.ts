@@ -308,7 +308,7 @@ function scriptedLetter(
         "",
         "If that product was not in fact available to you on that date, tell us and send what your wholesaler showed you. We will reopen the appeal on that basis, and if you are right the ceiling moves for every pharmacy, not only for yours.",
         "",
-        "Glass PBM, network contracting.",
+        "Sapphire PBM, network contracting.",
       ].join("\n"),
     };
   }
@@ -325,7 +325,7 @@ function scriptedLetter(
       "",
       `The ceiling for this product is revised to ${revised.toFixed(5)} per unit. You will be paid the difference on this fill and on every fill of this product you have dispensed since the ceiling took effect. No further action is needed from you.`,
       "",
-      "Glass PBM, network contracting.",
+      "Sapphire PBM, network contracting.",
     ].join("\n"),
   };
 }

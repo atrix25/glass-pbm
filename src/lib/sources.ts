@@ -137,7 +137,7 @@ export const SOURCES: SourceDefinition[] = [
   {
     id: "simulated-awp",
     title: "AWP benchmark",
-    publisher: "Glass (this system)",
+    publisher: "Sapphire (this system)",
     url: "/methodology#awp",
     kind: "price-file",
     notes:

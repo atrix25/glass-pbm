@@ -63,7 +63,7 @@ export default function LoginForm({ demo = false }: { demo?: boolean }) {
         }}
       >
         <h1 style={{ margin: 0, fontSize: 28, letterSpacing: "-0.02em" }}>
-          glass
+          sapphire
         </h1>
         <p style={{ margin: 0, color: "#667a6e", fontSize: 14 }}>
           Sign in to your plan.

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * objection, so the sequence matters more than the page list.
  */
 export const DEMO_STEPS = [
-  {href:"/gemma",label:"Glass",claim:"Signals, actions and verified simulated outcomes."},
+  {href:"/gemma",label:"Sapphire",claim:"Signals, actions and verified simulated outcomes."},
   { href: "/offering", label: "Choose", claim: "Compare pricing and benefit assumptions." },
   { href: "/sponsor", label: "Employer value", claim: "Plan costs and member tradeoffs." },
   { href: "/savings", label: "Find savings", claim: "Savings, member disruption, and modeled NPS." },

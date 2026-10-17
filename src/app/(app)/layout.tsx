@@ -15,7 +15,7 @@ import { getCopyOverrides, copyIsPersistable } from "@/lib/copy";
 const GROUPS: NavGroup[] = [
   {title: "Offering", items: [
     {href:"/benefit-changes",label:"Benefit changes",icon:"changes"},
-    {href:"/gemma",label:"Glass activity",icon:"agents"},
+    {href:"/gemma",label:"Sapphire activity",icon:"agents"},
     {href:"/sponsor",label:"Plan outlook",icon:"sponsor"},
     {href:"/savings",label:"Find savings",icon:"trends"},
     {href:"/offering",label:"Pricing & benefits",icon:"changes"},
@@ -70,7 +70,7 @@ export default async function AppLayout({
           <span className="h-2.5 w-2.5 rounded-[2px] border-[1.5px] border-white/90" />
         </span>
         <span className="text-[14px] font-semibold tracking-tight text-ink-900">
-          Glass
+          Sapphire
         </span>
         <span className="mr-8 ml-auto rounded bg-ink-200/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-600 lg:mr-0">
           Concept

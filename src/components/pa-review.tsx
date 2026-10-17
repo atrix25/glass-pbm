@@ -272,7 +272,7 @@ function ReviewPanel({
           reviewer:
             kind === "pharmacist"
               ? { kind, label: reviewer.label, licence: reviewer.licence }
-              : { kind, label: "Glass criteria engine" },
+              : { kind, label: "Sapphire criteria engine" },
           action,
           note: note || undefined,
         }),

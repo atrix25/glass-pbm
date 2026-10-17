@@ -92,7 +92,7 @@ export async function command(a:ChangeAccess,id:string,input:{requestId:string;r
 }
 export async function analyze(payload:{id:string;revision:number;mode:string;scope:{sponsorId:string;contractId:string}}){
  const row=await prisma.benefitChange.findFirstOrThrow({where:{id:payload.id,...payload.scope}}),d=parse(row);if(row.revision!==payload.revision)return {discarded:true};
- const a={...payload.scope,actor:'Glass · digital twin',at:new Date(d.cutoff)};
+ const a={...payload.scope,actor:'Sapphire · digital twin',at:new Date(d.cutoff)};
  try{await fresh(a,d);await loadWorld(true);const result=await replay(d.override,{scope:scope(a),baselineOverride:d.baseline,asOf:new Date(d.cutoff),sampleRate:payload.mode==='preview'?0.01:1,maxDiffs:100,nps:true,trackDisruption:true});
  if(payload.mode==='impact'&&d.referenceClaims!==undefined&&result.claimsEvaluated!==d.referenceClaims)throw new ServiceError(`Incomplete coverage: evaluated ${result.claimsEvaluated} of ${d.referenceClaims} source claims. Required evidence is missing.`);
  const {nps,memberImpacts,elapsedMs,...rest}=result;void memberImpacts;void elapsedMs;
@@ -100,9 +100,9 @@ export async function analyze(payload:{id:string;revision:number;mode:string;sco
  if(payload.mode==='preview')d.preview=analysis;else{d.impact=analysis;delete d.checks;d.decisions=[];delete d.version;delete d.tests;}delete d.jobId;delete d.jobMode;delete d.error;
  await fresh(a,d);
  await prisma.$transaction(async tx=>{const updated=await tx.benefitChange.updateMany({where:{id:row.id,revision:row.revision},data:{data:JSON.stringify(d),status:payload.mode==='preview'?'Preview ready':'Impact ready',revision:{increment:1}}});if(updated.count)await event(tx,{...row,revision:row.revision+1},d,'analysis','analysis_'+row.id+'_'+row.revision,a.actor,'Impact ready',hash(payload));},{timeout:20000});return {claims:analysis.claimsEvaluated};
- }catch(e){d.error=e instanceof Error?e.message:'Analysis failed';delete d.jobId;delete d.jobMode;await prisma.$transaction(async tx=>{const changed=await tx.benefitChange.updateMany({where:{id:row.id,revision:row.revision},data:{status:'Analysis failed',data:JSON.stringify(d),revision:{increment:1}}});if(changed.count)await event(tx,{...row,revision:row.revision+1},d,'analysis-failed','failed_'+row.id+'_'+row.revision,'Glass','Analysis failed',hash(payload));});throw e;}
+ }catch(e){d.error=e instanceof Error?e.message:'Analysis failed';delete d.jobId;delete d.jobMode;await prisma.$transaction(async tx=>{const changed=await tx.benefitChange.updateMany({where:{id:row.id,revision:row.revision},data:{status:'Analysis failed',data:JSON.stringify(d),revision:{increment:1}}});if(changed.count)await event(tx,{...row,revision:row.revision+1},d,'analysis-failed','failed_'+row.id+'_'+row.revision,'Sapphire','Analysis failed',hash(payload));});throw e;}
 }
 export async function monitorBenefits(){
  const rows=await prisma.benefitDeployment.findMany({where:{changeId:{not:null}},take:20});
- for(const active of rows){if(!active.changeId)continue;const row=await prisma.benefitChange.findUnique({where:{id:active.changeId}});if(!row)continue;const d=parse(row);if(d.rolledBackAt||!d.deployedAt)continue;try{await command({...scope(row as unknown as Access),actor:'Glass · background simulator',role:'admin',demoRoles:true,at:new Date()},row.id,{requestId:'monitor-'+Math.floor(Date.now()/60000),revision:row.revision,command:'monitor'});}catch(e){console.error('Benefit monitoring:',e instanceof Error?e.message:'failed');}}
+ for(const active of rows){if(!active.changeId)continue;const row=await prisma.benefitChange.findUnique({where:{id:active.changeId}});if(!row)continue;const d=parse(row);if(d.rolledBackAt||!d.deployedAt)continue;try{await command({...scope(row as unknown as Access),actor:'Sapphire · background simulator',role:'admin',demoRoles:true,at:new Date()},row.id,{requestId:'monitor-'+Math.floor(Date.now()/60000),revision:row.revision,command:'monitor'});}catch(e){console.error('Benefit monitoring:',e instanceof Error?e.message:'failed');}}
 }
