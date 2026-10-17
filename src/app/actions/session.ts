@@ -1,6 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { authMode } from "@/lib/config";
+import { DEMO_SESSION_COOKIE, validBasicHeader, validDemoSession } from "@/lib/demo-auth";
+import { SESSION_COOKIE, sessionUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ROLE_BY_ID, type Role } from "@/lib/roles";
 import {
@@ -19,7 +22,12 @@ export async function signIn(formData: FormData) {
   if (typeof memberId === "string" && memberId) {
     jar.set("glass_member", memberId, { path: "/", maxAge: 60 * 60 * 24 * 30 });
   }
-  redirect(def.landing);
+  // Redirect explicitly to login so a Server Action preserves the chosen destination.
+  const mode = authMode();
+  const authenticated = mode === "open" || (mode === "basic"
+    ? !process.env.DEMO_PASSWORD || validDemoSession(jar.get(DEMO_SESSION_COOKIE)?.value) || validBasicHeader((await headers()).get("authorization"))
+    : !!(await sessionUser(jar.get(SESSION_COOKIE)?.value)));
+  redirect(authenticated ? def.landing : `/login?next=${encodeURIComponent(def.landing)}`);
 }
 
 export async function switchRole(formData: FormData) {
