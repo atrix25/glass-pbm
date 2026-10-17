@@ -168,10 +168,18 @@ function prepopulationExpression(step: CriteriaStepDef): string | null {
       return `Condition.where(code.coding.code.startsWith(${JSON.stringify(
         (args.codes as string[]) ?? [],
       )})).exists()`;
-    case "member.hasTrialOf":
+    case "member.hasTrialOf": {
+      const groups = args.trialGroups as
+        | { id: string; drugPatterns: string[] }[]
+        | undefined;
+      const patterns =
+        groups && groups.length > 0
+          ? groups.flatMap((g) => g.drugPatterns)
+          : ((args.drugPatterns as string[]) ?? []);
       return `ClaimResponse.where(item.productOrService.display.matches(${JSON.stringify(
-        (args.drugPatterns as string[]) ?? [],
+        patterns,
       )})).exists()`;
+    }
     case "member.ageBetween":
       return "Patient.birthDate.toAge()";
     case "member.weightBelowKg":
@@ -406,10 +414,15 @@ export function questionnaireItem(
   // shown when the prepopulated answer came back false.
   const alsoAccept = step.args?.alsoAcceptAnswer as string | undefined;
   if (alsoAccept) {
+    const minGroups = (step.args?.minGroups as number | undefined) ?? 1;
+    const attestationText =
+      minGroups > 1
+        ? `The record shows fewer than ${minGroups} required trial classes. Do you attest that at least ${minGroups} occurred, with documentation submitted?`
+        : "The record shows no such trial. Do you attest that it occurred, with documentation submitted?";
     item.item = [
       {
         linkId: `${linkIdFor(step.step)}-attestation`,
-        text: "The record shows no such trial. Do you attest that it occurred, with documentation submitted?",
+        text: attestationText,
         type: "boolean",
         required: false,
         enableWhen: [

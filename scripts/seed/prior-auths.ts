@@ -163,27 +163,29 @@ const PATTERNS: Record<string, FactPattern[]> = {
   "pa-dupixent": [
     {
       weight: 46,
-      label: "complete atopic dermatitis request with topical trial",
+      label: "complete atopic dermatitis request with two documented trial classes",
       build: (c) => ({
         condition: dupixentCondition(c),
         prescriberSpecialty: "Dermatology",
         answers: {
           quantityLimitBasis: ["maintenance-ad-asthma"],
           diagnosisProvided: true,
-          topicalTrialDocumented: true,
+          twoAdTrialsDocumented: true,
+          combinationImmunomodulator: false,
         },
       }),
     },
     {
       weight: 13,
-      label: "no topical corticosteroid trial documented",
+      label: "fewer than two AD trial classes documented",
       build: (c) => ({
         condition: dupixentCondition(c),
         prescriberSpecialty: "Dermatology",
         answers: {
           quantityLimitBasis: ["maintenance-ad-asthma"],
           diagnosisProvided: true,
-          topicalTrialDocumented: false,
+          twoAdTrialsDocumented: false,
+          allAdTrialsContraindicated: false,
         },
       }),
     },
@@ -197,7 +199,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
           quantityLimitBasis: [],
           quantityDosingProvided: true,
           diagnosisProvided: true,
-          topicalTrialDocumented: true,
+          twoAdTrialsDocumented: true,
+          combinationImmunomodulator: false,
         },
       }),
     },

@@ -444,35 +444,95 @@ const DIAGNOSIS_PROVIDED: NoteField = {
   ],
 };
 
-const TOPICAL_TRIAL: NoteField = {
-  key: "topicalTrialDocumented",
-  label: "Trial of topical corticosteroid or calcineurin inhibitor",
+const TWO_AD_TRIALS: NoteField = {
+  key: "twoAdTrialsDocumented",
+  label: "Trials of at least two required AD therapies",
   type: "boolean",
   step: 6,
   values: [
     {
       value: true,
       says: [
-        "She has used triamcinolone 0.1% ointment twice daily for eight weeks with inadequate control.",
         "Trial of clobetasol 0.05% for six weeks, then tacrolimus 0.1% ointment for a further eight weeks, both ineffective.",
-        "Mometasone was ineffective, and pimecrolimus caused intolerable burning.",
-        "Failed medium potency topical steroids, including betamethasone valerate.",
+        "Methotrexate 15 mg weekly for three months was ineffective, and medium-potency triamcinolone ointment failed before that.",
+        "She failed cyclosporine and a course of narrow-band UVB phototherapy, both documented in the chart.",
+        "Mometasone was ineffective, and pimecrolimus caused intolerable burning; both trials are in the record.",
       ],
       saysObliquely: [
-        "Topicals have not held her disease, as documented in the chart over the past year.",
+        "She has already failed two guideline-directed therapies for atopic dermatitis, as documented.",
       ],
       cues: [
-        /(triamcinolone|clobetasol|fluocinonide|betamethasone|mometasone|tacrolimus|pimecrolimus)/i,
-        /topical (cortico)?steroid[^.]{0,60}(inadequate|ineffective|failed|not tolerated)/i,
-        /failed[^.]{0,40}topical/i,
+        /(clobetasol|triamcinolone|mometasone|betamethasone|fluocinonide).{0,80}(tacrolimus|pimecrolimus)/i,
+        /(tacrolimus|pimecrolimus).{0,80}(clobetasol|triamcinolone|mometasone|betamethasone|fluocinonide)/i,
+        /(methotrexate|cyclosporine|azathioprine|mycophenolate).{0,80}(triamcinolone|clobetasol|mometasone|tacrolimus|pimecrolimus|phototherapy|UVB)/i,
+        /(triamcinolone|clobetasol|mometasone|tacrolimus|pimecrolimus|phototherapy|UVB).{0,80}(methotrexate|cyclosporine|azathioprine|mycophenolate)/i,
+        /failed (two|2) .{0,40}(therap|trial)/i,
       ],
     },
     {
       value: false,
       says: [
-        "No topical therapy has been tried; the patient prefers to start systemic treatment.",
+        "She has used triamcinolone 0.1% ointment twice daily for eight weeks with inadequate control.",
+        "Failed medium potency topical steroids, including betamethasone valerate.",
+        "No topical or systemic AD trial has been attempted; the patient prefers to start Dupixent.",
       ],
-      cues: [/no topical (therapy|treatment)/i],
+      cues: [
+        /no topical (therapy|treatment)/i,
+        /\bonly\b.{0,20}(triamcinolone|clobetasol|mometasone)\b/i,
+      ],
+    },
+  ],
+};
+
+const COMBINATION_IMMUNOMODULATOR: NoteField = {
+  key: "combinationImmunomodulator",
+  label: "Combination with another targeted immunomodulator for AD",
+  type: "boolean",
+  step: 7,
+  values: [
+    {
+      value: false,
+      says: [
+        "Dupixent will be used as monotherapy; no other targeted immunomodulator is planned.",
+        "Not combining with another biologic or JAK inhibitor for atopic dermatitis.",
+      ],
+      cues: [
+        /monotherapy/i,
+        /not (be )?(used )?in combination with another (targeted )?immunomodulator/i,
+        /no other (targeted )?immunomodulator/i,
+      ],
+    },
+    {
+      value: true,
+      says: [
+        "Will continue upadacitinib alongside Dupixent for atopic dermatitis.",
+      ],
+      cues: [
+        /in combination with .{0,40}(upadacitinib|abrocitinib|tralokinumab|lebrikizumab)/i,
+      ],
+    },
+  ],
+};
+
+const ALL_AD_TRIALS_CONTRAINDICATED: NoteField = {
+  key: "allAdTrialsContraindicated",
+  label: "All required AD trial therapies contraindicated",
+  type: "boolean",
+  step: 8,
+  values: [
+    {
+      value: true,
+      says: [
+        "Topical steroids, calcineurin inhibitors, methotrexate, cyclosporine, azathioprine, mycophenolate, and phototherapy are all contraindicated.",
+      ],
+      cues: [/all .{0,40}contraindicated/i],
+    },
+    {
+      value: false,
+      says: [
+        "Contraindications do not apply to every listed AD trial option.",
+      ],
+      cues: [],
     },
   ],
 };
@@ -593,7 +653,9 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_DUPIXENT,
     QUANTITY_DOSING_PROVIDED,
     DIAGNOSIS_PROVIDED,
-    TOPICAL_TRIAL,
+    TWO_AD_TRIALS,
+    COMBINATION_IMMUNOMODULATOR,
+    ALL_AD_TRIALS_CONTRAINDICATED,
   ],
   "pa-adalimumab": [
     SPECIALTY,

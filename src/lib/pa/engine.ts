@@ -119,8 +119,59 @@ function evaluatePredicate(
     }
 
     case "member.hasTrialOf": {
-      const patterns = (args.drugPatterns as string[]) ?? [];
       const alsoAccept = args.alsoAcceptAnswer as string | undefined;
+      const groups = args.trialGroups as
+        | { id: string; drugPatterns: string[] }[]
+        | undefined;
+      const minGroups = (args.minGroups as number | undefined) ?? 1;
+
+      /*
+       * Some forms require trials of N distinct therapy classes (Dupixent AD
+       * initial needs two), not N drug-name hits. Two topical steroids are
+       * still one class. Flat `drugPatterns` remains the one-of path used by
+       * Skyrizi and Adalimumab.
+       */
+      if (groups && groups.length > 0) {
+        const hitIds = new Set<string>();
+        for (const group of groups) {
+          const matched = group.drugPatterns.some((p) =>
+            facts.filledDrugNames.some((n) =>
+              n.toUpperCase().includes(p.toUpperCase()),
+            ),
+          );
+          if (matched) hitIds.add(group.id);
+        }
+        if (alsoAccept) {
+          const attested = facts.answers[alsoAccept];
+          if (Array.isArray(attested)) {
+            for (const id of attested) {
+              if (groups.some((g) => g.id === String(id))) {
+                hitIds.add(String(id));
+              }
+            }
+          } else if (attested === true) {
+            /*
+             * Boolean attestation means the prescriber documented that the
+             * published step's full trial count is met, not that a single
+             * class was tried. Intake/seed copy must only set this when the
+             * note actually supports minGroups classes.
+             */
+            return {
+              result: true,
+              evidence: `Prescriber attested that at least ${minGroups} required trial class${minGroups === 1 ? "" : "es"} occurred, with documentation submitted.`,
+            };
+          }
+        }
+        const result = hitIds.size >= minGroups;
+        return {
+          result,
+          evidence: result
+            ? `Claims/attestation cover ${hitIds.size} of ${minGroups} required trial class${minGroups === 1 ? "" : "es"} (${[...hitIds].join(", ")}).`
+            : `Only ${hitIds.size} of ${minGroups} required trial class${minGroups === 1 ? "" : "es"} found (${[...hitIds].join(", ") || "none"}).`,
+        };
+      }
+
+      const patterns = (args.drugPatterns as string[]) ?? [];
       const matched = patterns.filter((p) =>
         facts.filledDrugNames.some((n) =>
           n.toUpperCase().includes(p.toUpperCase()),

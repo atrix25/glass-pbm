@@ -201,8 +201,12 @@ function humanField(key: string): string {
       return "the qualifying diagnosis";
     case "phototherapyTrial":
       return "the trial of phototherapy, methotrexate or acitretin";
-    case "topicalTrialDocumented":
-      return "the topical trial";
+    case "twoAdTrialsDocumented":
+      return "the two required AD trial classes";
+    case "combinationImmunomodulator":
+      return "combination with another targeted immunomodulator";
+    case "allAdTrialsContraindicated":
+      return "whether all AD trial therapies are contraindicated";
     case "conventionalTherapyTrial":
       return "the conventional therapy trial";
     case "preferredBiosimilarOrFailure":
