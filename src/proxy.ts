@@ -21,6 +21,9 @@ function constantTimeEqual(a: string, b: string): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  // The product landing page and its role picker are public; destinations stay gated.
+  if (request.nextUrl.pathname === "/") return NextResponse.next();
+
   const mode = authMode();
   if (mode === "open") return NextResponse.next();
 
