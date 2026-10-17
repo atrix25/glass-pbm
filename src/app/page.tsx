@@ -1,3 +1,4 @@
+import { LandingStudio } from '@/components/landing-studio';
 import { LandingLedger } from '@/components/landing-ledger';
 import Link from 'next/link';
 import { ArrowDown, ArrowRight, Check, Diamond, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
@@ -28,7 +29,7 @@ export default function Home() {
       <div id="platform" className="scroll-mt-8">
         <section id="studio" aria-labelledby="studio-title" className="grid scroll-mt-8 items-center gap-10 border-b border-slate-200 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
           <div><Layers3 size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">01 / Design</p><h2 id="studio-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Benefit Design Studio</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Compare options. Understand the tradeoffs. Build your plan.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Compare coverage, pharmacy and clinical-program options together.</p><Link prefetch={false} href="/benefit-changes" className={textLink+' mt-7'}>Open the studio <ArrowRight size={16}/></Link></div>
-          <div className={preview}><PreviewLabel title="Your next benefit" label="Interface preview"/><div className="mt-6 rounded-xl bg-blue-50 p-4"><p className="text-sm font-medium text-blue-950">Reduce spending while keeping disruption low.</p><p className="mt-1 text-xs text-blue-800">Plan cost · Employee affordability · Access to care</p></div><div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-6">{[['Projected savings','Change in net plan cost'],['Employee cost','Out-of-pocket change'],['Members disrupted','Unique members affected by cost or access'],['Experience impact','Modeled NPS change']].map(([title,body])=><div key={title}><h3 className="text-sm font-medium">{title}</h3><p className="mt-1.5 text-xs leading-relaxed text-slate-500">{body}</p></div>)}</div><ol className="mt-7 grid grid-cols-2 gap-2 border-t border-slate-100 pt-5 sm:grid-cols-4">{['Proposal','Impact','Approval','Tested benefit'].map((step,i)=><li key={step} className="text-xs text-slate-600"><span className="mr-1.5 text-blue-700">{i+1}.</span>{step}</li>)}</ol><p className="mt-4 text-[11px] text-slate-500">Estimates appear after analysis. No results are shown here.</p></div>
+          <LandingStudio/>
         </section>
         <section id="assurance" aria-labelledby="assurance-title" className="grid scroll-mt-8 items-center gap-10 border-b border-slate-200 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
           <div>
