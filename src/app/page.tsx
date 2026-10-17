@@ -16,8 +16,7 @@ export default function Home() {
         <nav aria-label="Main navigation" className="flex items-center gap-6 text-sm"><a href="#platform" className="hidden text-slate-600 hover:text-blue-700 sm:block">The platform</a><a href="#demo-access" className="font-medium text-slate-700 hover:text-blue-700">Explore by role <span aria-hidden="true">↗</span></a></nav>
       </header>
       <section className="mx-auto max-w-4xl py-20 text-center sm:py-28">
-        <p className="text-xs font-semibold uppercase tracking-[.18em] text-blue-800">A Caremark offering concept</p>
-        <h1 className="mt-7 text-5xl font-medium leading-[1.06] tracking-[-.055em] sm:text-7xl">Your plan.<br/><span className="text-blue-700">Built around your people.</span></h1>
+        <h1 className="text-5xl font-medium leading-[1.06] tracking-[-.055em] sm:text-7xl">Your plan.<br/><span className="text-blue-700">Built around your people.</span></h1>
         <p className="mx-auto mt-7 max-w-lg text-lg leading-relaxed text-slate-600">Design pharmacy benefits that balance cost and employee experience.</p>
         <div className="mt-9 flex flex-wrap justify-center gap-4"><Link prefetch={false} href="/benefit-changes" className={action}>Build your plan <ArrowRight size={16}/></Link><a href="#platform" className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-medium hover:border-blue-400">Explore the platform <ArrowDown size={16}/></a></div>
       </section>
