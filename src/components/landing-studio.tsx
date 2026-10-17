@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 // Authored scenario assumptions for the public preview, not outputs from the claims engine.
 const scenarios = [
-  { name: 'Lower disruption', savings: '$0.9M', oop: '+$2', members: '85', nps: '−0.2 pts', description: 'Prioritize changes that affect fewer members.' },
+  { name: 'Best member experience', savings: '$0.9M', oop: '+$2', members: '85', nps: '−0.2 pts', description: 'Prioritize member experience with fewer cost and access changes.' },
   { name: 'Balanced', savings: '$1.8M', oop: '+$8', members: '395', nps: '−1.1 pts', description: 'Balance savings with member cost and access changes.' },
   { name: 'Higher savings', savings: '$2.7M', oop: '+$18', members: '1,240', nps: '−3.2 pts', description: 'Consider broader changes with greater member impact.' },
 ];
@@ -17,7 +17,7 @@ export function LandingStudio() {
     <h3 className="mt-4 text-xl font-semibold tracking-tight">Try the tradeoff</h3>
     <div className="mt-7 flex items-center justify-between gap-3"><label htmlFor="studio-goal" className="text-sm font-medium">Savings goal</label><span className="text-sm font-semibold text-blue-700">{scenario.name}</span></div>
     <input id="studio-goal" type="range" min={0} max={2} step={1} value={selected} onChange={e=>setSelected(Number(e.target.value))} aria-valuetext={scenario.name} aria-describedby="studio-assumptions" className="mt-4 h-8 w-full cursor-pointer accent-blue-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"/>
-    <div className="mt-1 flex justify-between gap-4 text-xs text-slate-500"><span>Lower disruption</span><span>Higher savings</span></div>
+    <div className="mt-1 flex justify-between gap-4 text-xs text-slate-500"><span>Best member experience</span><span>Higher savings</span></div>
     <p className="mt-4 min-h-10 text-xs leading-relaxed text-slate-500">{scenario.description}</p>
     <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200" aria-live="polite" aria-atomic="true">
       {[
