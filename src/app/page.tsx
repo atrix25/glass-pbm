@@ -1,5 +1,6 @@
+import { LandingLedger } from '@/components/landing-ledger';
 import Link from 'next/link';
-import { ArrowDown, ArrowRight, Check, Diamond, FileText, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, Diamond, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
 import { ROLES } from '@/lib/roles';
 import { signIn } from '@/app/actions/session';
 
@@ -34,30 +35,14 @@ export default function Home() {
             <ShieldCheck size={26} className="text-blue-700" strokeWidth={1.5}/>
             <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">02 / Administer</p>
             <h2 id="assurance-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Administer with assurance</h2>
-            <p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Confidence in every dollar.</p>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">See what you owe, what’s been paid, and what comes back to your plan. Follow the records behind each amount.</p>
+            <p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">See the amount. Open the detail.</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">A simple ledger connects each prescription to its charges, member payment and employer credits. Click a row to follow the calculation.</p>
             <div className="mt-7 flex flex-col items-start gap-4">
               <Link prefetch={false} href="/settlement" className={textLink}>Follow the money <ArrowRight size={16}/></Link>
               <Link prefetch={false} href="/reconciliation" className="rounded text-sm text-slate-600 underline underline-offset-4">Check your guarantees</Link>
             </div>
           </div>
-          <div className={preview}>
-            <PreviewLabel title="Your plan, accounted for" label="Interface preview"/>
-            <div className="mt-5 grid grid-cols-3 gap-3 rounded-xl bg-blue-50 p-4">
-              {[['Owed','Under your agreement'],['Paid','Recorded payments'],['Open','Still to reconcile']].map(([title,body])=><div key={title}><p className="text-sm font-semibold text-blue-950">{title}</p><p className="mt-1 text-[11px] leading-relaxed text-blue-800">{body}</p></div>)}
-            </div>
-            <div className="mt-3 divide-y divide-slate-100">
-              {[
-                ['Claims & fees','Compare billed charges with claims and agreed fees.','/settlement'],
-                ['Rebates & credits','Track receipts, amounts owed and employer credits.','/settlement'],
-                ['Contract guarantees','Compare pricing and service results with commitments.','/reconciliation'],
-              ].map(([title,body,href])=><Link key={title} prefetch={false} href={href} className="group flex items-center justify-between gap-4 rounded-lg py-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"><div><h3 className="text-sm font-medium group-hover:text-blue-700">{title}</h3><p className="mt-1 text-xs leading-relaxed text-slate-500">{body}</p></div><ArrowRight size={15} className="shrink-0 text-blue-700 transition-transform group-hover:translate-x-1"/></Link>)}
-            </div>
-            <div className="mt-1 flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-              <FileText size={16} className="mt-0.5 shrink-0 text-amber-800"/>
-              <div><p className="text-xs font-medium text-slate-800">Clear records. Visible exceptions.</p><p className="mt-1 text-xs leading-relaxed text-slate-600">Pending collections and unresolved differences stay visible until reconciled.</p></div>
-            </div>
-          </div>
+          <LandingLedger/>
         </section>
         <section id="autopilot" aria-labelledby="autopilot-title" className="grid scroll-mt-8 items-center gap-10 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
           <div><Sparkles size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">03 / Improve</p><h2 id="autopilot-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Autopilot</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Keep costs in check. Keep your people in mind.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Sapphire watches spending and changing drug options, recommends savings with fewer member disruptions, and tracks results after approved changes.</p><div className="mt-7 flex flex-col items-start gap-4"><Link prefetch={false} href="/gemma" className={textLink}>See Sapphire at work <ArrowRight size={16}/></Link><Link prefetch={false} href="/savings" className="rounded text-sm text-slate-600 underline underline-offset-4">Explore savings</Link></div></div>
