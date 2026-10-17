@@ -37,7 +37,7 @@ export default function Home() {
             <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">02 / Administer</p>
             <h2 id="assurance-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Administer with assurance</h2>
             <p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">See the amount. Open the detail.</p>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">A simple ledger connects each prescription to its charges, member payment and employer credits. Click a row to follow the calculation.</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">No latency payment infrastructure, tracks every penny in real time with a cloud based claims engine</p>
             <div className="mt-7 flex flex-col items-start gap-4">
               <Link prefetch={false} href="/settlement" className={textLink}>Follow the money <ArrowRight size={16}/></Link>
               <Link prefetch={false} href="/reconciliation" className="rounded text-sm text-slate-600 underline underline-offset-4">Check your guarantees</Link>
