@@ -135,6 +135,7 @@ export function isPrepopulated(predicate: PredicateId): boolean {
     case "member.ageBetween":
     case "member.weightBelowKg":
     case "prescriber.specialtyIs":
+    case "prescriber.specialtyForDiagnosis":
       return true;
     default:
       return false;
@@ -148,6 +149,7 @@ function itemType(step: CriteriaStepDef): QuestionnaireItemType {
     case "request.selectedAny":
       return "open-choice";
     case "prescriber.specialtyIs":
+    case "prescriber.specialtyForDiagnosis":
       return "choice";
     case "member.ageBetween":
       return "integer";
@@ -177,10 +179,29 @@ function prepopulationExpression(step: CriteriaStepDef): string | null {
     case "member.weightBelowKg":
       return "Observation.where(code.coding.code='29463-7').value.first()";
     case "prescriber.specialtyIs":
+    case "prescriber.specialtyForDiagnosis":
       return "PractitionerRole.specialty.first()";
     default:
       return null;
   }
+}
+
+/** Specialties listed across diagnosis-bound specialty rules. */
+function specialtiesForDiagnosis(step: CriteriaStepDef): string[] {
+  const rules =
+    (step.args?.byDiagnosis as
+      | { codes: string[]; specialties: string[] }[]
+      | undefined) ?? [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of rules) {
+    for (const s of r.specialties ?? []) {
+      if (seen.has(s)) continue;
+      seen.add(s);
+      out.push(s);
+    }
+  }
+  return out;
 }
 
 /**
@@ -239,6 +260,12 @@ function answerOptions(step: CriteriaStepDef): AnswerOption[] | undefined {
 
   if (step.predicate === "prescriber.specialtyIs") {
     return ((args.specialties as string[]) ?? []).map((s) => ({
+      valueString: s,
+    }));
+  }
+
+  if (step.predicate === "prescriber.specialtyForDiagnosis") {
+    return specialtiesForDiagnosis(step).map((s) => ({
       valueString: s,
     }));
   }
@@ -311,8 +338,14 @@ function conditionsFor(edge: Edge): { when: EnableWhen[]; behavior: "all" | "any
     };
   }
 
-  if (from.predicate === "prescriber.specialtyIs") {
-    const specialties = (from.args?.specialties as string[]) ?? [];
+  if (
+    from.predicate === "prescriber.specialtyIs" ||
+    from.predicate === "prescriber.specialtyForDiagnosis"
+  ) {
+    const specialties =
+      from.predicate === "prescriber.specialtyIs"
+        ? ((from.args?.specialties as string[]) ?? [])
+        : specialtiesForDiagnosis(from);
     return {
       when: specialties.map((s) => ({
         question,

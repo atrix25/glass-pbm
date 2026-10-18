@@ -21,6 +21,7 @@ export type PredicateId =
   | "request.answerYes"
   | "request.selectedAny"
   | "prescriber.specialtyIs"
+  | "prescriber.specialtyForDiagnosis"
   | "member.hasDiagnosis"
   | "member.hasTrialOf"
   | "member.ageBetween"
@@ -385,10 +386,35 @@ export const ADALIMUMAB: CriteriaTreeDef = {
     {
       step: 4,
       question:
+        "Is the medication prescribed by a specialist appropriate to the diagnosis (rheumatology, dermatology, gastroenterology, or ophthalmology as the indication requires)?",
+      predicate: "prescriber.specialtyForDiagnosis",
+      args: {
+        byDiagnosis: [
+          { codes: ["M05", "M06", "M45"], specialties: ["Rheumatology"] },
+          { codes: ["L40", "L73"], specialties: ["Dermatology"] },
+          { codes: ["K50", "K51"], specialties: ["Gastroenterology"] },
+          {
+            codes: ["H20"],
+            specialties: ["Ophthalmology", "Rheumatology"],
+          },
+        ],
+      },
+      yes: { outcome: "step", step: 5 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab must be prescribed by a specialist appropriate to the diagnosis. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, specialty requirement by indication (e.g. RA step 6 rheumatology, PsO step 41 dermatologist, CD step 25 gastroenterology, uveitis step 58 ophthalmology or rheumatology).",
+    },
+    {
+      step: 5,
+      question:
         "Is the requested product a preferred adalimumab biosimilar, or has the member failed a preferred biosimilar?",
       predicate: "request.answerYes",
       args: { field: "preferredBiosimilarOrFailure" },
-      yes: { outcome: "step", step: 5 },
+      yes: { outcome: "step", step: 6 },
       no: {
         outcome: "deny",
         reason:
@@ -398,7 +424,7 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
-      step: 5,
+      step: 6,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",

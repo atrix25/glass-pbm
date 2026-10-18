@@ -61,6 +61,7 @@ const PRESCRIBERS = [
   { name: "Dr. P. Nakamura", specialty: "Allergy and Immunology" },
   { name: "Dr. J. Whitfield", specialty: "Internal Medicine" },
   { name: "Dr. R. Castellanos", specialty: "Pulmonology" },
+  { name: "Dr. E. Vasquez", specialty: "Ophthalmology" },
 ];
 
 /*
@@ -240,8 +241,10 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 48,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        // Specialty must match the diagnosis the specialty gate binds to;
+        // a fixed Rheumatology label wrongly Denied dermatology/GI cohorts.
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
@@ -252,8 +255,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
+      build: (c) => ({
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["loading-dose"],
           preferredBiosimilarOrFailure: true,
@@ -264,8 +267,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 14,
       label: "reference product requested with no biosimilar failure",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: false,
@@ -275,8 +278,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
@@ -287,8 +290,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
+      build: (c) => ({
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: [],
           quantityDosingProvided: true,
@@ -301,6 +304,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
       weight: 6,
       label: "incomplete submission",
       build: () => ({
+        // Wrong specialty on purpose: Internal Medicine never satisfies the
+        // diagnosis-bound gate, so even a cured dosing field still Denies.
         prescriberSpecialty: "Internal Medicine",
         answers: { quantityLimitBasis: [], quantityDosingProvided: false },
       }),
@@ -329,6 +334,21 @@ function dupixentCondition(c: PACandidate): string {
     return "atopic-dermatitis-initial";
   if (c.diagnosisCodes.some((d) => d.startsWith("J45"))) return "asthma-initial";
   return "atopic-dermatitis-initial";
+}
+
+/**
+ * The specialty the published form requires for the member's diagnosis.
+ *
+ * Kept in lockstep with `prescriber.specialtyForDiagnosis` on the adalimumab
+ * tree so seed Approvals are ones a specialist would actually sign.
+ */
+function adalimumabSpecialty(c: PACandidate): string {
+  if (c.diagnosisCodes.some((d) => d.startsWith("L40") || d.startsWith("L73")))
+    return "Dermatology";
+  if (c.diagnosisCodes.some((d) => d.startsWith("K50") || d.startsWith("K51")))
+    return "Gastroenterology";
+  if (c.diagnosisCodes.some((d) => d.startsWith("H20"))) return "Ophthalmology";
+  return "Rheumatology";
 }
 
 /** A decided request, ready to be written once claim generation finishes. */
