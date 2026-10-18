@@ -104,6 +104,42 @@ function evaluatePredicate(
       };
     }
 
+    case "prescriber.specialtyForDiagnosis": {
+      /*
+       * Indication-specific specialty gates collapsed into one step: the
+       * published form branches by condition first, then asks rheumatology /
+       * dermatology / gastroenterology / ophthalmology. Matching specialty to
+       * the diagnoses already on file is what stops Internal Medicine from
+       * unlocking a specialty biologic under a rheumatology-only rule.
+       */
+      const rules =
+        (args.byDiagnosis as
+          | { codes: string[]; specialties: string[] }[]
+          | undefined) ?? [];
+      const specialty = facts.prescriberSpecialty ?? "";
+      const matched = rules.filter((r) =>
+        r.codes.some((c) =>
+          facts.memberDiagnosisCodes.some((held) => held.startsWith(c)),
+        ),
+      );
+      if (matched.length === 0) {
+        return {
+          result: false,
+          evidence:
+            "No diagnosis on file maps to a specialty requirement for this step.",
+        };
+      }
+      const hit = matched.find((r) => r.specialties.includes(specialty));
+      return {
+        result: Boolean(hit),
+        evidence: hit
+          ? `Prescriber specialty is ${specialty}, which satisfies the ${hit.codes.join("/")} indication.`
+          : `Prescriber specialty is ${specialty || "not recorded"}; this diagnosis requires ${matched
+              .map((r) => `${r.specialties.join(" or ")} (for ${r.codes.join("/")})`)
+              .join("; ")}.`,
+      };
+    }
+
     case "member.hasDiagnosis": {
       const codes = (args.codes as string[]) ?? [];
       const matched = codes.filter((c) =>

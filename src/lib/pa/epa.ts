@@ -103,6 +103,7 @@ function answersByLinkId(
         if (facts.condition !== undefined) out[linkId] = facts.condition;
         break;
       case "prescriber.specialtyIs":
+      case "prescriber.specialtyForDiagnosis":
         if (facts.prescriberSpecialty !== undefined) {
           out[linkId] = facts.prescriberSpecialty;
         }

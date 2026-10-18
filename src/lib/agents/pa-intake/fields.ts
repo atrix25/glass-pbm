@@ -84,6 +84,11 @@ const SPECIALTY: NoteField = {
       says: ["Pulmonology"],
       cues: [/\bpulmonolog(y|ist)\b/i],
     },
+    {
+      value: "Ophthalmology",
+      says: ["Ophthalmology"],
+      cues: [/\bophthalmolog(y|ist)\b/i],
+    },
   ],
 };
 
@@ -521,7 +526,7 @@ const PREFERRED_BIOSIMILAR: NoteField = {
   key: "preferredBiosimilarOrFailure",
   label: "Preferred biosimilar, or failure of one",
   type: "boolean",
-  step: 4,
+  step: 5,
   values: [
     {
       value: true,
@@ -549,7 +554,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 6,
   values: [
     {
       value: true,
@@ -596,7 +601,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     TOPICAL_TRIAL,
   ],
   "pa-adalimumab": [
-    SPECIALTY,
+    { ...SPECIALTY, step: 4 },
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,

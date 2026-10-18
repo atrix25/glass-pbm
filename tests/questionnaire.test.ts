@@ -268,20 +268,37 @@ const SCENARIOS: Scenario[] = [
     }),
   },
   {
-    name: "Adalimumab approved through the biosimilar and trial steps",
+    name: "Adalimumab approved through the specialty, biosimilar and trial steps",
     tree: ADALIMUMAB,
     answers: {
       "step-1": ["loading-dose"],
       "step-3": true,
-      "step-4": true,
+      "step-4": "Dermatology",
       "step-5": true,
+      "step-6": true,
     },
     facts: facts({
       answers: {
         quantityLimitBasis: ["loading-dose"],
         preferredBiosimilarOrFailure: true,
       },
+      prescriberSpecialty: "Dermatology",
       memberDiagnosisCodes: ["L40.0"],
+      filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab refused at the specialty step",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": "Internal Medicine",
+    },
+    facts: facts({
+      answers: { quantityLimitBasis: ["standard-2-inj-28-days"] },
+      prescriberSpecialty: "Internal Medicine",
+      memberDiagnosisCodes: ["M05.9"],
       filledDrugNames: ["methotrexate tab"],
     }),
   },
