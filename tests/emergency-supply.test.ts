@@ -117,6 +117,26 @@ describe("the pharmacy has to ask for an emergency supply", () => {
       }).eligible,
     ).toBe(true);
   });
+
+  it("does not treat a zero or negative days supply as an emergency fill", () => {
+    // `daysSupply <= 5` is true for 0 and −1, but those are not a supply of
+    // medicine. Granting them would waive the authorization and pay the plan
+    // share for a claim that dispenses nothing.
+    expect(
+      emergencySupplyEligibility({
+        dateOfService: SATURDAY,
+        daysSupply: 0,
+        levelOfService: "3",
+      }).eligible,
+    ).toBe(false);
+    expect(
+      emergencySupplyEligibility({
+        dateOfService: SATURDAY,
+        daysSupply: -1,
+        levelOfService: "3",
+      }).eligible,
+    ).toBe(false);
+  });
 });
 
 describe("an emergency supply at the point of sale", () => {
@@ -236,5 +256,21 @@ describe("an emergency supply at the point of sale", () => {
     });
     expect(result.responseStatus).toBe("P");
     expect(result.patientPayCents).toBeGreaterThan(0);
+  });
+
+  it("still refuses a zero-day emergency on a PA drug", () => {
+    // The POS accepts a typed days supply of 0. Without a positive-days gate,
+    // level of service 3 on a Saturday waived 75 and paid the plan share for a
+    // claim that is not a five-day bridge.
+    const result = claim({
+      drug: paDrug,
+      formularyEntry: paEntry,
+      dateOfService: SATURDAY,
+      daysSupply: 0,
+      quantityDispensed: 1,
+      levelOfService: "3",
+    });
+    expect(result.responseStatus).toBe("R");
+    expect(result.rejectCodes).toContain("75");
   });
 });

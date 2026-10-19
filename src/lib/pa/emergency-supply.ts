@@ -184,7 +184,14 @@ export function emergencySupplyEligibility(
 ): EmergencySupplyDecision {
   const requested = request.levelOfService === LEVEL_OF_SERVICE_EMERGENCY;
   const closure = closureOn(request.dateOfService);
-  const withinDays = request.daysSupply <= EMERGENCY_SUPPLY.maxDaysSupply;
+  /*
+   * A five-day ceiling is an upper bound on a real days supply. Zero and
+   * negative values satisfy `<= 5` but are not a supply of medicine, and must
+   * not waive the authorization or reprice the fill as free to the member.
+   */
+  const withinDays =
+    request.daysSupply > 0 &&
+    request.daysSupply <= EMERGENCY_SUPPLY.maxDaysSupply;
 
   const eligible = requested && closure !== null && withinDays;
 
@@ -194,6 +201,9 @@ export function emergencySupplyEligibility(
     }
     if (!closure) {
       return "The fill date is a business day, when the prescriber's office can be reached to obtain the authorization, so the emergency supply does not apply.";
+    }
+    if (!(request.daysSupply > 0)) {
+      return `An emergency supply is a dispensation of medicine, and this claim carries a days supply of ${request.daysSupply}.`;
     }
     if (!withinDays) {
       return `An emergency supply is limited to ${EMERGENCY_SUPPLY.maxDaysSupply} days and this claim is for ${request.daysSupply}.`;
