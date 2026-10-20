@@ -225,6 +225,103 @@ const PHOTOTHERAPY_TRIAL: NoteField = {
   ],
 };
 
+const CONTINUING_DIAGNOSIS: NoteField = {
+  key: "continuingDiagnosis",
+  label: "Continuing therapy diagnosis",
+  type: "multi",
+  step: 11,
+  values: [
+    {
+      value: "plaque-psoriasis",
+      says: [
+        "Continuing diagnosis remains plaque psoriasis.",
+        "She continues on therapy for plaque psoriasis (PsO).",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}plaque psoriasis/i,
+        /diagnosis remains plaque psoriasis/i,
+        /\bPsO\b/,
+      ],
+    },
+    {
+      value: "palmoplantar-psoriasis",
+      says: [
+        "Continuing therapy for palmoplantar psoriasis with ongoing palm and sole involvement.",
+      ],
+      cues: [/palmoplantar/i, /palms and soles/i],
+    },
+    {
+      value: "__none",
+      says: [
+        "The original diagnosis is no longer active; this request is for a different indication.",
+      ],
+      cues: [],
+    },
+  ],
+};
+
+const SIGNIFICANT_IMPROVEMENT: NoteField = {
+  key: "significantImprovement",
+  label: "Significant improvement on continuing therapy",
+  type: "boolean",
+  step: 12,
+  values: [
+    {
+      value: true,
+      says: [
+        "She has demonstrated significant improvement from her pre-treatment baseline; BSA has fallen from 18% to 4%.",
+        "Marked clinical improvement on risankizumab with substantial clearing versus baseline.",
+      ],
+      cues: [
+        /significant improvement/i,
+        /marked (clinical )?improvement/i,
+        /BSA has fallen/i,
+        /substantial clearing/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "There has been no significant improvement from pre-treatment baseline; disease remains active.",
+        "Response has been inadequate; BSA is unchanged from baseline.",
+      ],
+      cues: [
+        /no significant improvement/i,
+        /inadequate (response|improvement)/i,
+        /unchanged from baseline/i,
+      ],
+    },
+  ],
+};
+
+const IMPROVEMENT_DOCUMENTED: NoteField = {
+  key: "improvementDocumented",
+  label: "Improvement documentation within the past year",
+  type: "boolean",
+  step: 13,
+  values: [
+    {
+      value: true,
+      says: [
+        "Chart documentation of improvement within the past year is attached to this request.",
+        "Written explanation of improvement dated within the last twelve months is submitted.",
+      ],
+      cues: [
+        /documentation of improvement/i,
+        /improvement[^.]{0,40}(attached|submitted)/i,
+        /written explanation of improvement/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No recent documentation of improvement is available to attach.",
+      ],
+      cues: [/no recent documentation of improvement/i],
+    },
+  ],
+};
+
 const ALL_CONTRAINDICATED: NoteField = {
   key: "allAlternativesContraindicated",
   label: "All conventional alternatives contraindicated",
@@ -586,6 +683,9 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     PHOTOTHERAPY_TRIAL,
     ALL_CONTRAINDICATED,
     CONTRAINDICATIONS_LISTED,
+    CONTINUING_DIAGNOSIS,
+    SIGNIFICANT_IMPROVEMENT,
+    IMPROVEMENT_DOCUMENTED,
   ],
   "pa-dupixent": [
     DUPIXENT_CONDITION,

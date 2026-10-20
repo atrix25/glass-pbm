@@ -309,10 +309,10 @@ const PATTERNS: Record<string, FactPattern[]> = {
 };
 
 /*
- * The Skyrizi form covers seven indications, but only the initial plaque
- * psoriasis branch is transcribed in full. Requests for the other indications
- * are still made, and the honest result is a denial at step 4 recording that
- * this criteria set does not cover them.
+ * The Skyrizi form covers seven indications; initial and continuing plaque
+ * psoriasis are transcribed. Requests for PsA / CD / UC are still made, and
+ * the honest result is a denial at step 4 recording that this criteria set
+ * does not cover them yet.
  */
 function psoriasisCondition(c: PACandidate): string {
   if (c.diagnosisCodes.some((d) => d.startsWith("L40")))
@@ -323,6 +323,53 @@ function psoriasisCondition(c: PACandidate): string {
     return "ulcerative-colitis-initial";
   return "psoriatic-arthritis";
 }
+
+/**
+ * Fact patterns for Skyrizi reauthorization. Continuing therapy on the
+ * published form goes to steps 10–13 and requires documented improvement —
+ * re-walking the initial trial path with historical methotrexate would
+ * false-Approve non-responders and unlock specialty fills at POS.
+ */
+const SKYRIZI_RENEWAL_PATTERNS: FactPattern[] = [
+  {
+    weight: 72,
+    label: "continuing therapy with documented significant improvement",
+    build: () => ({
+      condition: "plaque-psoriasis-continuing",
+      prescriberSpecialty: "Dermatology",
+      answers: {
+        continuingDiagnosis: ["plaque-psoriasis"],
+        significantImprovement: true,
+        improvementDocumented: true,
+      },
+    }),
+  },
+  {
+    weight: 14,
+    label: "continuing therapy without demonstrated improvement",
+    build: () => ({
+      condition: "plaque-psoriasis-continuing",
+      prescriberSpecialty: "Dermatology",
+      answers: {
+        continuingDiagnosis: ["plaque-psoriasis"],
+        significantImprovement: false,
+      },
+    }),
+  },
+  {
+    weight: 14,
+    label: "continuing therapy with improvement asserted but not documented",
+    build: () => ({
+      condition: "plaque-psoriasis-continuing",
+      prescriberSpecialty: "Dermatology",
+      answers: {
+        continuingDiagnosis: ["plaque-psoriasis"],
+        significantImprovement: true,
+        improvementDocumented: false,
+      },
+    }),
+  },
+];
 
 function dupixentCondition(c: PACandidate): string {
   if (c.diagnosisCodes.some((d) => d.startsWith("L20")))
@@ -491,9 +538,9 @@ function decidePriorAuth(
   /*
    * An approval runs for a fixed term, and Skyrizi's is four months, so a
    * member who stays on therapy files again before it lapses. Each renewal is
-   * a fresh request against the same criteria, and the prescriber's answers
-   * are drawn again, because the second submission is not guaranteed to be as
-   * complete as the first.
+   * a fresh request against the continuing-therapy branch (not a re-walk of
+   * initial trial criteria), and the prescriber's answers are drawn again,
+   * because the second submission is not guaranteed to document improvement.
    */
   let latest = results[results.length - 1];
   while (
@@ -505,7 +552,9 @@ function decidePriorAuth(
     );
     if (renewalReceived >= c.planYearEnd) break;
 
-    const renewalPartial = draw(tree.id, patterns).build(c);
+    const renewalPatterns =
+      tree.id === "pa-skyrizi-sc" ? SKYRIZI_RENEWAL_PATTERNS : patterns;
+    const renewalPartial = draw(`${tree.id}:renewal`, renewalPatterns).build(c);
     const renewalFacts: PAFacts = {
       ...facts,
       condition: renewalPartial.condition,
