@@ -18,6 +18,7 @@
 
 export type PredicateId =
   | "request.conditionIs"
+  | "request.conditionRoutes"
   | "request.answerYes"
   | "request.selectedAny"
   | "prescriber.specialtyIs"
@@ -80,8 +81,18 @@ export const SKYRIZI_SC: CriteriaTreeDef = {
     {
       step: 4,
       question: "What condition is the product being used for?",
-      predicate: "request.conditionIs",
-      args: { condition: "plaque-psoriasis-initial" },
+      /*
+       * Multi-way branch: initial PsO → #5, continuing PsO → #10. Other
+       * indications on the printed form (PsA, CD, UC) are not transcribed yet
+       * and deny here rather than being walked as initial therapy.
+       */
+      predicate: "request.conditionRoutes",
+      args: {
+        routes: {
+          "plaque-psoriasis-initial": 5,
+          "plaque-psoriasis-continuing": 10,
+        },
+      },
       options: [
         "Initial therapy for plaque psoriasis (PsO)",
         "Continuing therapy for plaque psoriasis (PsO)",
@@ -92,7 +103,7 @@ export const SKYRIZI_SC: CriteriaTreeDef = {
         "Continuing therapy for ulcerative colitis (UC)",
         "None of the above",
       ],
-      yes: { outcome: "step", step: 5 },
+      yes: { outcome: "step" },
       no: {
         outcome: "deny",
         reason:
@@ -183,6 +194,70 @@ export const SKYRIZI_SC: CriteriaTreeDef = {
       },
       citation:
         "SKYRIZI SC prior authorization form, step 9. Form complete here (Approve - 4 months).",
+    },
+    // Continuing Therapy for Plaque Psoriasis (PsO) — form steps 10–13
+    {
+      step: 10,
+      question: "Is the medication prescribed by a dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Dermatology"] },
+      yes: { outcome: "step", step: 11 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Skyrizi continuing therapy for plaque psoriasis must be prescribed by a dermatologist.",
+      },
+      citation: "SKYRIZI SC prior authorization form, step 10",
+    },
+    {
+      step: 11,
+      question: "The member has a diagnosis of ONE of the following:",
+      predicate: "request.selectedAny",
+      args: {
+        field: "continuingDiagnosis",
+        options: ["plaque-psoriasis", "palmoplantar-psoriasis"],
+      },
+      options: [
+        "Plaque psoriasis (PsO)",
+        "Palmoplantar psoriasis (PP)",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 12 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No qualifying diagnosis of plaque psoriasis or palmoplantar psoriasis was documented for continuing therapy.",
+      },
+      citation: "SKYRIZI SC prior authorization form, step 11",
+    },
+    {
+      step: 12,
+      question:
+        "Has the member demonstrated a significant improvement in their condition?",
+      predicate: "request.answerYes",
+      args: { field: "significantImprovement" },
+      yes: { outcome: "step", step: 13 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Significant improvement from pre-treatment baseline was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "SKYRIZI SC prior authorization form, step 12",
+    },
+    {
+      step: 13,
+      question:
+        "Is documentation (written explanation accepted) of improvement within the past year submitted with the request?",
+      predicate: "request.answerYes",
+      args: { field: "improvementDocumented" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Documentation of improvement within the past year was not submitted. Form complete here (Deny).",
+      },
+      citation:
+        "SKYRIZI SC prior authorization form, step 13. Form complete here (Approve - 1 year).",
     },
   ],
 };

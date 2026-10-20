@@ -14,6 +14,8 @@ import { paDeadlines } from "@/lib/pa/engine";
 interface Step {
   stepNumber: number;
   question: string;
+  predicate: string;
+  predicateArgs: string;
   yesOutcome: string;
   yesStep: number | null;
   yesApprovalDays: number | null;
@@ -22,6 +24,18 @@ interface Step {
   noApprovalDays: number | null;
   denyReason: string | null;
   citation: string | null;
+}
+
+function routeTargets(step: Step): number[] {
+  if (step.predicate !== "request.conditionRoutes") return [];
+  try {
+    const args = JSON.parse(step.predicateArgs || "{}") as {
+      routes?: Record<string, number>;
+    };
+    return Object.values(args.routes ?? {});
+  } catch {
+    return [];
+  }
 }
 
 interface Tree {
@@ -58,8 +72,17 @@ describe("the encoded trees are well formed", () => {
     for (const t of trees) {
       const numbers = new Set(t.steps.map((s) => s.stepNumber));
       for (const s of t.steps) {
-        if (s.yesOutcome === "step" && !numbers.has(s.yesStep ?? -1))
+        const routes = routeTargets(s);
+        if (routes.length > 0) {
+          for (const target of routes) {
+            if (!numbers.has(target))
+              dangling.push(
+                `${t.id} step ${s.stepNumber} route -> ${target}`,
+              );
+          }
+        } else if (s.yesOutcome === "step" && !numbers.has(s.yesStep ?? -1)) {
           dangling.push(`${t.id} step ${s.stepNumber} yes -> ${s.yesStep}`);
+        }
         if (s.noOutcome === "step" && !numbers.has(s.noStep ?? -1))
           dangling.push(`${t.id} step ${s.stepNumber} no -> ${s.noStep}`);
       }
@@ -71,8 +94,20 @@ describe("the encoded trees are well formed", () => {
     const backward: string[] = [];
     for (const t of trees) {
       for (const s of t.steps) {
-        if (s.yesOutcome === "step" && (s.yesStep ?? 0) <= s.stepNumber)
+        const routes = routeTargets(s);
+        if (routes.length > 0) {
+          for (const target of routes) {
+            if (target <= s.stepNumber)
+              backward.push(
+                `${t.id} step ${s.stepNumber} route -> ${target}`,
+              );
+          }
+        } else if (
+          s.yesOutcome === "step" &&
+          (s.yesStep ?? 0) <= s.stepNumber
+        ) {
           backward.push(`${t.id} step ${s.stepNumber} yes -> ${s.yesStep}`);
+        }
         if (s.noOutcome === "step" && (s.noStep ?? 0) <= s.stepNumber)
           backward.push(`${t.id} step ${s.stepNumber} no -> ${s.noStep}`);
       }
@@ -124,8 +159,11 @@ describe("the encoded trees are well formed", () => {
       while (queue.length > 0) {
         const step = byNumber.get(queue.shift()!);
         if (!step) continue;
+        const routed = routeTargets(step);
         for (const next of [
-          step.yesOutcome === "step" ? step.yesStep : null,
+          ...(routed.length > 0
+            ? routed
+            : [step.yesOutcome === "step" ? step.yesStep : null]),
           step.noOutcome === "step" ? step.noStep : null,
         ]) {
           if (next != null && !seen.has(next)) {
