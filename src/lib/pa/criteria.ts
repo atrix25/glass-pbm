@@ -18,6 +18,7 @@
 
 export type PredicateId =
   | "request.conditionIs"
+  | "request.conditionRoutes"
   | "request.answerYes"
   | "request.selectedAny"
   | "prescriber.specialtyIs"
@@ -258,8 +259,19 @@ export const DUPIXENT: CriteriaTreeDef = {
     {
       step: 4,
       question: "What condition is the product being used for?",
-      predicate: "request.conditionIs",
-      args: { condition: "atopic-dermatitis-initial" },
+      /*
+       * Multi-way branch: initial AD → #5, continuing AD → #13. Other
+       * indications on the printed form (asthma, CRSwNP, EoE, PN, COPD, CSU)
+       * are not transcribed yet and deny here rather than being walked as
+       * initial AD therapy.
+       */
+      predicate: "request.conditionRoutes",
+      args: {
+        routes: {
+          "atopic-dermatitis-initial": 5,
+          "atopic-dermatitis-continuing": 13,
+        },
+      },
       options: [
         "Initial therapy for atopic dermatitis (AD)",
         "Continuing therapy for atopic dermatitis (AD)",
@@ -272,7 +284,7 @@ export const DUPIXENT: CriteriaTreeDef = {
         "Initial therapy for COPD",
         "Initial therapy for chronic spontaneous urticaria (CSU)",
       ],
-      yes: { outcome: "step", step: 5 },
+      yes: { outcome: "step" },
       no: {
         outcome: "deny",
         reason:
@@ -319,6 +331,49 @@ export const DUPIXENT: CriteriaTreeDef = {
       },
       citation:
         "DUPIXENT prior authorization form, atopic dermatitis step therapy requirement",
+    },
+    // Continuing Therapy for Atopic Dermatitis (AD) — form steps 13–15
+    {
+      step: 13,
+      question:
+        "Does the member have a diagnosis of moderate to severe atopic dermatitis (AD) at baseline?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L20"] },
+      yes: { outcome: "step", step: 14 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented baseline diagnosis of moderate to severe atopic dermatitis (ICD-10 L20).",
+      },
+      citation: "DUPIXENT prior authorization form, step 13",
+    },
+    {
+      step: 14,
+      question: "Has a positive clinical response been achieved?",
+      predicate: "request.answerYes",
+      args: { field: "positiveClinicalResponse" },
+      yes: { outcome: "step", step: 15 },
+      no: {
+        outcome: "deny",
+        reason:
+          "A positive clinical response was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "DUPIXENT prior authorization form, step 14",
+    },
+    {
+      step: 15,
+      question:
+        "Will dupilumab (DUPIXENT) be used in combination with another targeted immunomodulator product used for AD?",
+      predicate: "request.answerYes",
+      args: { field: "combinationImmunomodulator" },
+      yes: {
+        outcome: "deny",
+        reason:
+          "Dupilumab may not be used in combination with another targeted immunomodulator for atopic dermatitis. Form complete here (Deny).",
+      },
+      no: { outcome: "approve", days: 365 },
+      citation:
+        "DUPIXENT prior authorization form, step 15. Form complete here (Approve - 1 year).",
     },
   ],
 };

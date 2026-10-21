@@ -98,12 +98,23 @@ describe("every criteria tree generates a structurally valid questionnaire", () 
         // A mapping that is silently off by one attaches the wrong indication to
         // the code the engine branches on, so it is derived and then asserted.
         for (const step of tree.steps) {
-          if (step.predicate !== "request.conditionIs") continue;
-          const condition = step.args?.condition as string;
-          expect(
-            optionForCondition(condition, step.options),
-            `${condition} did not resolve to one option`,
-          ).toBeTruthy();
+          if (step.predicate === "request.conditionIs") {
+            const condition = step.args?.condition as string;
+            expect(
+              optionForCondition(condition, step.options),
+              `${condition} did not resolve to one option`,
+            ).toBeTruthy();
+          }
+          if (step.predicate === "request.conditionRoutes") {
+            const routes =
+              (step.args?.routes as Record<string, number> | undefined) ?? {};
+            for (const condition of Object.keys(routes)) {
+              expect(
+                optionForCondition(condition, step.options),
+                `${condition} did not resolve to one option`,
+              ).toBeTruthy();
+            }
+          }
         }
       });
 
@@ -231,6 +242,50 @@ const SCENARIOS: Scenario[] = [
       },
       memberDiagnosisCodes: ["L20.9"],
       filledDrugNames: ["triamcinolone cream"],
+    }),
+  },
+  {
+    name: "Dupixent continuing therapy denied without positive clinical response",
+    tree: DUPIXENT,
+    answers: {
+      "step-1": ["maintenance-ad-asthma"],
+      "step-3": true,
+      "step-4": "atopic-dermatitis-continuing",
+      "step-13": true,
+      "step-14": false,
+    },
+    facts: facts({
+      condition: "atopic-dermatitis-continuing",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        positiveClinicalResponse: false,
+      },
+      memberDiagnosisCodes: ["L20.9"],
+      filledDrugNames: ["triamcinolone cream", "DUPIXENT"],
+    }),
+  },
+  {
+    name: "Dupixent continuing therapy approved with documented response",
+    tree: DUPIXENT,
+    answers: {
+      "step-1": ["maintenance-ad-asthma"],
+      "step-3": true,
+      "step-4": "atopic-dermatitis-continuing",
+      "step-13": true,
+      "step-14": true,
+      "step-15": false,
+    },
+    facts: facts({
+      condition: "atopic-dermatitis-continuing",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        positiveClinicalResponse: true,
+        combinationImmunomodulator: false,
+      },
+      memberDiagnosisCodes: ["L20.9"],
+      filledDrugNames: ["DUPIXENT"],
     }),
   },
   {

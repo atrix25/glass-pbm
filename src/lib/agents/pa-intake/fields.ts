@@ -311,6 +311,19 @@ const DUPIXENT_CONDITION: NoteField = {
       ],
     },
     {
+      value: "atopic-dermatitis-continuing",
+      says: [
+        "Indication: continuing therapy for moderate to severe atopic dermatitis.",
+        "Requesting reauthorization of dupilumab for atopic dermatitis with documented response.",
+        "She continues on dupilumab for atopic dermatitis (L20.9).",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}atopic dermatitis/i,
+        /reauthorization[^.]{0,40}(dupilumab|DUPIXENT|atopic dermatitis)/i,
+        /atopic dermatitis[^.]{0,40}continuing/i,
+      ],
+    },
+    {
       value: "asthma-initial",
       says: [
         "Indication: severe eosinophilic asthma, initial therapy.",
@@ -333,6 +346,70 @@ const DUPIXENT_CONDITION: NoteField = {
         "Requesting dupilumab as add-on maintenance for COPD despite triple inhaled therapy.",
       ],
       cues: [/\bCOPD\b/, /\bJ44\.?\d?\b/],
+    },
+  ],
+};
+
+const POSITIVE_CLINICAL_RESPONSE: NoteField = {
+  key: "positiveClinicalResponse",
+  label: "Positive clinical response on continuing therapy",
+  type: "boolean",
+  step: 14,
+  values: [
+    {
+      value: true,
+      says: [
+        "She has achieved a positive clinical response versus her pre-treatment baseline; itch and BSA have both improved.",
+        "Documented positive clinical response on dupilumab with substantial clearing of atopic dermatitis.",
+      ],
+      cues: [
+        /positive clinical response/i,
+        /clinical response[^.]{0,40}(achieved|documented|improved)/i,
+        /substantial clearing/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "There has been no positive clinical response from pre-treatment baseline; disease remains active.",
+        "Response has been inadequate; BSA and itch scores are unchanged from baseline.",
+      ],
+      cues: [
+        /no positive clinical response/i,
+        /inadequate (response|improvement)/i,
+        /unchanged from baseline/i,
+      ],
+    },
+  ],
+};
+
+const COMBINATION_IMMUNOMODULATOR: NoteField = {
+  key: "combinationImmunomodulator",
+  label: "Combination with another targeted immunomodulator for AD",
+  type: "boolean",
+  step: 15,
+  values: [
+    {
+      value: true,
+      says: [
+        "Dupilumab will be used in combination with another targeted immunomodulator for atopic dermatitis.",
+        "Concurrent therapy with a second targeted immunomodulator is planned.",
+      ],
+      cues: [
+        /combination with another (targeted )?immunomodulator/i,
+        /concurrent[^.]{0,40}immunomodulator/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Dupilumab will not be used in combination with another targeted immunomodulator for atopic dermatitis.",
+        "Monotherapy; no concurrent targeted immunomodulator.",
+      ],
+      cues: [
+        /not[^.]{0,20}combination with another (targeted )?immunomodulator/i,
+        /monotherapy/i,
+      ],
     },
   ],
 };
@@ -418,6 +495,10 @@ const DIAGNOSIS_PROVIDED: NoteField = {
         "atopic-dermatitis-initial": [
           "Primary diagnosis: L20.89, other atopic dermatitis.",
           "Diagnosis: atopic dermatitis, ICD-10 L20.9.",
+        ],
+        "atopic-dermatitis-continuing": [
+          "Primary diagnosis: L20.89, other atopic dermatitis, continuing therapy.",
+          "Diagnosis: atopic dermatitis, ICD-10 L20.9, on ongoing therapy.",
         ],
         "asthma-initial": [
           "Primary diagnosis J45.50, severe persistent asthma, uncomplicated.",
@@ -594,6 +675,8 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_DOSING_PROVIDED,
     DIAGNOSIS_PROVIDED,
     TOPICAL_TRIAL,
+    POSITIVE_CLINICAL_RESPONSE,
+    COMBINATION_IMMUNOMODULATOR,
   ],
   "pa-adalimumab": [
     SPECIALTY,
