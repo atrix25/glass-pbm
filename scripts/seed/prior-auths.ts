@@ -331,6 +331,53 @@ function dupixentCondition(c: PACandidate): string {
   return "atopic-dermatitis-initial";
 }
 
+/**
+ * Fact patterns for Dupixent reauthorization. Continuing AD therapy on the
+ * published form goes to steps 13–15 and requires a positive clinical response
+ * — re-walking the initial topical-trial path with historical fills would
+ * false-Approve non-responders and unlock specialty fills at POS.
+ */
+const DUPIXENT_RENEWAL_PATTERNS: FactPattern[] = [
+  {
+    weight: 72,
+    label: "continuing AD with positive clinical response",
+    build: () => ({
+      condition: "atopic-dermatitis-continuing",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        positiveClinicalResponse: true,
+        combinationImmunomodulator: false,
+      },
+    }),
+  },
+  {
+    weight: 14,
+    label: "continuing AD without positive clinical response",
+    build: () => ({
+      condition: "atopic-dermatitis-continuing",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        positiveClinicalResponse: false,
+      },
+    }),
+  },
+  {
+    weight: 14,
+    label: "continuing AD with response but combination immunomodulator",
+    build: () => ({
+      condition: "atopic-dermatitis-continuing",
+      answers: {
+        quantityLimitBasis: ["maintenance-ad-asthma"],
+        diagnosisProvided: true,
+        positiveClinicalResponse: true,
+        combinationImmunomodulator: true,
+      },
+    }),
+  },
+];
+
 /** A decided request, ready to be written once claim generation finishes. */
 export interface DecidedPA {
   memberId: string;
@@ -491,9 +538,9 @@ function decidePriorAuth(
   /*
    * An approval runs for a fixed term, and Skyrizi's is four months, so a
    * member who stays on therapy files again before it lapses. Each renewal is
-   * a fresh request against the same criteria, and the prescriber's answers
-   * are drawn again, because the second submission is not guaranteed to be as
-   * complete as the first.
+   * a fresh request against the continuing-therapy branch (not a re-walk of
+   * initial trial criteria), and the prescriber's answers are drawn again,
+   * because the second submission is not guaranteed to document response.
    */
   let latest = results[results.length - 1];
   while (
@@ -505,7 +552,9 @@ function decidePriorAuth(
     );
     if (renewalReceived >= c.planYearEnd) break;
 
-    const renewalPartial = draw(tree.id, patterns).build(c);
+    const renewalPatterns =
+      tree.id === "pa-dupixent" ? DUPIXENT_RENEWAL_PATTERNS : patterns;
+    const renewalPartial = draw(`${tree.id}:renewal`, renewalPatterns).build(c);
     const renewalFacts: PAFacts = {
       ...facts,
       condition: renewalPartial.condition,
