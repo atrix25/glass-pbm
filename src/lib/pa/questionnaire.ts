@@ -144,6 +144,7 @@ export function isPrepopulated(predicate: PredicateId): boolean {
 function itemType(step: CriteriaStepDef): QuestionnaireItemType {
   switch (step.predicate) {
     case "request.conditionIs":
+    case "request.conditionRoutes":
       return "choice";
     case "request.selectedAny":
       return "open-choice";
@@ -225,6 +226,23 @@ function answerOptions(step: CriteriaStepDef): AnswerOption[] | undefined {
     }));
   }
 
+  if (step.predicate === "request.conditionRoutes") {
+    const routes = (args.routes as Record<string, number> | undefined) ?? {};
+    const printed = step.options ?? [];
+    const codeByLabel = new Map<string, string>();
+    for (const code of Object.keys(routes)) {
+      const label = optionForCondition(code, printed);
+      if (label) codeByLabel.set(label, code);
+    }
+    return printed.map((label) => ({
+      valueCoding: {
+        system: CONDITION_SYSTEM,
+        code: codeByLabel.get(label) ?? slug(label),
+        display: label,
+      },
+    }));
+  }
+
   if (step.predicate === "request.selectedAny") {
     const coded = (args.options as string[]) ?? [];
     const printed = step.options ?? [];
@@ -262,6 +280,8 @@ interface Edge {
   from: CriteriaStepDef;
   branch: CriteriaBranch;
   taken: boolean;
+  /** Set when the edge comes from a conditionRoutes destination. */
+  routeCode?: string;
 }
 
 /**
@@ -286,6 +306,23 @@ function conditionsFor(edge: Edge): { when: EnableWhen[]; behavior: "all" | "any
           question,
           operator: taken ? "=" : "!=",
           answerCoding: { system: CONDITION_SYSTEM, code: condition },
+        },
+      ],
+      behavior: "any",
+    };
+  }
+
+  if (from.predicate === "request.conditionRoutes") {
+    const code =
+      edge.routeCode ??
+      Object.keys((from.args?.routes as Record<string, number>) ?? {})[0] ??
+      "";
+    return {
+      when: [
+        {
+          question,
+          operator: "=",
+          answerCoding: { system: CONDITION_SYSTEM, code },
         },
       ],
       behavior: "any",
@@ -339,6 +376,21 @@ function conditionsFor(edge: Edge): { when: EnableWhen[]; behavior: "all" | "any
 function incomingEdges(tree: CriteriaTreeDef, step: number): Edge[] {
   const edges: Edge[] = [];
   for (const from of tree.steps) {
+    if (from.predicate === "request.conditionRoutes") {
+      const routes =
+        (from.args?.routes as Record<string, number> | undefined) ?? {};
+      for (const [code, target] of Object.entries(routes)) {
+        if (target === step) {
+          edges.push({
+            from,
+            branch: { outcome: "step", step: target },
+            taken: true,
+            routeCode: code,
+          });
+        }
+      }
+      continue;
+    }
     if (from.yes.outcome === "step" && from.yes.step === step) {
       edges.push({ from, branch: from.yes, taken: true });
     }

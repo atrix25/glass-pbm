@@ -481,6 +481,176 @@ const TOPICAL_TRIAL: NoteField = {
 // Adalimumab
 // ---------------------------------------------------------------------------
 
+const ADALIMUMAB_CONDITION: NoteField = {
+  key: "__condition",
+  label: "Indication",
+  type: "condition",
+  step: 5,
+  values: [
+    {
+      value: "rheumatoid-arthritis",
+      says: [
+        "Requesting adalimumab for rheumatoid arthritis.",
+        "Indication: rheumatoid arthritis (M05.9).",
+      ],
+      cues: [
+        /rheumatoid arthritis/i,
+        /\bRA\b[^.]{0,20}(adalimumab|HUMIRA|biosimilar)/i,
+      ],
+    },
+    {
+      value: "crohn-initial",
+      says: [
+        "Requesting initial therapy for Crohn's disease.",
+        "Indication: Crohn's disease, initial biologic therapy.",
+      ],
+      cues: [
+        /initial (therapy|treatment)[^.]{0,40}Crohn/i,
+        /Crohn[^.]{0,40}initial (therapy|treatment)/i,
+      ],
+    },
+    {
+      value: "crohn-continuing",
+      says: [
+        "Requesting continuation of therapy for Crohn's disease.",
+        "She continues on adalimumab for Crohn's disease with documented response.",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}Crohn/i,
+        /reauthorization[^.]{0,40}Crohn/i,
+        /Crohn[^.]{0,40}continuing/i,
+      ],
+    },
+    {
+      value: "ulcerative-colitis-initial",
+      says: [
+        "Requesting initial therapy for ulcerative colitis.",
+        "Indication: ulcerative colitis, starting adalimumab.",
+      ],
+      cues: [
+        /initial (therapy|treatment)[^.]{0,40}ulcerative colitis/i,
+        /ulcerative colitis[^.]{0,40}initial/i,
+      ],
+    },
+    {
+      value: "ulcerative-colitis-continuing",
+      says: [
+        "Requesting continuation of therapy for ulcerative colitis.",
+        "She continues on adalimumab for ulcerative colitis with clinical response.",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}ulcerative colitis/i,
+        /ulcerative colitis[^.]{0,40}continuing/i,
+      ],
+    },
+    {
+      value: "plaque-psoriasis-initial",
+      says: [
+        "Requesting initial therapy for plaque psoriasis.",
+        "Indication: plaque psoriasis, initial therapy with adalimumab.",
+      ],
+      cues: [
+        /initial (therapy|treatment)[^.]{0,40}plaque psoriasis/i,
+        /plaque psoriasis[^.]{0,40}initial/i,
+      ],
+    },
+    {
+      value: "plaque-psoriasis-continuing",
+      says: [
+        "Requesting continuation of therapy for plaque psoriasis.",
+        "She continues on adalimumab for plaque psoriasis with significant improvement.",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}plaque psoriasis/i,
+        /plaque psoriasis[^.]{0,40}continuing/i,
+      ],
+    },
+    {
+      value: "hidradenitis-suppurativa-initial",
+      says: [
+        "Requesting initial therapy for hidradenitis suppurativa.",
+        "Indication: hidradenitis suppurativa, starting adalimumab.",
+      ],
+      cues: [
+        /initial (therapy|treatment)[^.]{0,40}hidradenitis/i,
+        /hidradenitis[^.]{0,40}initial/i,
+      ],
+    },
+    {
+      value: "hidradenitis-suppurativa-continuing",
+      says: [
+        "Requesting continuation of therapy for hidradenitis suppurativa.",
+        "She continues on adalimumab for hidradenitis with reduction in abscess count.",
+      ],
+      cues: [
+        /continu(ing|es)[^.]{0,40}hidradenitis/i,
+        /hidradenitis[^.]{0,40}continuing/i,
+      ],
+    },
+  ],
+};
+
+const SIGNIFICANT_IMPROVEMENT_ADA: NoteField = {
+  key: "significantImprovement",
+  label: "Significant improvement on continuing therapy",
+  type: "boolean",
+  step: 29,
+  values: [
+    {
+      value: true,
+      says: [
+        "She has demonstrated significant improvement from her pre-treatment baseline.",
+        "Marked clinical improvement on adalimumab with substantial clearing versus baseline.",
+      ],
+      cues: [
+        /significant improvement/i,
+        /marked (clinical )?improvement/i,
+        /substantial clearing/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "There has been no significant improvement from pre-treatment baseline; disease remains active.",
+        "Response has been inadequate; disease activity is unchanged from baseline.",
+      ],
+      cues: [
+        /no significant improvement/i,
+        /inadequate (response|improvement)/i,
+        /unchanged from baseline/i,
+      ],
+    },
+  ],
+};
+
+const IMPROVEMENT_DOCUMENTED_ADA: NoteField = {
+  key: "improvementDocumented",
+  label: "Improvement documentation within the past year",
+  type: "boolean",
+  step: 30,
+  values: [
+    {
+      value: true,
+      says: [
+        "Chart documentation of improvement within the past year is attached to this request.",
+        "Written explanation of improvement dated within the last twelve months is submitted.",
+      ],
+      cues: [
+        /documentation of improvement/i,
+        /improvement[^.]{0,40}(attached|submitted)/i,
+        /written explanation of improvement/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No recent documentation of improvement is available to attach.",
+      ],
+      cues: [/no recent documentation of improvement/i],
+    },
+  ],
+};
+
 const QUANTITY_BASIS_ADA: NoteField = {
   key: "quantityLimitBasis",
   label: "Quantity limit basis",
@@ -549,7 +719,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 6,
   values: [
     {
       value: true,
@@ -596,11 +766,14 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     TOPICAL_TRIAL,
   ],
   "pa-adalimumab": [
+    ADALIMUMAB_CONDITION,
     SPECIALTY,
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
     CONVENTIONAL_TRIAL,
+    SIGNIFICANT_IMPROVEMENT_ADA,
+    IMPROVEMENT_DOCUMENTED_ADA,
   ],
 };
 

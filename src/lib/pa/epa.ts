@@ -100,6 +100,7 @@ function answersByLinkId(
     const linkId = linkIdFor(step.step);
     switch (step.predicate) {
       case "request.conditionIs":
+      case "request.conditionRoutes":
         if (facts.condition !== undefined) out[linkId] = facts.condition;
         break;
       case "prescriber.specialtyIs":

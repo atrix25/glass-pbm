@@ -18,6 +18,7 @@
 
 export type PredicateId =
   | "request.conditionIs"
+  | "request.conditionRoutes"
   | "request.answerYes"
   | "request.selectedAny"
   | "prescriber.specialtyIs"
@@ -380,7 +381,7 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         reason:
           "No qualifying primary diagnosis was documented for an adalimumab product.",
       },
-      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 3",
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 4",
     },
     {
       step: 4,
@@ -399,6 +400,51 @@ export const ADALIMUMAB: CriteriaTreeDef = {
     },
     {
       step: 5,
+      question: "What condition is the product being used for?",
+      /*
+       * Multi-way branch (form step 5). Continuing CD/UC/PsO/HS require
+       * significant improvement + documentation; re-walking conventional
+       * therapy on renewals false-Approves non-responders and unlocks specialty
+       * POS. RA and other initial branches keep the collapsed conventional-
+       * therapy gate at step 6 until those indication trees are fully
+       * transcribed.
+       */
+      predicate: "request.conditionRoutes",
+      args: {
+        routes: {
+          "rheumatoid-arthritis": 6,
+          "crohn-initial": 6,
+          "ulcerative-colitis-initial": 6,
+          "plaque-psoriasis-initial": 6,
+          "hidradenitis-suppurativa-initial": 6,
+          "crohn-continuing": 27,
+          "ulcerative-colitis-continuing": 35,
+          "plaque-psoriasis-continuing": 46,
+          "hidradenitis-suppurativa-continuing": 54,
+        },
+      },
+      options: [
+        "Rheumatoid arthritis (RA)",
+        "Initial therapy for Crohn disease (CD)",
+        "Continuing therapy for Crohn disease (CD)",
+        "Initial therapy for ulcerative colitis (UC)",
+        "Continuing therapy for ulcerative colitis (UC)",
+        "Initial therapy for plaque psoriasis (PsO)",
+        "Continuing therapy for plaque psoriasis (PsO)",
+        "Initial therapy for hidradenitis suppurativa (HS)",
+        "Continuing therapy for hidradenitis suppurativa (HS)",
+        "None of the above",
+      ],
+      yes: { outcome: "step" },
+      no: {
+        outcome: "deny",
+        reason:
+          "The requested indication is not among the conditions this criteria set covers. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 5",
+    },
+    {
+      step: 6,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
@@ -423,6 +469,225 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    // Continuing Therapy for Crohn's Disease (CD) — form steps 27–30
+    {
+      step: 27,
+      question: "Is the medication prescribed by a gastroenterology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Gastroenterology"] },
+      yes: { outcome: "step", step: 28 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab continuing therapy for Crohn's disease must be prescribed by a gastroenterology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 27",
+    },
+    {
+      step: 28,
+      question: "Does the member have a diagnosis of Crohn's disease (CD)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["K50"] },
+      yes: { outcome: "step", step: 29 },
+      no: {
+        outcome: "deny",
+        reason: "No documented diagnosis of Crohn's disease (ICD-10 K50).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 28",
+    },
+    {
+      step: 29,
+      question: "Has the member demonstrated a significant improvement in their condition?",
+      predicate: "request.answerYes",
+      args: { field: "significantImprovement" },
+      yes: { outcome: "step", step: 30 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Significant improvement from pre-treatment baseline was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 29",
+    },
+    {
+      step: 30,
+      question:
+        "Is documentation (written explanation accepted) of improvement within the past year submitted with this request?",
+      predicate: "request.answerYes",
+      args: { field: "improvementDocumented" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Documentation of improvement within the past year was not submitted. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 30. Form complete here (Approve - 1 year).",
+    },
+    // Continuing Therapy for Ulcerative Colitis (UC) — form steps 35–38
+    {
+      step: 35,
+      question: "Does the member have a diagnosis of ulcerative colitis (UC)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["K51"] },
+      yes: { outcome: "step", step: 36 },
+      no: {
+        outcome: "deny",
+        reason: "No documented diagnosis of ulcerative colitis (ICD-10 K51).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 35",
+    },
+    {
+      step: 36,
+      question: "Is the medication prescribed by a gastroenterology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Gastroenterology"] },
+      yes: { outcome: "step", step: 37 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab continuing therapy for ulcerative colitis must be prescribed by a gastroenterology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 36",
+    },
+    {
+      step: 37,
+      question: "Has the member demonstrated a significant improvement in their condition?",
+      predicate: "request.answerYes",
+      args: { field: "significantImprovement" },
+      yes: { outcome: "step", step: 38 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Significant improvement from pre-treatment baseline was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 37",
+    },
+    {
+      step: 38,
+      question:
+        "Is documentation (written explanation accepted) of improvement within the past year submitted with this request?",
+      predicate: "request.answerYes",
+      args: { field: "improvementDocumented" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Documentation of improvement within the past year was not submitted. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 38. Form complete here (Approve - 1 year).",
+    },
+    // Continuing Therapy for Plaque Psoriasis (PsO) — form steps 46–49
+    {
+      step: 46,
+      question:
+        "Does the member have a diagnosis of plaque psoriasis (PsO) and/or palmoplantar psoriasis (PP)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L40"] },
+      yes: { outcome: "step", step: 47 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of plaque psoriasis or palmoplantar psoriasis (ICD-10 L40).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 46",
+    },
+    {
+      step: 47,
+      question: "Is the medication prescribed by a dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Dermatology"] },
+      yes: { outcome: "step", step: 48 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab continuing therapy for plaque psoriasis must be prescribed by a dermatologist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 47",
+    },
+    {
+      step: 48,
+      question: "Has the member demonstrated a significant improvement in their condition?",
+      predicate: "request.answerYes",
+      args: { field: "significantImprovement" },
+      yes: { outcome: "step", step: 49 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Significant improvement from pre-treatment baseline was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 48",
+    },
+    {
+      step: 49,
+      question:
+        "Is documentation (written explanation accepted) of improvement within the past year submitted with this request?",
+      predicate: "request.answerYes",
+      args: { field: "improvementDocumented" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Documentation of improvement within the past year was not submitted. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 49. Form complete here (Approve - 1 year).",
+    },
+    // Continuing Therapy for Hidradenitis Suppurativa (HS) — form steps 54–57
+    {
+      step: 54,
+      question: "Does the member have a diagnosis of hidradenitis suppurativa (HS)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L73"] },
+      yes: { outcome: "step", step: 55 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of hidradenitis suppurativa (ICD-10 L73).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 54",
+    },
+    {
+      step: 55,
+      question: "Is the medication prescribed by a dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Dermatology"] },
+      yes: { outcome: "step", step: 56 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab continuing therapy for hidradenitis must be prescribed by a dermatologist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 55",
+    },
+    {
+      step: 56,
+      question: "Has the member demonstrated a significant improvement in their condition?",
+      predicate: "request.answerYes",
+      args: { field: "significantImprovement" },
+      yes: { outcome: "step", step: 57 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Significant improvement from pre-treatment baseline was not demonstrated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 56",
+    },
+    {
+      step: 57,
+      question:
+        "Has the member had improvement based on abscess/nodule size and/or number?",
+      predicate: "request.answerYes",
+      args: { field: "improvementDocumented" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Documentation of abscess/nodule improvement was not submitted. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 57. Form complete here (Approve - 1 year).",
     },
   ],
 };
