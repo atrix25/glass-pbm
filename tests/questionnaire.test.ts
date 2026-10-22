@@ -98,12 +98,23 @@ describe("every criteria tree generates a structurally valid questionnaire", () 
         // A mapping that is silently off by one attaches the wrong indication to
         // the code the engine branches on, so it is derived and then asserted.
         for (const step of tree.steps) {
-          if (step.predicate !== "request.conditionIs") continue;
-          const condition = step.args?.condition as string;
-          expect(
-            optionForCondition(condition, step.options),
-            `${condition} did not resolve to one option`,
-          ).toBeTruthy();
+          if (step.predicate === "request.conditionIs") {
+            const condition = step.args?.condition as string;
+            expect(
+              optionForCondition(condition, step.options),
+              `${condition} did not resolve to one option`,
+            ).toBeTruthy();
+          }
+          if (step.predicate === "request.conditionRoutes") {
+            const routes =
+              (step.args?.routes as Record<string, number> | undefined) ?? {};
+            for (const condition of Object.keys(routes)) {
+              expect(
+                optionForCondition(condition, step.options),
+                `${condition} did not resolve to one option`,
+              ).toBeTruthy();
+            }
+          }
         }
       });
 
@@ -274,15 +285,41 @@ const SCENARIOS: Scenario[] = [
       "step-1": ["loading-dose"],
       "step-3": true,
       "step-4": true,
-      "step-5": true,
+      "step-5": "plaque-psoriasis-initial",
+      "step-6": true,
     },
     facts: facts({
+      condition: "plaque-psoriasis-initial",
       answers: {
         quantityLimitBasis: ["loading-dose"],
         preferredBiosimilarOrFailure: true,
       },
       memberDiagnosisCodes: ["L40.0"],
       filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab continuing Crohn's denied without significant improvement",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": "crohn-continuing",
+      "step-27": "Gastroenterology",
+      "step-28": true,
+      "step-29": false,
+    },
+    facts: facts({
+      condition: "crohn-continuing",
+      prescriberSpecialty: "Gastroenterology",
+      answers: {
+        quantityLimitBasis: ["standard-2-inj-28-days"],
+        preferredBiosimilarOrFailure: true,
+        significantImprovement: false,
+      },
+      memberDiagnosisCodes: ["K50.90"],
+      filledDrugNames: ["methotrexate tab", "HUMIRA"],
     }),
   },
 ];

@@ -240,8 +240,9 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 48,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        condition: adalimumabCondition(c),
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
@@ -252,8 +253,9 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
+      build: (c) => ({
+        condition: adalimumabCondition(c),
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["loading-dose"],
           preferredBiosimilarOrFailure: true,
@@ -264,8 +266,9 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 14,
       label: "reference product requested with no biosimilar failure",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        condition: adalimumabCondition(c),
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: false,
@@ -275,8 +278,9 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
+      build: (c) => ({
+        condition: adalimumabCondition(c),
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
@@ -287,8 +291,9 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
+      build: (c) => ({
+        condition: adalimumabCondition(c),
+        prescriberSpecialty: adalimumabSpecialty(c),
         answers: {
           quantityLimitBasis: [],
           quantityDosingProvided: true,
@@ -300,7 +305,8 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 6,
       label: "incomplete submission",
-      build: () => ({
+      build: (c) => ({
+        condition: adalimumabCondition(c),
         prescriberSpecialty: "Internal Medicine",
         answers: { quantityLimitBasis: [], quantityDosingProvided: false },
       }),
@@ -330,6 +336,135 @@ function dupixentCondition(c: PACandidate): string {
   if (c.diagnosisCodes.some((d) => d.startsWith("J45"))) return "asthma-initial";
   return "atopic-dermatitis-initial";
 }
+
+/**
+ * Map member diagnoses onto Adalimumab form step-5 codes. Continuing /
+ * reauthorization must not re-use these initial codes — see
+ * ADALIMUMAB_RENEWAL_PATTERNS.
+ */
+function adalimumabCondition(c: PACandidate): string {
+  if (c.diagnosisCodes.some((d) => d.startsWith("K50"))) return "crohn-initial";
+  if (c.diagnosisCodes.some((d) => d.startsWith("K51")))
+    return "ulcerative-colitis-initial";
+  if (c.diagnosisCodes.some((d) => d.startsWith("L40")))
+    return "plaque-psoriasis-initial";
+  if (c.diagnosisCodes.some((d) => d.startsWith("L73")))
+    return "hidradenitis-suppurativa-initial";
+  return "rheumatoid-arthritis";
+}
+
+function adalimumabSpecialty(c: PACandidate): string {
+  if (c.diagnosisCodes.some((d) => d.startsWith("K50") || d.startsWith("K51")))
+    return "Gastroenterology";
+  if (c.diagnosisCodes.some((d) => d.startsWith("L40") || d.startsWith("L73")))
+    return "Dermatology";
+  return "Rheumatology";
+}
+
+function adalimumabContinuingCondition(c: PACandidate): string | null {
+  if (c.diagnosisCodes.some((d) => d.startsWith("K50"))) return "crohn-continuing";
+  if (c.diagnosisCodes.some((d) => d.startsWith("K51")))
+    return "ulcerative-colitis-continuing";
+  if (c.diagnosisCodes.some((d) => d.startsWith("L40")))
+    return "plaque-psoriasis-continuing";
+  if (c.diagnosisCodes.some((d) => d.startsWith("L73")))
+    return "hidradenitis-suppurativa-continuing";
+  // RA (and residual indications) have lifetime / non-continuing paths on the
+  // published form — renewals stay on the initial conventional-therapy gate.
+  return null;
+}
+
+/**
+ * Fact patterns for Adalimumab reauthorization. Continuing CD/UC/PsO/HS on
+ * the published form require significant improvement + documentation —
+ * re-walking the conventional-therapy Approve with historical DMARD fills
+ * would false-Approve non-responders and unlock specialty fills at POS.
+ */
+const ADALIMUMAB_RENEWAL_PATTERNS: FactPattern[] = [
+  {
+    weight: 72,
+    label: "continuing therapy with documented significant improvement",
+    build: (c) => {
+      const continuing = adalimumabContinuingCondition(c);
+      if (!continuing) {
+        return {
+          condition: "rheumatoid-arthritis",
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: true,
+          },
+        };
+      }
+      return {
+        condition: continuing,
+        prescriberSpecialty: adalimumabSpecialty(c),
+        answers: {
+          quantityLimitBasis: ["standard-2-inj-28-days"],
+          preferredBiosimilarOrFailure: true,
+          significantImprovement: true,
+          improvementDocumented: true,
+        },
+      };
+    },
+  },
+  {
+    weight: 14,
+    label: "continuing therapy without significant improvement",
+    build: (c) => {
+      const continuing = adalimumabContinuingCondition(c);
+      if (!continuing) {
+        return {
+          condition: "rheumatoid-arthritis",
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: false,
+          },
+        };
+      }
+      return {
+        condition: continuing,
+        prescriberSpecialty: adalimumabSpecialty(c),
+        answers: {
+          quantityLimitBasis: ["standard-2-inj-28-days"],
+          preferredBiosimilarOrFailure: true,
+          significantImprovement: false,
+        },
+      };
+    },
+  },
+  {
+    weight: 14,
+    label: "continuing therapy with improvement asserted but not documented",
+    build: (c) => {
+      const continuing = adalimumabContinuingCondition(c);
+      if (!continuing) {
+        return {
+          condition: "rheumatoid-arthritis",
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: true,
+          },
+        };
+      }
+      return {
+        condition: continuing,
+        prescriberSpecialty: adalimumabSpecialty(c),
+        answers: {
+          quantityLimitBasis: ["standard-2-inj-28-days"],
+          preferredBiosimilarOrFailure: true,
+          significantImprovement: true,
+          improvementDocumented: false,
+        },
+      };
+    },
+  },
+];
 
 /** A decided request, ready to be written once claim generation finishes. */
 export interface DecidedPA {
@@ -491,9 +626,9 @@ function decidePriorAuth(
   /*
    * An approval runs for a fixed term, and Skyrizi's is four months, so a
    * member who stays on therapy files again before it lapses. Each renewal is
-   * a fresh request against the same criteria, and the prescriber's answers
-   * are drawn again, because the second submission is not guaranteed to be as
-   * complete as the first.
+   * a fresh request against the continuing-therapy branch (not a re-walk of
+   * initial trial criteria), and the prescriber's answers are drawn again,
+   * because the second submission is not guaranteed to document improvement.
    */
   let latest = results[results.length - 1];
   while (
@@ -505,7 +640,9 @@ function decidePriorAuth(
     );
     if (renewalReceived >= c.planYearEnd) break;
 
-    const renewalPartial = draw(tree.id, patterns).build(c);
+    const renewalPatterns =
+      tree.id === "pa-adalimumab" ? ADALIMUMAB_RENEWAL_PATTERNS : patterns;
+    const renewalPartial = draw(`${tree.id}:renewal`, renewalPatterns).build(c);
     const renewalFacts: PAFacts = {
       ...facts,
       condition: renewalPartial.condition,

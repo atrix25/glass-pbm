@@ -66,6 +66,25 @@ function evaluatePredicate(
       };
     }
 
+    case "request.conditionRoutes": {
+      /*
+       * Multi-way indication branching. Matched routes are resolved in
+       * determinePA; here we only report whether the selected condition is
+       * among the transcribed destinations.
+       */
+      const routes =
+        (args.routes as Record<string, number> | undefined) ?? {};
+      const selected = facts.condition ?? "";
+      const next = routes[selected];
+      return {
+        result: next != null,
+        evidence:
+          next != null
+            ? `Prescriber selected "${selected}", routing to step ${next}.`
+            : `Prescriber selected "${selected || "nothing"}", which is not among the transcribed indications (${Object.keys(routes).join(", ") || "none"}).`,
+      };
+    }
+
     case "request.answerYes": {
       const field = args.field as string;
       const value = facts.answers[field];
@@ -201,7 +220,23 @@ export function determinePA(
       step.args ?? {},
       facts,
     );
-    const branch = result ? step.yes : step.no;
+
+    /*
+     * conditionRoutes carries the next step number in its args map rather than
+     * on the yes branch, because one printed question fans out to several
+     * destinations. Falling through to the static yes.step would escalate.
+     */
+    let branch = result ? step.yes : step.no;
+    if (result && step.predicate === "request.conditionRoutes") {
+      const routes =
+        (step.args?.routes as Record<string, number> | undefined) ?? {};
+      const routed = routes[facts.condition ?? ""];
+      if (routed == null) {
+        branch = step.no;
+      } else {
+        branch = { outcome: "step", step: routed };
+      }
+    }
 
     path.push({
       step: step.step,
