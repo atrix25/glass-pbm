@@ -5,6 +5,12 @@
  *
  * Skips tables already fully loaded. Partially loaded tables are truncated and
  * reloaded.
+ *
+ * Settlement and book-day aggregates are derived from Claim but do not carry a
+ * Claim foreign key, so a count-only skip would leave RemittanceRun /
+ * SponsorInvoice / RebateInvoice / BookDay dollars stale after Claim is
+ * truncated and reloaded. Those tables are force-reloaded whenever Claim was
+ * rewritten earlier in the same run.
  */
 
 import { createRequire } from "node:module";
@@ -14,6 +20,10 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import pg from "pg";
 import { from as copyFrom } from "pg-copy-streams";
+import {
+  CLAIM_DERIVED_AGGREGATES,
+  shouldSkipResume,
+} from "./import-sqlite-resume";
 
 const require = createRequire(import.meta.url);
 const { DatabaseSync } = require("node:sqlite") as {
@@ -216,6 +226,8 @@ async function main() {
 
   console.log(`Importing ${tables.length} tables from ${SQLITE}`);
 
+  let claimReloaded = false;
+
   for (const table of tables) {
     const total = Number(
       (sqlite.prepare(`SELECT COUNT(*) AS n FROM "${table}"`).get() as { n: number }).n,
@@ -230,13 +242,19 @@ async function main() {
         .n,
     );
 
-    if (pgCount >= total) {
+    if (shouldSkipResume({ table, pgCount, sqliteCount: total, claimReloaded })) {
       console.log(`  ${table}: already loaded (${pgCount})`);
       continue;
     }
 
     if (pgCount > 0) {
-      console.log(`  ${table}: partial (${pgCount}/${total}) — truncating and reloading`);
+      const staleAggregate =
+        claimReloaded && CLAIM_DERIVED_AGGREGATES.has(table) && pgCount >= total;
+      console.log(
+        staleAggregate
+          ? `  ${table}: stale after Claim reload (${pgCount}) — truncating and reloading`
+          : `  ${table}: partial (${pgCount}/${total}) — truncating and reloading`,
+      );
       await client.query(`TRUNCATE TABLE "${table}" CASCADE`);
     }
 
@@ -272,6 +290,8 @@ async function main() {
       copyFrom(`COPY "${table}" (${colList}) FROM STDIN WITH (FORMAT text, NULL '\\N')`),
     );
     await pipeline(Readable.from(lines()), stream);
+
+    if (table === "Claim") claimReloaded = true;
 
     const secs = ((Date.now() - started) / 1000).toFixed(1);
     console.log(`  ${table}: done ${total} in ${secs}s`);
