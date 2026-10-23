@@ -2346,3 +2346,26 @@ model SapphireOnboardingEvent {
   createdAt DateTime @default(now())
   @@index([onboardingId, createdAt])
 }
+
+model SapphirePlanStudy {
+  id String @id
+  sponsorId String
+  contractId String
+  revision Int @default(0)
+  data String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([sponsorId, contractId, createdAt])
+}
+model SapphirePlanStudyEvent {
+  id String @id
+  studyId String
+  requestKey String @unique
+  inputHash String
+  actor String
+  kind String
+  revision Int
+  data String
+  createdAt DateTime @default(now())
+  @@index([studyId, createdAt])
+}

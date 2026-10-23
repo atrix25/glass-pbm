@@ -1,0 +1,11 @@
+import {describe,it,expect} from 'vitest';
+import {compare,projectMember,enginePlan} from '../src/lib/plan-studio/model';
+import {DESIGNS,goalsSchema,designSchema} from '../src/lib/plan-studio/schema';
+const goals={name:'Test employer',lives:250,currentSpend:null,renewal:'2027-01-01',priority:'balance' as const,contribution:null};
+describe('Employer plan comparisons',()=>{
+ it('uses the same varied population and reconciles all money',()=>{const s=compare(goals);expect(s.options.map(o=>o.claims)).toEqual([s.options[0].claims,s.options[0].claims,s.options[0].claims]);for(const o of s.options){expect(o.rejected).toBe(0);expect(o.employer+o.employee).toBe(o.allowed);expect(o.admin).toBe(250*12*500);expect(o.total).toBe(o.employer+o.admin);expect(o.savings).toBe(o.costShift);expect(o.disrupted).toBe(new Set(o.members.filter(m=>m.disrupted).map(m=>m.id)).size);expect(new Set(o.members.map(m=>m.group)).size).toBe(5);}expect(s.options[0].employee).toBeLessThan(s.options[1].employee);expect(s.options[2].employee).toBeGreaterThan(s.options[1].employee);});
+ it('calculates independently authored deductible and copay outcomes across a year',()=>{expect(projectMember(DESIGNS[0],50).employee).toBe(6000);expect(projectMember(DESIGNS[1],50).employee).toBe(18000);expect(projectMember(DESIGNS[2],50).employee).toBe(28400);expect(projectMember(DESIGNS[1],50).allowed).toBe(28800);});
+ it('preserves zero-use members and applies annual OOP caps',()=>{expect(projectMember(DESIGNS[1],0).claims).toBe(0);const p={...DESIGNS[1],oop:20000};expect(projectMember(p,24).employee).toBe(20000);});
+ it('defaults unknown population but never pretends supplied spend calibrates claims',()=>{const s=compare({...goals,lives:null,currentSpend:100});expect(s.lives).toBe(250);expect(s.baseline.total).toBe(compare(goals).baseline.total);expect(s.assumptions[0]).toContain('unknown');});
+ it('applies edited terms and rejects invalid designs and populations',()=>{expect(enginePlan({...DESIGNS[0],deductible:25000}).deductibleIndividual).toBe(25000);expect(()=>designSchema.parse({...DESIGNS[0],oop:10000,deductible:25000})).toThrow();expect(()=>goalsSchema.parse({...goals,lives:2001})).toThrow();expect(()=>goalsSchema.parse({...goals,renewal:'2027-02-31'})).toThrow();});
+});

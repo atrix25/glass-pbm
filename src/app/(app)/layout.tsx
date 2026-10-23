@@ -62,7 +62,7 @@ export default async function AppLayout({
 }) {
   const [role, clock, memberId] = await Promise.all([getRole(), getClock(), getActiveMemberId()]);
   const primary: Record<string,NavGroup[]> = {
- sponsor:[{title:"Your plan",items:[{href:"/workspace",label:"Overview",icon:"sponsor"},{href:"/workspace?view=plan",label:"Plan",icon:"changes"},{href:"/workspace?view=members",label:"Members",icon:"members"},{href:"/workspace?view=claims",label:"Claims",icon:"claims"},{href:"/workspace?view=money",label:"Money",icon:"settlement"},{href:"/workspace?view=autopilot",label:"Autopilot",icon:"agents"}]}],
+ sponsor:[{title:"Your plan",items:[{href:"/workspace",label:"Overview",icon:"sponsor"},{href:"/plan-studio",label:"Build a plan",icon:"changes"},{href:"/workspace?view=members",label:"Members",icon:"members"},{href:"/workspace?view=claims",label:"Claims",icon:"claims"},{href:"/workspace?view=money",label:"Money",icon:"settlement"},{href:"/workspace?view=autopilot",label:"Autopilot",icon:"agents"}]}],
  admin:[{title:"Operations",items:[{href:"/operations",label:"Overview",icon:"operations"},{href:"/workspace",label:"Employers",icon:"sponsor"},{href:"/agents",label:"Work",icon:"agents"},{href:"/pa/review",label:"Clinical",icon:"paReview"},{href:"/settlement",label:"Money",icon:"settlement"},{href:"/gemma",label:"Sapphire",icon:"agents"}]}],
  member:[{title:"Your benefits",items:[{href:"/members/"+memberId,label:"My benefits",icon:"members"},{href:"/members/"+memberId+"#claims",label:"Prescriptions",icon:"claims"},{href:"/assistant",label:"Support",icon:"assistant"}]}],
  pharmacy:[{title:"Pharmacy",items:[{href:"/pos",label:"Submit claim",icon:"pos"},{href:"/claims",label:"Claim history",icon:"claims"},{href:"/mac",label:"Support",icon:"mac"}]}]

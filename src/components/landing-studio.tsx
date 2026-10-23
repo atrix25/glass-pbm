@@ -4,9 +4,9 @@ import { useState } from 'react';
 
 // Authored scenario assumptions for the public preview, not outputs from the claims engine.
 const scenarios = [
-  { name: 'Best member experience', savings: '−$96', oop: '−$2', members: '0', nps: 'Not modeled', description: 'Prioritize member experience with fewer cost and access changes.' },
-  { name: 'Balanced', savings: '$0', oop: '$0', members: '0', nps: 'Not modeled', description: 'Balance savings with member cost and access changes.' },
-  { name: 'Higher savings', savings: '$240', oop: '+$5', members: '48', nps: 'Not modeled', description: 'Consider broader changes with greater member impact.' },
+  { name: 'Best member experience', savings: '−$29,758', oop: '$31,700', members: '0', nps: 'Not modeled', description: 'Prioritize member experience with fewer cost and access changes.' },
+  { name: 'Balanced', savings: '$0', oop: '$61,458', members: '0', nps: 'Not modeled', description: 'Balance savings with member cost and access changes.' },
+  { name: 'Higher savings', savings: '$44,404', oop: '$105,862', members: '137', nps: 'Not modeled', description: 'Consider broader changes with greater member impact.' },
 ];
 
 export function LandingStudio() {
@@ -21,12 +21,12 @@ export function LandingStudio() {
     <p className="mt-4 min-h-10 text-xs leading-relaxed text-slate-500">{scenario.description}</p>
     <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200" aria-live="polite" aria-atomic="true">
       {[
-        [scenario.savings,'Employer savings in the test population'],
-        [scenario.oop,'Out-of-pocket change per generic fill'],
+        [scenario.savings,'Annual employer claim savings'],
+        [scenario.oop,'Total annual employee out-of-pocket cost'],
         [scenario.members,'Unique members disrupted by higher cost or access changes'],
         [scenario.nps,'Experience impact'],
       ].map(([value,label],i)=><div key={label} className={'p-4 sm:p-5 '+(i%2===0?'border-r border-slate-200 ':'')+(i<2?'border-b border-slate-200':'')}><p className="tnum text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{value}</p><p className="mt-2 text-xs leading-relaxed text-slate-500">{label}</p></div>)}
     </div>
-    <p id="studio-assumptions" className="mt-5 text-[11px] leading-relaxed text-slate-500">Illustrative 48-member, 144-claim scenarios. Baseline generic copay $5; compare $3, $5 and $10. Employer savings from higher copays shift costs to members. Run the Studio to record plan-specific analysis.</p>
+    <p id="studio-assumptions" className="mt-5 text-[11px] leading-relaxed text-slate-500">Illustrative 250-member, 2,404-fill annual scenario. Compared with the Balanced design, before rebates. These savings shift cost to employees; no lower drug prices are assumed. Customize the plans in the Studio.</p>
   </div>;
 }

@@ -10,7 +10,7 @@ test.each(['basic', 'session', 'oidc'])('public landing keeps %s workspace acces
   for (const method of ['GET', 'POST']) {
     expect(proxy(new NextRequest('https://example.test/', {method})).headers.get('x-middleware-next')).toBe('1');
   }
-  for (const path of ['/benefit-changes', '/gemma', '/settlement', '/savings', '/onboarding', '/workspace']) {
+  for (const path of ['/benefit-changes', '/gemma', '/settlement', '/savings', '/onboarding', '/workspace', '/plan-studio']) {
     const response = proxy(new NextRequest('https://example.test' + path));
     expect(response.status).toBe(307);
     expect(new URL(response.headers.get('location')!).searchParams.get('next')).toBe(path);
