@@ -13,17 +13,17 @@
   --color-ink-900: #1d2432;
   --color-ink-950: #12161f;
 
-  --color-glass-50: #eefbfa;
-  --color-glass-100: #d3f5f3;
-  --color-glass-200: #ace9e8;
-  --color-glass-300: #74d8d8;
-  --color-glass-400: #38bec1;
-  --color-glass-500: #1ca2a7;
-  --color-glass-600: #148187;
-  --color-glass-700: #14676d;
-  --color-glass-800: #155259;
-  --color-glass-900: #16454b;
-  --color-glass-950: #072a2f;
+  --color-glass-50: #eff6ff;
+  --color-glass-100: #dbeafe;
+  --color-glass-200: #bfdbfe;
+  --color-glass-300: #93c5fd;
+  --color-glass-400: #60a5fa;
+  --color-glass-500: #3b82f6;
+  --color-glass-600: #2563eb;
+  --color-glass-700: #1447e6;
+  --color-glass-800: #1e40af;
+  --color-glass-900: #1e3a8a;
+  --color-glass-950: #172554;
 
   --color-amber-signal: #b45309;
   --color-positive: #0f766e;
@@ -127,3 +127,7 @@ body {
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
 }
+
+/* Shared Sapphire workspace rhythm. */
+:where(button, a, input, select, textarea):focus-visible { outline: 2px solid #1447e6; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

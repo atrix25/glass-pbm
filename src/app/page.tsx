@@ -15,20 +15,20 @@ export default function Home() {
     <div className="mx-auto max-w-6xl px-6 sm:px-10">
       <header className="flex items-center justify-between gap-4 border-b border-slate-200/70 py-7">
         <Link href="/" aria-label="Sapphire home" className="flex items-center gap-2.5 text-2xl font-semibold tracking-[-.06em]"><Diamond className="text-blue-700" size={24} strokeWidth={1.8}/>sapphire<span className="text-blue-700">.</span></Link>
-        <nav aria-label="Main navigation" className="flex items-center gap-6 text-sm"><a href="#platform" className="hidden text-slate-600 hover:text-blue-700 sm:block">The platform</a><a href="#demo-access" className="font-medium text-slate-700 hover:text-blue-700">Explore by role <span aria-hidden="true">↗</span></a></nav>
+        <nav aria-label="Main navigation" className="flex items-center gap-6 text-sm"><a href="#platform" className="hidden text-slate-600 hover:text-blue-700 sm:block">The platform</a><Link href="/login" className="text-slate-600 hover:text-blue-700">Sign in</Link><a href="#demo-access" className="font-medium text-slate-700 hover:text-blue-700">Explore by role <span aria-hidden="true">↗</span></a></nav>
       </header>
       <section className="mx-auto max-w-4xl py-20 text-center sm:py-28">
         <h1 className="text-5xl font-medium leading-[1.06] tracking-[-.055em] sm:text-7xl">Your plan.<br/><span className="text-blue-700">Built around your people.</span></h1>
         <p className="mx-auto mt-7 max-w-lg text-lg leading-relaxed text-slate-600">Design a better pharmacy benefit. Know where the money goes. Keep finding ways to improve.</p>
-        <div className="mt-9 flex flex-wrap justify-center gap-4"><Link prefetch={false} href="/benefit-changes" className={action}>Build your plan <ArrowRight size={16}/></Link><a href="#platform" className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-medium hover:border-blue-400">Explore the platform <ArrowDown size={16}/></a></div>
+        <div className="mt-9 flex flex-wrap justify-center gap-4"><Link prefetch={false} href="/onboarding" className={action}>Build your plan <ArrowRight size={16}/></Link><a href="#platform" className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-6 py-3.5 text-sm font-medium hover:border-blue-400">Explore the platform <ArrowDown size={16}/></a></div>
       </section>
       <nav aria-label="Platform sections" className="grid grid-cols-3 border-y border-slate-200 py-5 text-center text-xs sm:text-sm">
         {['Design','Administer','Improve'].map((label,i)=><a key={label} href={['#studio','#assurance','#autopilot'][i]} className="rounded px-2 py-1 text-slate-600 hover:text-blue-700"><span className="mr-2 text-blue-700">0{i+1}</span>{label}</a>)}
       </nav>
-      <p className="mt-5 text-center text-sm text-slate-500">One plan. From design to daily decisions.</p>
+      <p className="mt-5 text-center text-sm text-slate-500">Meet Willow Works. Design the benefit, follow the money, then keep improving.</p>
       <div id="platform" className="scroll-mt-8">
         <section id="studio" aria-labelledby="studio-title" className="grid scroll-mt-8 items-center gap-10 border-b border-slate-200 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
-          <div><Layers3 size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">01 / Design</p><h2 id="studio-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Benefit Design Studio</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Compare options. Understand the tradeoffs. Build your plan.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Compare coverage, pharmacy and clinical-program options together.</p><p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-500">Launch the group entirely on web-based portal.</p><Link prefetch={false} href="/benefit-changes" className={textLink+' mt-7'}>Open the studio <ArrowRight size={16}/></Link></div>
+          <div><Layers3 size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">01 / Design</p><h2 id="studio-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Benefit Design Studio</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Compare options. Understand the tradeoffs. Build your plan.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Compare coverage, pharmacy and clinical-program options together.</p><p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-500">Launch the group entirely through a web-based portal.</p><Link prefetch={false} href="/onboarding" className={textLink+' mt-7'}>Open the studio <ArrowRight size={16}/></Link></div>
           <LandingStudio/>
         </section>
         <section id="assurance" aria-labelledby="assurance-title" className="grid scroll-mt-8 items-center gap-10 border-b border-slate-200 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
@@ -37,16 +37,16 @@ export default function Home() {
             <p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">02 / Administer</p>
             <h2 id="assurance-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Administer with assurance</h2>
             <p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">See the amount. Open the detail.</p>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">No latency payment infrastructure, tracks every penny in real time with a cloud based claims engine</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">A cloud-based claims engine connects each charge to the evidence behind it.</p>
             <div className="mt-7 flex flex-col items-start gap-4">
-              <Link prefetch={false} href="/settlement" className={textLink}>Follow the money <ArrowRight size={16}/></Link>
+              <Link prefetch={false} href="/workspace?view=money" className={textLink}>Follow the money <ArrowRight size={16}/></Link>
               <Link prefetch={false} href="/reconciliation" className="rounded text-sm text-slate-600 underline underline-offset-4">Check your guarantees</Link>
             </div>
           </div>
           <LandingLedger/>
         </section>
         <section id="autopilot" aria-labelledby="autopilot-title" className="grid scroll-mt-8 items-center gap-10 py-16 lg:grid-cols-[.9fr_1.1fr] lg:gap-20 sm:py-20">
-          <div><Sparkles size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">03 / Improve</p><h2 id="autopilot-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Autopilot</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Your plan keeps getting smarter.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Sapphire spots opportunities, tests the tradeoffs and learns from results.</p><div className="mt-7 flex flex-col items-start gap-4"><Link prefetch={false} href="/gemma" className={textLink}>See Sapphire at work <ArrowRight size={16}/></Link><Link prefetch={false} href="/savings" className="rounded text-sm text-slate-600 underline underline-offset-4">Explore savings</Link></div></div>
+          <div><Sparkles size={26} className="text-blue-700" strokeWidth={1.5}/><p className="mt-6 text-xs font-medium uppercase tracking-widest text-slate-500">03 / Improve</p><h2 id="autopilot-title" className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Autopilot</h2><p className="mt-5 max-w-sm text-lg leading-relaxed text-slate-600">Your plan keeps getting smarter.</p><p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">Sapphire spots opportunities, tests the tradeoffs and learns from results.</p><div className="mt-7 flex flex-col items-start gap-4"><Link prefetch={false} href="/workspace?view=autopilot" className={textLink}>See Sapphire at work <ArrowRight size={16}/></Link><Link prefetch={false} href="/savings" className="rounded text-sm text-slate-600 underline underline-offset-4">Explore savings</Link></div></div>
           <LandingAutopilot/>
         </section>
       </div>

@@ -15,7 +15,7 @@ export const ROLES: RoleDefinition[] = [
     who: "Employer benefits team",
     blurb:
       "Compare employer costs, member costs, and benefit choices.",
-    landing: "/sponsor",
+    landing: "/workspace",
   },
   {
     id: "admin",

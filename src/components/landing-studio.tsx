@@ -4,16 +4,16 @@ import { useState } from 'react';
 
 // Authored scenario assumptions for the public preview, not outputs from the claims engine.
 const scenarios = [
-  { name: 'Best member experience', savings: '$0.9M', oop: '+$2', members: '85', nps: '−0.2 pts', description: 'Prioritize member experience with fewer cost and access changes.' },
-  { name: 'Balanced', savings: '$1.8M', oop: '+$8', members: '395', nps: '−1.1 pts', description: 'Balance savings with member cost and access changes.' },
-  { name: 'Higher savings', savings: '$2.7M', oop: '+$18', members: '1,240', nps: '−3.2 pts', description: 'Consider broader changes with greater member impact.' },
+  { name: 'Best member experience', savings: '−$96', oop: '−$2', members: '0', nps: 'Not modeled', description: 'Prioritize member experience with fewer cost and access changes.' },
+  { name: 'Balanced', savings: '$0', oop: '$0', members: '0', nps: 'Not modeled', description: 'Balance savings with member cost and access changes.' },
+  { name: 'Higher savings', savings: '$240', oop: '+$5', members: '48', nps: 'Not modeled', description: 'Consider broader changes with greater member impact.' },
 ];
 
 export function LandingStudio() {
   const [selected, setSelected] = useState(1);
   const scenario = scenarios[selected];
   return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_48px_-24px_rgba(30,64,175,0.22)] sm:p-7">
-    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-slate-500">Steel Potatoes · Example employer</p><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-600">Illustrative scenarios</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-slate-500">Willow Works · Example employer</p><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-600">Illustrative scenarios</span></div>
     <h3 className="mt-4 text-xl font-semibold tracking-tight">Try the tradeoff</h3>
     <div className="mt-7 flex items-center justify-between gap-3"><label htmlFor="studio-goal" className="text-sm font-medium">Savings goal</label><span className="text-sm font-semibold text-blue-700">{scenario.name}</span></div>
     <input id="studio-goal" type="range" min={0} max={2} step={1} value={selected} onChange={e=>setSelected(Number(e.target.value))} aria-valuetext={scenario.name} aria-describedby="studio-assumptions" className="mt-4 h-8 w-full cursor-pointer accent-blue-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"/>
@@ -21,12 +21,12 @@ export function LandingStudio() {
     <p className="mt-4 min-h-10 text-xs leading-relaxed text-slate-500">{scenario.description}</p>
     <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200" aria-live="polite" aria-atomic="true">
       {[
-        [scenario.savings,'Annual net plan savings'],
-        [scenario.oop,'Avg. monthly out-of-pocket change per disrupted member'],
+        [scenario.savings,'Employer savings in the test population'],
+        [scenario.oop,'Out-of-pocket change per generic fill'],
         [scenario.members,'Unique members disrupted by higher cost or access changes'],
-        [scenario.nps,'Modeled member NPS change'],
+        [scenario.nps,'Experience impact'],
       ].map(([value,label],i)=><div key={label} className={'p-4 sm:p-5 '+(i%2===0?'border-r border-slate-200 ':'')+(i<2?'border-b border-slate-200':'')}><p className="tnum text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{value}</p><p className="mt-2 text-xs leading-relaxed text-slate-500">{label}</p></div>)}
     </div>
-    <p id="studio-assumptions" className="mt-5 text-[11px] leading-relaxed text-slate-500">Three synthetic scenarios, not analysis of the reference claims. Figures illustrate tradeoffs; plan-specific estimates require analysis in the Studio.</p>
+    <p id="studio-assumptions" className="mt-5 text-[11px] leading-relaxed text-slate-500">Illustrative 48-member, 144-claim scenarios. Baseline generic copay $5; compare $3, $5 and $10. Employer savings from higher copays shift costs to members. Run the Studio to record plan-specific analysis.</p>
   </div>;
 }

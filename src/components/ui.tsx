@@ -14,7 +14,7 @@ export function Card({
   return (
     <Tag
       className={cn(
-        "rounded-xl border border-ink-200/80 bg-white shadow-[0_1px_2px_rgba(18,22,31,0.04),0_8px_24px_-16px_rgba(18,22,31,0.18)]",
+        "rounded-2xl border border-ink-200/80 bg-white",
         className,
       )}
     >
@@ -42,7 +42,7 @@ export function CardHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold tracking-tight text-ink-900">
+        <h2 className="text-base font-medium tracking-tight text-ink-900">
           {title}
         </h2>
         {description ? (

@@ -233,6 +233,7 @@ export default async function MemberPage({
         </Card>
       ) : null}
 
+      <div id="claims"/>
       <Card>
         <CardHeader
           title="Claim history"

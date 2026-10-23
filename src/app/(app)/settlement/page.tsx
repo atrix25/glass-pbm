@@ -39,7 +39,7 @@ export default async function SettlementPage() {
   return (
     <div className="space-y-6">
       <SectionTitle description="Trace claims, client invoices, manufacturer receipts and employer credits. Amounts owed follow the applicable agreement; outstanding collections and unresolved differences remain visible.">
-        Settlement
+        Money
       </SectionTitle>
 
       {/* ------------------------------------------------------------------ */}

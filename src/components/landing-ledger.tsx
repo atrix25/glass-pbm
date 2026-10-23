@@ -14,7 +14,7 @@ export function LandingLedger() {
   return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_48px_-24px_rgba(30,64,175,0.22)]">
     <div className="px-5 py-5 sm:px-7">
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Plan ledger</h3><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-slate-600">Synthetic example</span></div>
-      <p className="mt-2 text-xs text-slate-500">Steel Potatoes · 4 example claims</p>
+      <p className="mt-2 text-xs text-slate-500">Willow Works · 4 example claims</p>
     </div>
     <div className="flex items-center justify-between border-y border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] text-slate-500 sm:px-7"><span>Prescription</span><span className="mr-9">Net plan cost</span></div>
     <div className="divide-y divide-slate-100">

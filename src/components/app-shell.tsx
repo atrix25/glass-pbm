@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Diamond } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -60,8 +60,8 @@ export function AppShell({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[264px] max-w-[85vw] flex-col border-r border-ink-200/80 bg-ink-50 transition-transform duration-200 ease-out",
-          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[236px] lg:max-w-none lg:translate-x-0 lg:bg-ink-100/40 lg:shadow-none lg:transition-none",
+          "fixed inset-y-0 left-0 z-40 flex w-[264px] max-w-[85vw] flex-col border-r border-ink-200/80 bg-white transition-transform duration-200 ease-out",
+          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[236px] lg:max-w-none lg:translate-x-0 lg:bg-white lg:shadow-none lg:transition-none",
           open ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         )}
         // Any link in here is a navigation, and a drawer that stays open over
@@ -92,9 +92,7 @@ export function AppShell({
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="relative flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-glass-400 to-glass-700">
-            <span className="h-2.5 w-2.5 rounded-[2px] border-[1.5px] border-white/90" />
-          </span>
+          <Diamond size={24} strokeWidth={1.8} className="text-blue-700"/>
           <span className="text-[14px] font-semibold tracking-tight text-ink-900">
             Sapphire
           </span>

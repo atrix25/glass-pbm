@@ -77,9 +77,10 @@ export interface NavGroup {
 
 export function SideNav({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
-  const query = useSearchParams().toString();
+  const params = useSearchParams();
+  const query = params.toString();
   const offeringPages = ["/sponsor", "/offering", "/business"];
-  const preserve = (href: string) => query && offeringPages.includes(pathname) && offeringPages.includes(href) ? `${href}?${query}` : href;
+  const preserve = (href: string) => {if(href.startsWith('/workspace')&&params.get('employer')&&['/workspace','/onboarding'].includes(pathname)){const u=new URL(href,'https://sapphire.invalid');u.searchParams.set('employer',params.get('employer')!);return u.pathname+'?'+u.searchParams.toString();}return query && offeringPages.includes(pathname) && offeringPages.includes(href) ? `${href}?${query}` : href;};
 
   return (
     <nav className="flex flex-col gap-6 px-3 py-5">
@@ -92,12 +93,13 @@ export function SideNav({ groups }: { groups: NavGroup[] }) {
             {group.items.map((item) => {
               const Icon = ICONS[item.icon];
               const active =
-                pathname === item.href ||
+                (item.href.startsWith("/workspace") ? pathname === "/workspace" && (params.get("view")??"overview") === (new URL(item.href,"https://sapphire.invalid").searchParams.get("view")??"overview") : pathname === item.href) ||
                 (item.href !== "/" && item.href !== "/sponsor" && pathname.startsWith(`${item.href}/`));
               return (
                 <li key={item.href}>
                   <Link
                     href={preserve(item.href)}
+                    prefetch={false}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition",
                       active

@@ -2319,3 +2319,30 @@ model BenefitSourceRevision {
   id String @id
   revision Int @default(0)
 }
+
+/// Isolated example-employer lifecycle. Never an operational enrollment or benefit.
+model SapphireOnboarding {
+  id String @id
+  employerKey String
+  sponsorId String
+  contractId String
+  name String
+  status String @default("Draft")
+  revision Int @default(0)
+  data String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([sponsorId, contractId, createdAt])
+}
+model SapphireOnboardingEvent {
+  id String @id
+  onboardingId String
+  requestKey String @unique
+  inputHash String
+  actor String
+  kind String
+  revision Int
+  data String
+  createdAt DateTime @default(now())
+  @@index([onboardingId, createdAt])
+}
