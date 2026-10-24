@@ -415,7 +415,10 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         ],
         alsoAcceptAnswer: "conventionalTherapyTrial",
       },
-      yes: { outcome: "approve", days: 365 },
+      // Uveitis is age-gated on the published form (adult ≥18 at step 60;
+      // pediatric 2–17 at step 66). Route H20 through that check before
+      // Approve so under-2 / unknown-age members cannot unlock specialty.
+      yes: { outcome: "step", step: 6 },
       no: {
         outcome: "deny",
         reason:
@@ -423,6 +426,34 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    {
+      step: 6,
+      question:
+        "Is the request for non-infectious intermediate, posterior, or pan-uveitis (ICD-10 H20)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["H20"] },
+      yes: { outcome: "step", step: 7 },
+      no: { outcome: "approve", days: 365 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, adult uveitis step 58–63 / pediatric uveitis step 64–67",
+    },
+    {
+      step: 7,
+      question:
+        "Is the member two years of age or older (adult uveitis ≥18, or pediatric uveitis ages 2–17)?",
+      predicate: "member.ageBetween",
+      // Union of form steps 60 (≥18) and 66 (2–17). Age under 2 fails both
+      // paths; unknown age must not Approve.
+      args: { min: 2, max: 150 },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Member is under two years of age, or age is unknown. Adult uveitis requires age 18 or older; pediatric uveitis requires ages 2 through 17.",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, adult uveitis step 60 / pediatric uveitis step 66",
     },
   ],
 };
