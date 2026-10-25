@@ -622,7 +622,7 @@ const ORAL_ANTIBIOTIC_TRIAL: NoteField = {
   key: "oralAntibioticTrial",
   label: "Oral antibiotic trial for hidradenitis",
   type: "boolean",
-  step: 6,
+  step: 52,
   values: [
     {
       value: true,
