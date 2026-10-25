@@ -13,3 +13,23 @@ describe('Sapphire isolated employer lifecycle',()=>{
  it('retains rejected review and requires clinical decision',()=>{let d=reviewed({...setup,kind:'pa'});d=execute(d,'decide','reviewer',at,{role:'Clinical',approved:false}).data;expect(d.decisions.find(x=>x.role==='Clinical')?.approved).toBe(false);expect(()=>execute(d,'test','reviewer',at)).toThrow('approvals');});
  it('invalidates approvals when checks are rerun and keeps evidence versioned',()=>{let d=reviewed();const h=fingerprint(d);d=execute(d,'check','reviewer',at).data;expect(d.decisions).toEqual([]);expect(d.version).toBeUndefined();expect(fingerprint(d)).toBe(h);expect(()=>execute(d,'launch','reviewer',at)).toThrow();});
 });
+
+describe('actionable setup prerequisites',()=>{
+ it('names the missing steps instead of a generic error',()=>{
+  const d=initial(setup,at);
+  expect(()=>execute(d,'test','tester',at)).toThrow('Validate the census in Members.');
+  const validated=execute(d,'validate','tester',at).data;
+  expect(()=>execute(validated,'test','tester',at)).toThrow('Run the digital twin in Design');
+ });
+ it('directs unsupported changes back to Design without allowing approval',()=>{
+  let d=initial({...setup,kind:'blocked'},at);
+  for(const c of ['validate','analyze','check'])d=execute(d,c,'tester',at).data;
+  expect(()=>execute(d,'decide','tester',at,{role:'Employer',approved:true})).toThrow('Choose a supported change in Design');
+ });
+ it('does not treat empty or incomplete constraints as passing evidence',()=>{
+  const d=reviewed();d.checks=[];
+  expect(()=>assertLaunch(d,at)).toThrow('Run Check requirements');
+  d.checks=[{name:'Contract authority',status:'Passed',requirement:'Example',source:'Synthetic'}];
+  expect(()=>assertLaunch(d,at)).toThrow('Clinical review: evidence is missing');
+ });
+});

@@ -1,0 +1,24 @@
+import {expect,test} from 'vitest';
+import {initial,execute,type Setup} from '../src/lib/onboarding/domain';
+import {actionGaps} from '../src/lib/onboarding/readiness';
+const at='2026-10-25T12:00:00Z';
+const setup:Setup={name:'Example',effectiveDate:'2026-10-25',goal:'Balance',kind:'copay',copayCents:300,requiresPA:false,specialtyRestricted:false};
+test('each incomplete step offers recovery without blocking prerequisite actions',()=>{
+ let d=initial(setup,at);
+ expect(actionGaps(d,'validate')).toEqual([]);
+ expect(actionGaps(d,'analyze').map(g=>g.stage)).toEqual([1]);
+ d=execute(d,'validate','tester',at).data;
+ expect(actionGaps(d,'analyze')).toEqual([]);
+ expect(actionGaps(d,'check').map(g=>g.stage)).toEqual([2]);
+ d=execute(d,'analyze','tester',at).data;
+ expect(actionGaps(d,'check')).toEqual([]);
+ expect(actionGaps(d,'decide').map(g=>g.stage)).toEqual([3]);
+ d=execute(d,'check','tester',at).data;
+ expect(actionGaps(d,'decide')).toEqual([]);
+ expect(actionGaps(d,'test').map(g=>g.message)).toEqual(['Employer approval is required in Review.']);
+ d=execute(d,'decide','tester',at,{role:'Employer',approved:true}).data;
+ expect(actionGaps(d,'test')).toEqual([]);
+ expect(actionGaps(d,'launch').map(g=>g.stage)).toEqual([4]);
+ d=execute(d,'test','tester',at).data;
+ expect(actionGaps(d,'launch')).toEqual([]);
+});

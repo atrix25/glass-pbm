@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {evidenceGaps} from './readiness';
 import {hash} from '@/lib/gemma/domain';
 import {adjudicate} from '@/lib/engine/adjudicate';
 import {applyPlanOverride,applyFormularyOverride,type ConfigOverride} from '@/lib/engine/replay';
@@ -44,7 +45,7 @@ export function check(d:OnboardingData){return [
  {name:'Member protections',status:'Passed',requirement:'Preserve baseline out-of-pocket protections. Actual jurisdiction-specific legal approval is outside the simulation.',source:'Synthetic screening checklist §3 · v1. Not a legal compliance determination.'},
  {name:'Effective date',status:d.setup.effectiveDate>=planDay(d.cutoff)?'Passed':'Failed',requirement:'No retroactive deployment; a future effective date remains pending until that date.',source:'Sandbox launch policy §4 · v1'}
  ];}
-export function assertReady(d:OnboardingData){if(!d.validated?.passed||censusErrors(d).length||!d.impact||d.impact.claims!==d.census.length*3||!d.checks||d.checks.some(c=>['Failed','Missing evidence'].includes(c.status)))throw Error('Required census, impact and constraint evidence must pass.');}
+export function assertReady(d:OnboardingData){const errors=[...censusErrors(d),...evidenceGaps(d).map(g=>g.message)];if(errors.length)throw Error(errors.join(' '));}
 export function assertLaunch(d:OnboardingData,now:string){assertReady(d);if(!approved(d)||!d.version||d.version.hash!==fingerprint(d))throw Error('Current version approvals are required.');const freshTests=verifyBenefit(proposal(d.setup),overrideFor(proposal(d.setup),d.baseline??{}));if(!d.tests?.length||d.tests.some(t=>!t.passed)||freshTests.some(t=>!t.passed)||hash(freshTests)!==hash(d.tests))throw Error('Required claim tests must pass for the reviewed version.');if(d.setup.effectiveDate>planDay(now))throw Error('The effective date has not arrived.');if(d.deployment)throw Error('This version is already deployed.');}
 export function execute(d:OnboardingData,command:string,actor:string,at:string,decision?:{role:string;approved:boolean}):{data:OnboardingData;status:string}{
  d=structuredClone(d);let status='Draft';
