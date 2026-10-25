@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { loginDestination } from "@/lib/login-destination";
 
 export default function LoginForm({ demo = false }: { demo?: boolean }) {
-  const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,13 +26,8 @@ export default function LoginForm({ demo = false }: { demo?: boolean }) {
         setError(data.error ?? "Login failed");
         return;
       }
-      const next = params.get("next") || "/";
-      router.replace(
-        next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")
-          ? next
-          : "/",
-      );
-      router.refresh();
+      // Reload after setting the session cookie so no pre-login route cache is reused.
+      window.location.replace(loginDestination(params.get("next")));
     } catch {
       setError("Network error");
     } finally {

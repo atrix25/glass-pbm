@@ -75,7 +75,7 @@ export function proxy(request: NextRequest) {
   }
 
   const login = new URL("/login", request.url);
-  login.searchParams.set("next", request.nextUrl.pathname);
+  login.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
   return NextResponse.redirect(login);
 }
 
