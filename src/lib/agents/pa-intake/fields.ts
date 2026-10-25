@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 7,
   values: [
     {
       value: true,
@@ -572,6 +572,35 @@ const CONVENTIONAL_TRIAL: NoteField = {
         "No conventional therapy has been used; the patient wishes to start a biologic directly.",
       ],
       cues: [/no conventional therapy/i],
+    },
+  ],
+};
+
+const ORAL_ANTIBIOTIC_TRIAL: NoteField = {
+  key: "oralAntibioticTrial",
+  label: "Oral antibiotic trial for hidradenitis",
+  type: "boolean",
+  step: 6,
+  values: [
+    {
+      value: true,
+      says: [
+        "Doxycycline 100 mg twice daily for three months failed to reduce abscess count.",
+        "Tried clindamycin and rifampin combination for hidradenitis without adequate response.",
+        "Minocycline course completed; inflammatory nodules persist.",
+      ],
+      cues: [
+        /(doxycycline|minocycline|clindamycin|rifampin|rifampicin|tetracycline|amoxicillin|erythromycin|bactrim|sulfamethoxazole)/i,
+        /oral antibiotic[^.]{0,40}hidradenitis/i,
+        /hidradenitis[^.]{0,40}(antibiotic|doxycycline|clindamycin)/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No oral antibiotic has been tried for the hidradenitis; requesting adalimumab first-line.",
+      ],
+      cues: [/no (oral )?antibiotic/i],
     },
   ],
 };
@@ -600,6 +629,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    ORAL_ANTIBIOTIC_TRIAL,
     CONVENTIONAL_TRIAL,
   ],
 };

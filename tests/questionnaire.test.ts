@@ -274,7 +274,8 @@ const SCENARIOS: Scenario[] = [
       "step-1": ["loading-dose"],
       "step-3": true,
       "step-4": true,
-      "step-5": true,
+      "step-5": false,
+      "step-7": true,
     },
     facts: facts({
       answers: {

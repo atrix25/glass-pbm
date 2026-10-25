@@ -398,7 +398,54 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      // Form step 5 routes hidradenitis to initial therapy steps 50–53, which
+      // require an oral antibiotic trial — not the DMARD/conventional list used
+      // for RA/PsO/IBD. Collapsing HS into that list Approved on methotrexate
+      // (or conventionalTherapyTrial attest) and Denied a documented doxycycline
+      // trial, unlocking specialty POS for non-antibiotic failures.
       step: 5,
+      question:
+        "Is the request for initial therapy for hidradenitis suppurativa (ICD-10 L73)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L73"] },
+      yes: { outcome: "step", step: 6 },
+      no: { outcome: "step", step: 7 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Initial therapy for hidradenitis suppurativa → #50)",
+    },
+    {
+      step: 6,
+      question:
+        "Has the member tried and failed at least one oral antibiotic for hidradenitis suppurativa?",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: [
+          "doxycycline",
+          "minocycline",
+          "clindamycin",
+          "rifampin",
+          "rifampicin",
+          "tetracycline",
+          "amoxicillin",
+          "erythromycin",
+          "trimethoprim",
+          "sulfamethoxazole",
+          "Bactrim",
+          "Septra",
+        ],
+        alsoAcceptAnswer: "oralAntibioticTrial",
+      },
+      yes: { outcome: "approve", days: 90 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented trial of an oral antibiotic for hidradenitis suppurativa. Form step 52 requires at least one oral antibiotic failure before approval.",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, steps 52–53. Form complete here (Approve - 3 months).",
+    },
+    {
+      step: 7,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
