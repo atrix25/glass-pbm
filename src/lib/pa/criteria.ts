@@ -297,6 +297,44 @@ export const DUPIXENT: CriteriaTreeDef = {
     {
       step: 6,
       question:
+        "Is the medication prescribed by, or in consultation with, an allergist, immunologist, or dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: {
+        specialties: ["Dermatology", "Allergy and Immunology"],
+      },
+      yes: { outcome: "step", step: 8 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Dupixent for atopic dermatitis must be prescribed by, or in consultation with, an allergist, immunologist, or dermatologist.",
+      },
+      citation: "DUPIXENT prior authorization form, step 6",
+    },
+    {
+      step: 8,
+      question:
+        "The member meets ONE of the following: affected body surface area greater than or equal to 10%, or the prescriber attests to severity in sensitive areas.",
+      predicate: "request.selectedAny",
+      args: {
+        field: "adSeverityCriteria",
+        options: ["bsa-10pct-or-more", "severity-sensitive-areas"],
+      },
+      options: [
+        "The member's affected body surface area (BSA) is provided and greater than or equal to 10%",
+        "The prescriber attests to severity in sensitive areas",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 10 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No qualifying AD severity was documented (BSA ≥10% or sensitive-area involvement). Documentation is required to be submitted for an approval.",
+      },
+      citation: "DUPIXENT prior authorization form, step 8",
+    },
+    {
+      step: 10,
+      question:
         "Has the member had a trial of a medium to high potency topical corticosteroid, or a topical calcineurin inhibitor, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
       args: {

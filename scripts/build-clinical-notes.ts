@@ -34,6 +34,7 @@ const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
     quantityDosingProvided: "med",
     diagnosisProvided: "early",
     diagnosisCriteria: "early",
+    adSeverityCriteria: "early",
     phototherapyTrial: "middle",
     topicalTrialDocumented: "middle",
     conventionalTherapyTrial: "middle",
