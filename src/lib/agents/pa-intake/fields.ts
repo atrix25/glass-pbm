@@ -444,11 +444,53 @@ const DIAGNOSIS_PROVIDED: NoteField = {
   ],
 };
 
+const AD_SEVERITY: NoteField = {
+  key: "adSeverityCriteria",
+  label: "AD severity (BSA or sensitive areas)",
+  type: "multi",
+  step: 8,
+  values: [
+    {
+      value: "bsa-10pct-or-more",
+      says: [
+        "Affected body surface area is approximately 18%.",
+        "BSA involvement is 22% today across the trunk and extremities.",
+        "Documented BSA of 14% with chronic moderate-to-severe atopic dermatitis.",
+      ],
+      cues: [
+        /\bBSA\b[^.]{0,30}?(\d{2})\s?%/i,
+        /body surface (area )?(involvement )?(is )?(approximately |roughly |about )?(\d{2})\s?%/i,
+        /(\d{2})\s?%\s+(of )?(the )?body surface/i,
+      ],
+    },
+    {
+      value: "severity-sensitive-areas",
+      says: [
+        "Disease involves the face and hands with marked functional impact.",
+        "Severity is concentrated in sensitive areas including the eyelids and flexural surfaces.",
+      ],
+      cues: [
+        /sensitive areas?/i,
+        /face and hands/i,
+        /eyelids? and flexural/i,
+      ],
+    },
+    {
+      value: "__none",
+      says: [
+        "BSA involvement is limited to roughly 4% on the antecubital fossae.",
+        "Disease is mild and confined to a few patches on the limbs.",
+      ],
+      cues: [],
+    },
+  ],
+};
+
 const TOPICAL_TRIAL: NoteField = {
   key: "topicalTrialDocumented",
   label: "Trial of topical corticosteroid or calcineurin inhibitor",
   type: "boolean",
-  step: 6,
+  step: 10,
   values: [
     {
       value: true,
@@ -549,7 +591,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 7,
   values: [
     {
       value: true,
@@ -576,6 +618,35 @@ const CONVENTIONAL_TRIAL: NoteField = {
   ],
 };
 
+const ORAL_ANTIBIOTIC_TRIAL: NoteField = {
+  key: "oralAntibioticTrial",
+  label: "Oral antibiotic trial for hidradenitis",
+  type: "boolean",
+  step: 52,
+  values: [
+    {
+      value: true,
+      says: [
+        "Doxycycline 100 mg twice daily for three months failed to reduce abscess count.",
+        "Tried clindamycin and rifampin combination for hidradenitis without adequate response.",
+        "Minocycline course completed; inflammatory nodules persist.",
+      ],
+      cues: [
+        /(doxycycline|minocycline|clindamycin|rifampin|rifampicin|tetracycline|amoxicillin|erythromycin|bactrim|sulfamethoxazole)/i,
+        /oral antibiotic[^.]{0,40}hidradenitis/i,
+        /hidradenitis[^.]{0,40}(antibiotic|doxycycline|clindamycin)/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No oral antibiotic has been tried for the hidradenitis; requesting adalimumab first-line.",
+      ],
+      cues: [/no (oral )?antibiotic/i],
+    },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 
 export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
@@ -593,6 +664,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_DUPIXENT,
     QUANTITY_DOSING_PROVIDED,
     DIAGNOSIS_PROVIDED,
+    AD_SEVERITY,
     TOPICAL_TRIAL,
   ],
   "pa-adalimumab": [
@@ -600,6 +672,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    ORAL_ANTIBIOTIC_TRIAL,
     CONVENTIONAL_TRIAL,
   ],
 };

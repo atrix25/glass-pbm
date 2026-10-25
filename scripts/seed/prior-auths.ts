@@ -162,7 +162,7 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-dupixent": [
     {
-      weight: 46,
+      weight: 40,
       label: "complete atopic dermatitis request with topical trial",
       build: (c) => ({
         condition: dupixentCondition(c),
@@ -170,12 +170,13 @@ const PATTERNS: Record<string, FactPattern[]> = {
         answers: {
           quantityLimitBasis: ["maintenance-ad-asthma"],
           diagnosisProvided: true,
+          adSeverityCriteria: ["bsa-10pct-or-more"],
           topicalTrialDocumented: true,
         },
       }),
     },
     {
-      weight: 13,
+      weight: 12,
       label: "no topical corticosteroid trial documented",
       build: (c) => ({
         condition: dupixentCondition(c),
@@ -183,12 +184,13 @@ const PATTERNS: Record<string, FactPattern[]> = {
         answers: {
           quantityLimitBasis: ["maintenance-ad-asthma"],
           diagnosisProvided: true,
+          adSeverityCriteria: ["bsa-10pct-or-more"],
           topicalTrialDocumented: false,
         },
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "quantity outside the listed limits, dosing supplied on request",
       build: (c) => ({
         condition: dupixentCondition(c),
@@ -197,6 +199,35 @@ const PATTERNS: Record<string, FactPattern[]> = {
           quantityLimitBasis: [],
           quantityDosingProvided: true,
           diagnosisProvided: true,
+          adSeverityCriteria: ["severity-sensitive-areas"],
+          topicalTrialDocumented: true,
+        },
+      }),
+    },
+    {
+      weight: 10,
+      label: "prescriber is not an allergist, immunologist, or dermatologist",
+      build: (c) => ({
+        condition: dupixentCondition(c),
+        prescriberSpecialty: "Internal Medicine",
+        answers: {
+          quantityLimitBasis: ["maintenance-ad-asthma"],
+          diagnosisProvided: true,
+          adSeverityCriteria: ["bsa-10pct-or-more"],
+          topicalTrialDocumented: true,
+        },
+      }),
+    },
+    {
+      weight: 8,
+      label: "AD severity below the BSA / sensitive-area threshold",
+      build: (c) => ({
+        condition: dupixentCondition(c),
+        prescriberSpecialty: "Dermatology",
+        answers: {
+          quantityLimitBasis: ["maintenance-ad-asthma"],
+          diagnosisProvided: true,
+          adSeverityCriteria: [],
           topicalTrialDocumented: true,
         },
       }),
@@ -211,7 +242,7 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 8,
+      weight: 6,
       label: "no ICD-10 diagnosis on the form",
       build: (c) => ({
         condition: dupixentCondition(c),
@@ -223,7 +254,7 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 8,
+      weight: 6,
       label: "an indication this criteria set does not cover",
       build: () => ({
         condition: "copd-initial",

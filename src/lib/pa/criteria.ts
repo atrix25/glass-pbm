@@ -297,6 +297,44 @@ export const DUPIXENT: CriteriaTreeDef = {
     {
       step: 6,
       question:
+        "Is the medication prescribed by, or in consultation with, an allergist, immunologist, or dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: {
+        specialties: ["Dermatology", "Allergy and Immunology"],
+      },
+      yes: { outcome: "step", step: 8 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Dupixent for atopic dermatitis must be prescribed by, or in consultation with, an allergist, immunologist, or dermatologist.",
+      },
+      citation: "DUPIXENT prior authorization form, step 6",
+    },
+    {
+      step: 8,
+      question:
+        "The member meets ONE of the following: affected body surface area greater than or equal to 10%, or the prescriber attests to severity in sensitive areas.",
+      predicate: "request.selectedAny",
+      args: {
+        field: "adSeverityCriteria",
+        options: ["bsa-10pct-or-more", "severity-sensitive-areas"],
+      },
+      options: [
+        "The member's affected body surface area (BSA) is provided and greater than or equal to 10%",
+        "The prescriber attests to severity in sensitive areas",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 10 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No qualifying AD severity was documented (BSA ≥10% or sensitive-area involvement). Documentation is required to be submitted for an approval.",
+      },
+      citation: "DUPIXENT prior authorization form, step 8",
+    },
+    {
+      step: 10,
+      question:
         "Has the member had a trial of a medium to high potency topical corticosteroid, or a topical calcineurin inhibitor, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
       args: {
@@ -398,7 +436,67 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      // Form step 5 routes hidradenitis to initial therapy steps 50–53:
+      // dermatologist → severe HS → oral antibiotic → Approve 3 months.
+      // Collapsing HS into the DMARD/conventional list Approved on methotrexate
+      // (or conventionalTherapyTrial attest) and Denied a documented doxycycline
+      // trial, unlocking specialty POS for non-antibiotic failures.
       step: 5,
+      question:
+        "Is the request for initial therapy for hidradenitis suppurativa (ICD-10 L73)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L73"] },
+      yes: { outcome: "step", step: 50 },
+      no: { outcome: "step", step: 7 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Initial therapy for hidradenitis suppurativa → #50)",
+    },
+    {
+      step: 50,
+      question: "Is the medication prescribed by a dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Dermatology"] },
+      yes: { outcome: "step", step: 52 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for hidradenitis suppurativa must be prescribed by a dermatologist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 50",
+    },
+    {
+      step: 52,
+      question:
+        "Has the member tried and failed at least one oral antibiotic for hidradenitis suppurativa?",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: [
+          "doxycycline",
+          "minocycline",
+          "clindamycin",
+          "rifampin",
+          "rifampicin",
+          "tetracycline",
+          "amoxicillin",
+          "erythromycin",
+          "trimethoprim",
+          "sulfamethoxazole",
+          "Bactrim",
+          "Septra",
+        ],
+        alsoAcceptAnswer: "oralAntibioticTrial",
+      },
+      yes: { outcome: "approve", days: 90 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented trial of an oral antibiotic for hidradenitis suppurativa. Form step 52 requires at least one oral antibiotic failure before approval.",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, steps 52–53. Form complete here (Approve - 3 months).",
+    },
+    {
+      step: 7,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
