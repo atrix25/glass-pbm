@@ -31,7 +31,7 @@ describe("Adalimumab hidradenitis oral antibiotic gate", () => {
       hsFacts({ filledDrugNames: ["methotrexate 2.5 mg tablet"] }),
     );
     expect(result.outcome).toBe("Denied");
-    expect(result.decidingStep).toBe(6);
+    expect(result.decidingStep).toBe(52);
   });
 
   it("denies HS when conventionalTherapyTrial is attested without an antibiotic", () => {
@@ -43,7 +43,19 @@ describe("Adalimumab hidradenitis oral antibiotic gate", () => {
       }),
     );
     expect(result.outcome).toBe("Denied");
-    expect(result.decidingStep).toBe(6);
+    expect(result.decidingStep).toBe(52);
+  });
+
+  it("denies HS when prescribed by Internal Medicine even with doxycycline", () => {
+    const result = determinePA(
+      ADALIMUMAB,
+      hsFacts({
+        filledDrugNames: ["doxycycline hyclate 100 mg"],
+        prescriberSpecialty: "Internal Medicine",
+      }),
+    );
+    expect(result.outcome).toBe("Denied");
+    expect(result.decidingStep).toBe(50);
   });
 
   it("approves HS for 90 days after a documented doxycycline trial", () => {
@@ -52,7 +64,7 @@ describe("Adalimumab hidradenitis oral antibiotic gate", () => {
       hsFacts({ filledDrugNames: ["doxycycline hyclate 100 mg"] }),
     );
     expect(result.outcome).toBe("Approved");
-    expect(result.decidingStep).toBe(6);
+    expect(result.decidingStep).toBe(52);
     expect(result.approvedDays).toBe(90);
   });
 
@@ -65,7 +77,7 @@ describe("Adalimumab hidradenitis oral antibiotic gate", () => {
       }),
     );
     expect(result.outcome).toBe("Approved");
-    expect(result.decidingStep).toBe(6);
+    expect(result.decidingStep).toBe(52);
     expect(result.approvedDays).toBe(90);
   });
 
