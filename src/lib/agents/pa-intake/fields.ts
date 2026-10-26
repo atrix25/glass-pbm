@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 7,
   values: [
     {
       value: true,
@@ -600,6 +600,12 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    // Plaque psoriasis INITIAL (form steps 42–45). Shared keys with Skyrizi;
+    // step numbers match the adalimumab published form.
+    { ...DIAGNOSIS_CRITERIA, step: 42 },
+    { ...PHOTOTHERAPY_TRIAL, step: 43 },
+    { ...ALL_CONTRAINDICATED, step: 44 },
+    { ...CONTRAINDICATIONS_LISTED, step: 45 },
     CONVENTIONAL_TRIAL,
   ],
 };

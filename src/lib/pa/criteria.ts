@@ -398,7 +398,25 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      /*
+       * Form step 5 is a multi-way indication branch. Plaque psoriasis initial
+       * must walk steps 41–45 (dermatologist → severity → photo/MTX/acitretin,
+       * Approve 3 months). Collapsing L40 into the DMARD conventional-therapy
+       * Approve skipped the severity gate and issued a 365-day Approve that
+       * unlocked specialty POS for mild disease.
+       */
       step: 5,
+      question:
+        "Is the request for initial therapy for plaque psoriasis (ICD-10 L40)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L40"] },
+      yes: { outcome: "step", step: 41 },
+      no: { outcome: "step", step: 7 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Initial therapy for plaque psoriasis → #41)",
+    },
+    {
+      step: 7,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
@@ -423,6 +441,91 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    // Initial Therapy for Plaque Psoriasis (PsO) — form steps 41–45
+    {
+      step: 41,
+      question: "Is the medication prescribed by a dermatologist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Dermatology"] },
+      yes: { outcome: "step", step: 42 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for plaque psoriasis must be prescribed by a dermatologist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 41",
+    },
+    {
+      step: 42,
+      question:
+        "The member has a diagnosis of at least ONE of the following: moderate to severe plaque psoriasis with 10% or greater body surface involvement and significant functional disability, or debilitating palmoplantar psoriasis.",
+      predicate: "request.selectedAny",
+      args: {
+        field: "diagnosisCriteria",
+        options: [
+          "moderate-severe-pso-10pct-bsa",
+          "debilitating-palmoplantar-psoriasis",
+        ],
+      },
+      options: [
+        "Moderate to severe plaque psoriasis (PsO) with greater than or equal to 10% body surface involvement AND significant functional disability",
+        "Debilitating palmoplantar psoriasis (PP)",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 43 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No qualifying psoriasis severity was documented. Documentation is required to be submitted for an approval. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 42",
+    },
+    {
+      step: 43,
+      question:
+        "The member has had a trial of ONE of the following which was ineffective or not tolerated: a minimum of 15 sessions of phototherapy, methotrexate at a minimum dose of 15 mg per week, or acitretin.",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: ["methotrexate", "acitretin", "SORIATANE"],
+        alsoAcceptAnswer: "phototherapyTrial",
+      },
+      options: [
+        "Minimum of 15 sessions of phototherapy",
+        "Methotrexate (minimum dose of 15 mg/week)",
+        "Acitretin (SORIATANE)",
+        "None of the above",
+      ],
+      yes: { outcome: "approve", days: 90 },
+      no: { outcome: "step", step: 44 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 43. Note: a contraindication to or intolerance of methotrexate does not cancel the requirement of a trial of acitretin. Form complete here (Approve - 3 months).",
+    },
+    {
+      step: 44,
+      question: "If no, does the member have a contraindication to ALL the above?",
+      predicate: "request.answerYes",
+      args: { field: "allAlternativesContraindicated" },
+      yes: { outcome: "step", step: 45 },
+      no: {
+        outcome: "deny",
+        reason:
+          "The member has not tried phototherapy, methotrexate, or acitretin, and they are not all contraindicated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 44",
+    },
+    {
+      step: 45,
+      question: "Please list contraindication(s) to ALL of the above.",
+      predicate: "request.answerYes",
+      args: { field: "contraindicationsListed" },
+      yes: { outcome: "approve", days: 90 },
+      no: {
+        outcome: "deny",
+        reason: "Contraindications were not documented. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 45. Form complete here (Approve - 3 months).",
     },
   ],
 };

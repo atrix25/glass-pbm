@@ -238,31 +238,17 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-adalimumab": [
     {
-      weight: 48,
+      weight: 40,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
+    },
+    {
+      weight: 10,
+      label: "loading dose, complete",
+      build: (c) => adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 12,
-      label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
-    },
-    {
-      weight: 14,
       label: "reference product requested with no biosimilar failure",
       build: () => ({
         prescriberSpecialty: "Rheumatology",
@@ -273,29 +259,54 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "no conventional therapy tried first",
+      build: (c) => {
+        const pso = c.diagnosisCodes.some((d) => d.startsWith("L40"));
+        return {
+          // PsO without a phototherapy/MTX/acitretin trial Denies at step 43.
+          prescriberSpecialty: pso ? "Dermatology" : "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            ...(pso
+              ? {
+                  diagnosisCriteria: ["moderate-severe-pso-10pct-bsa"],
+                  phototherapyTrial: false,
+                  allAlternativesContraindicated: false,
+                }
+              : { conventionalTherapyTrial: false }),
+          },
+        };
+      },
+    },
+    {
+      weight: 8,
+      label: "plaque psoriasis below the BSA / palmoplantar severity gate",
       build: () => ({
-        prescriberSpecialty: "Rheumatology",
+        prescriberSpecialty: "Dermatology",
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
+          diagnosisCriteria: [],
+          phototherapyTrial: true,
         },
       }),
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +318,41 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab plaque psoriasis (L40) walks form steps 41–45 and needs
+ * Dermatology + severity documentation; other indications still use the
+ * collapsed conventional-therapy gate.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  const pso = c.diagnosisCodes.some((d) => d.startsWith("L40"));
+  if (pso) {
+    return {
+      prescriberSpecialty: "Dermatology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        diagnosisCriteria: ["moderate-severe-pso-10pct-bsa"],
+        phototherapyTrial: true,
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque
