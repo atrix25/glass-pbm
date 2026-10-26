@@ -275,14 +275,40 @@ const SCENARIOS: Scenario[] = [
       "step-3": true,
       "step-4": true,
       "step-5": true,
+      "step-41": "Dermatology",
+      "step-42": ["moderate-severe-pso-10pct-bsa"],
+      "step-43": true,
     },
     facts: facts({
       answers: {
         quantityLimitBasis: ["loading-dose"],
         preferredBiosimilarOrFailure: true,
+        diagnosisCriteria: ["moderate-severe-pso-10pct-bsa"],
       },
+      prescriberSpecialty: "Dermatology",
       memberDiagnosisCodes: ["L40.0"],
       filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab non-PsO approved through conventional therapy",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": false,
+      "step-7": true,
+    },
+    facts: facts({
+      answers: {
+        quantityLimitBasis: ["standard-2-inj-28-days"],
+        preferredBiosimilarOrFailure: true,
+        conventionalTherapyTrial: true,
+      },
+      prescriberSpecialty: "Rheumatology",
+      memberDiagnosisCodes: ["M05.9"],
+      filledDrugNames: [],
     }),
   },
 ];
