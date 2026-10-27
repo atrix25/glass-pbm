@@ -275,6 +275,7 @@ const SCENARIOS: Scenario[] = [
       "step-3": true,
       "step-4": true,
       "step-5": true,
+      "step-6": true,
     },
     facts: facts({
       answers: {
@@ -283,6 +284,27 @@ const SCENARIOS: Scenario[] = [
       },
       memberDiagnosisCodes: ["L40.0"],
       filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab uveitis approved after steroid plus immunosuppressant evidence",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": true,
+      "step-6": true,
+      "step-7": true,
+      "step-8": true,
+    },
+    facts: facts({
+      answers: {
+        quantityLimitBasis: ["standard-2-inj-28-days"],
+        preferredBiosimilarOrFailure: true,
+      },
+      memberDiagnosisCodes: ["H20.9"],
+      filledDrugNames: ["methotrexate tab", "prednisone tablet"],
     }),
   },
 ];
