@@ -576,6 +576,59 @@ const CONVENTIONAL_TRIAL: NoteField = {
   ],
 };
 
+const UVEITIS_STEROID_IS_COMBO: NoteField = {
+  key: "uveitisSteroidImmunosuppressantCombo",
+  label: "Corticosteroid plus immunosuppressant combination for uveitis",
+  type: "boolean",
+  // Adult form step 61 / pediatric step 67 combination gate.
+  step: 7,
+  values: [
+    {
+      value: true,
+      says: [
+        "Inadequate response to systemic prednisone in combination with methotrexate for intermediate uveitis.",
+        "Tried topical prednisolone acetate with azathioprine; inflammation persisted.",
+        "Methylprednisolone bridge plus mycophenolate mofetil failed to control posterior uveitis.",
+      ],
+      cues: [
+        /corticosteroid[^.]{0,40}(methotrexate|mycophenolate|azathioprine|cyclosporine)/i,
+        /(prednisone|prednisolone|methylprednisolone)[^.]{0,40}(methotrexate|mycophenolate|azathioprine|cyclosporine)/i,
+        /immunosuppressant[^.]{0,40}corticosteroid/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Methotrexate monotherapy only; no corticosteroid has been combined with an immunosuppressant.",
+      ],
+      cues: [/methotrexate monotherapy/i, /no corticosteroid/i],
+    },
+  ],
+};
+
+const UVEITIS_SEVERE_SIGHT_THREATENING: NoteField = {
+  key: "uveitisSevereSightThreatening",
+  label: "Severe sight-threatening uveitis with structural complications",
+  type: "boolean",
+  step: 9,
+  values: [
+    {
+      value: true,
+      says: [
+        "Severe, active, sight-threatening uveitis with ocular structural complications from disease and topical steroid therapy.",
+      ],
+      cues: [/sight-threatening/i, /ocular structural complications/i],
+    },
+    {
+      value: false,
+      says: [
+        "Uveitis is active but not currently sight-threatening and no structural complications are documented.",
+      ],
+      cues: [/not[^.]{0,20}sight-threatening/i],
+    },
+  ],
+};
+
 // ---------------------------------------------------------------------------
 
 export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
@@ -601,6 +654,8 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
     CONVENTIONAL_TRIAL,
+    UVEITIS_STEROID_IS_COMBO,
+    UVEITIS_SEVERE_SIGHT_THREATENING,
   ],
 };
 

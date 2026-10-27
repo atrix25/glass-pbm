@@ -415,7 +415,14 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         ],
         alsoAcceptAnswer: "conventionalTherapyTrial",
       },
-      yes: { outcome: "approve", days: 365 },
+      /*
+       * Uveitis cannot Approve on a lone immunosuppressant or DMARD fill.
+       * Adult form steps 61–63 and pediatric step 67 require corticosteroids
+       * in combination with an immunosuppressant (or, for pediatrics, a
+       * documented severe sight-threatening course). Route H20 through those
+       * gates before Approve so specialty POS is not unlocked early.
+       */
+      yes: { outcome: "step", step: 6 },
       no: {
         outcome: "deny",
         reason:
@@ -423,6 +430,75 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    {
+      step: 6,
+      question:
+        "Is the request for non-infectious intermediate, posterior, or pan-uveitis (ICD-10 H20)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["H20"] },
+      yes: { outcome: "step", step: 7 },
+      no: { outcome: "approve", days: 365 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Adult uveitis → #58 / Pediatric uveitis → #64)",
+    },
+    {
+      step: 7,
+      question:
+        "Has the member experienced an inadequate response to corticosteroids used in combination with an immunosuppressant (e.g., methotrexate, mycophenolate mofetil, azathioprine, or cyclosporine)?",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: [
+          "prednisone",
+          "prednisolone",
+          "methylprednisolone",
+          "dexamethasone",
+          "hydrocortisone",
+        ],
+        alsoAcceptAnswer: "uveitisSteroidImmunosuppressantCombo",
+      },
+      yes: { outcome: "step", step: 8 },
+      no: { outcome: "step", step: 9 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, adult uveitis step 61 / pediatric uveitis step 67",
+    },
+    {
+      step: 8,
+      question:
+        "Was the corticosteroid trial used in combination with an immunosuppressant (methotrexate, mycophenolate mofetil, azathioprine, or cyclosporine)?",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: [
+          "methotrexate",
+          "mycophenolate",
+          "azathioprine",
+          "cyclosporine",
+        ],
+        alsoAcceptAnswer: "uveitisSteroidImmunosuppressantCombo",
+      },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Uveitis criteria require corticosteroids in combination with an immunosuppressant. An immunosuppressant-only or corticosteroid-only trial is not sufficient. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, adult uveitis steps 61–63 / pediatric uveitis step 67",
+    },
+    {
+      step: 9,
+      question:
+        "Is the member's uveitis severe, active, and sight-threatening with ocular structural complications due to uveitis or complications of topical steroid therapy?",
+      predicate: "request.answerYes",
+      args: { field: "uveitisSevereSightThreatening" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented inadequate response to corticosteroids in combination with an immunosuppressant, and no documented severe sight-threatening uveitis. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, pediatric uveitis step 67 (severe, active, sight-threatening alternative)",
     },
   ],
 };

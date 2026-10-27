@@ -240,26 +240,12 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 48,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
     },
     {
       weight: 12,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 14,
@@ -275,27 +261,38 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
-        },
-      }),
+      build: (c) => {
+        const uveitis = c.diagnosisCodes.some((d) => d.startsWith("H20"));
+        return {
+          prescriberSpecialty: uveitis ? "Ophthalmology" : "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: false,
+            ...(uveitis
+              ? {
+                  uveitisSteroidImmunosuppressantCombo: false,
+                  uveitisSevereSightThreatening: false,
+                }
+              : {}),
+          },
+        };
+      },
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +304,42 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab uveitis (H20) walks form steps 61–63 / 67 and needs a
+ * corticosteroid + immunosuppressant combination (or pediatric
+ * sight-threatening attestation). Other indications still use the collapsed
+ * conventional-therapy gate after preferred biosimilar.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  const uveitis = c.diagnosisCodes.some((d) => d.startsWith("H20"));
+  if (uveitis) {
+    return {
+      prescriberSpecialty: "Ophthalmology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        conventionalTherapyTrial: true,
+        uveitisSteroidImmunosuppressantCombo: true,
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque
