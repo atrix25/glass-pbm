@@ -37,6 +37,8 @@ const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
     phototherapyTrial: "middle",
     topicalTrialDocumented: "middle",
     conventionalTherapyTrial: "middle",
+    raMethotrexateTrial: "middle",
+    raResponseCriteria: "middle",
     preferredBiosimilarOrFailure: "middle",
     allAlternativesContraindicated: "late",
     contraindicationsListed: "late",
@@ -329,7 +331,8 @@ async function main() {
       truth.diagnosisCriteria === "__none" ||
       truth.phototherapyTrial === false ||
       truth.topicalTrialDocumented === false ||
-      truth.conventionalTherapyTrial === false;
+      truth.conventionalTherapyTrial === false ||
+      truth.raMethotrexateTrial === false;
     if (decoyEligible && rng.next() < 0.28) {
       filler.push(rng.pick(DECOYS));
       decoyed++;

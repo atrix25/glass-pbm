@@ -274,7 +274,8 @@ const SCENARIOS: Scenario[] = [
       "step-1": ["loading-dose"],
       "step-3": true,
       "step-4": true,
-      "step-5": true,
+      "step-5": false,
+      "step-70": true,
     },
     facts: facts({
       answers: {
@@ -282,6 +283,29 @@ const SCENARIOS: Scenario[] = [
         preferredBiosimilarOrFailure: true,
       },
       memberDiagnosisCodes: ["L40.0"],
+      filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab RA approved with methotrexate and response criteria",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": true,
+      "step-6": "Rheumatology",
+      "step-8": true,
+      "step-9": ["no-response-3-months"],
+    },
+    facts: facts({
+      answers: {
+        quantityLimitBasis: ["standard-2-inj-28-days"],
+        preferredBiosimilarOrFailure: true,
+        raResponseCriteria: ["no-response-3-months"],
+      },
+      memberDiagnosisCodes: ["M05.9"],
+      prescriberSpecialty: "Rheumatology",
       filledDrugNames: ["methotrexate tab"],
     }),
   },

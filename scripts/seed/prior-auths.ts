@@ -238,28 +238,16 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-adalimumab": [
     {
-      weight: 48,
+      weight: 40,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 14,
@@ -273,29 +261,53 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "no conventional therapy tried first",
+      build: (c) => {
+        const ra = c.diagnosisCodes.some(
+          (d) => d.startsWith("M05") || d.startsWith("M06"),
+        );
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            ...(ra
+              ? { raMethotrexateTrial: false, raResponseCriteria: [] }
+              : { conventionalTherapyTrial: false }),
+          },
+        };
+      },
+    },
+    {
+      weight: 8,
+      label: "RA without methotrexate in the conventional DMARD trial",
       build: () => ({
         prescriberSpecialty: "Rheumatology",
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
           preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
+          // Sulfasalazine/HCQ/LEF-style attestation without MTX — Denies at 8.
+          conventionalTherapyTrial: true,
+          raMethotrexateTrial: false,
+          raResponseCriteria: ["no-response-3-months"],
         },
       }),
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +319,43 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab RA (M05/M06) walks form steps 6–13 and needs Rheumatology +
+ * methotrexate ≥20 mg/week × 8 weeks + response documentation. Other
+ * indications still use the collapsed conventional-therapy gate.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  const ra = c.diagnosisCodes.some(
+    (d) => d.startsWith("M05") || d.startsWith("M06"),
+  );
+  if (ra) {
+    return {
+      prescriberSpecialty: "Rheumatology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        raMethotrexateTrial: true,
+        raResponseCriteria: ["no-response-3-months"],
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque
