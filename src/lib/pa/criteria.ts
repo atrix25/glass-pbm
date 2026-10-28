@@ -398,7 +398,83 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      /*
+       * Form step 5 is a multi-way indication branch. Rheumatoid arthritis
+       * must walk steps 6–13 (rheumatology → MTX ≥20 mg/week × 8 weeks →
+       * response → Approve lifetime). Collapsing M05/M06 into the flat
+       * conventional-therapy Approve let sulfasalazine/HCQ/LEF-only (or a
+       * generic conventionalTherapyTrial attestation) unlock specialty POS
+       * without the mandatory methotrexate half of the DMARD requirement.
+       */
       step: 5,
+      question:
+        "Is the request for rheumatoid arthritis (ICD-10 M05 / M06)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["M05", "M06"] },
+      yes: { outcome: "step", step: 6 },
+      no: { outcome: "step", step: 70 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Rheumatoid arthritis (RA) → #6)",
+    },
+    {
+      step: 6,
+      question: "Is the medication prescribed by a rheumatology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Rheumatology"] },
+      yes: { outcome: "step", step: 8 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for rheumatoid arthritis must be prescribed by a rheumatology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 6",
+    },
+    {
+      step: 8,
+      question:
+        "Has the member tried one or more conventional DMARDs alone or in combination, and must have included methotrexate greater than or equal to 20 mg/week for at least eight weeks?",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: ["methotrexate"],
+        alsoAcceptAnswer: "raMethotrexateTrial",
+      },
+      options: [
+        "Methotrexate ≥20 mg/week for ≥8 weeks (alone or in a conventional DMARD combination)",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 9 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Rheumatoid arthritis criteria require a conventional DMARD trial that included methotrexate ≥20 mg/week for at least eight weeks. A sulfasalazine, hydroxychloroquine, or leflunomide trial alone is not sufficient. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 8. Note: a contraindication to methotrexate does NOT cancel the requirement of a 3–6 month trial of conventional DMARDs.",
+    },
+    {
+      step: 9,
+      question: "The member meets ONE of the following:",
+      predicate: "request.selectedAny",
+      args: {
+        field: "raResponseCriteria",
+        options: ["no-response-3-months", "not-at-goal-6-months"],
+      },
+      options: [
+        "Member had no response after three months. Member must have used methotrexate ≥20 mg/week for eight weeks during that three-month period. No response is defined as no change in the SDAI or CDAI score.",
+        "Member did not reach goal at six months. Goal at six months is defined as remission (SDAI 0.0–3.3, CDAI 0.0–2.8) or low disease activity (SDAI 3.4–11.0, CDAI 2.9–10.0).",
+        "None of the above",
+      ],
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented inadequate response or failure to reach goal on conventional DMARD therapy including methotrexate. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, steps 9–13 (Approve - lifetime)",
+    },
+    {
+      step: 70,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",

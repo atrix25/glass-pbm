@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 70,
   values: [
     {
       value: true,
@@ -572,6 +572,81 @@ const CONVENTIONAL_TRIAL: NoteField = {
         "No conventional therapy has been used; the patient wishes to start a biologic directly.",
       ],
       cues: [/no conventional therapy/i],
+    },
+  ],
+};
+
+const RA_METHOTREXATE_TRIAL: NoteField = {
+  key: "raMethotrexateTrial",
+  label: "RA methotrexate ≥20 mg/week × 8 weeks",
+  type: "boolean",
+  step: 8,
+  values: [
+    {
+      value: true,
+      says: [
+        "Methotrexate 20 mg weekly for twelve weeks produced no meaningful improvement in joint counts.",
+        "Completed methotrexate 22.5 mg/week for more than eight weeks as part of a conventional DMARD regimen.",
+        "Methotrexate at 20 mg weekly for three months, alone and then with hydroxychloroquine, without response.",
+      ],
+      cues: [
+        /methotrexate[^.]{0,40}(20|22\.5|25)\s?mg/i,
+        /methotrexate[^.]{0,40}(eight|8|twelve|12)\s+weeks/i,
+        /MTX[^.]{0,30}(20|22\.5)\s?mg/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Tried sulfasalazine 2 g daily and hydroxychloroquine 400 mg daily; methotrexate was not used.",
+        "Leflunomide 20 mg daily for four months; patient declined methotrexate.",
+      ],
+      cues: [
+        /methotrexate was not used/i,
+        /declined methotrexate/i,
+        /sulfasalazine[^.]{0,40}hydroxychloroquine/i,
+      ],
+    },
+  ],
+};
+
+const RA_RESPONSE: NoteField = {
+  key: "raResponseCriteria",
+  label: "RA response on conventional DMARDs",
+  type: "multi",
+  step: 9,
+  values: [
+    {
+      value: "no-response-3-months",
+      says: [
+        "No change in CDAI after three months; methotrexate 20 mg weekly was used throughout that period.",
+        "SDAI unchanged after a three-month conventional DMARD trial that included methotrexate ≥20 mg/week for eight weeks.",
+      ],
+      cues: [
+        /no change in (SDAI|CDAI)/i,
+        /no response after three months/i,
+        /unchanged after (a )?three-month/i,
+      ],
+    },
+    {
+      value: "not-at-goal-6-months",
+      says: [
+        "At six months CDAI remains 14, above the low-disease-activity goal despite methotrexate 20 mg weekly.",
+        "Did not reach remission or low disease activity at six months on conventional DMARDs including methotrexate.",
+      ],
+      cues: [
+        /did not reach (remission|goal|low disease activity)/i,
+        /six months[^.]{0,40}(CDAI|SDAI)/i,
+        /not at goal at six months/i,
+      ],
+    },
+    {
+      value: "__none",
+      says: [
+        "CDAI improved from 22 to 8 over six months on methotrexate and is approaching low disease activity.",
+        "Partial response on conventional therapy; SDAI now 9.2.",
+      ],
+      cues: [],
     },
   ],
 };
@@ -600,6 +675,9 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    // Rheumatoid arthritis INITIAL (form steps 8–9).
+    RA_METHOTREXATE_TRIAL,
+    RA_RESPONSE,
     CONVENTIONAL_TRIAL,
   ],
 };
