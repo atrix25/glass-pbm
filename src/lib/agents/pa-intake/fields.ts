@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 7,
   values: [
     {
       value: true,
@@ -572,6 +572,100 @@ const CONVENTIONAL_TRIAL: NoteField = {
         "No conventional therapy has been used; the patient wishes to start a biologic directly.",
       ],
       cues: [/no conventional therapy/i],
+    },
+  ],
+};
+
+const MODERATELY_SEVERELY_ACTIVE_CD: NoteField = {
+  key: "moderatelySeverelyActiveCd",
+  label: "Moderately to severely active Crohn's disease",
+  type: "boolean",
+  step: 26,
+  values: [
+    {
+      value: true,
+      says: [
+        "Moderately to severely active Crohn's disease with elevated CRP and frequent liquid stools.",
+        "Disease is moderately to severely active; colonoscopy shows deep ulceration in the ileum.",
+        "She has moderately to severely active Crohn's disease refractory to optimized mesalamine.",
+      ],
+      saysObliquely: [
+        "Symptoms remain poorly controlled despite current therapy.",
+      ],
+      cues: [
+        /moderately to severely active Crohn/i,
+        /moderate[- ]to[- ]severe(ly active)? Crohn/i,
+        /Crohn[^.]{0,40}(moderately|severely) active/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Crohn's disease is mild and limited to the distal ileum; stools are mostly formed.",
+        "Mild Crohn's disease with minimal inflammatory activity on recent labs.",
+      ],
+      cues: [/mild Crohn/i, /Crohn[^.]{0,40}mild/i],
+    },
+  ],
+};
+
+const MODERATELY_SEVERELY_ACTIVE_UC: NoteField = {
+  key: "moderatelySeverelyActiveUc",
+  label: "Moderately to severely active ulcerative colitis",
+  type: "boolean",
+  step: 32,
+  values: [
+    {
+      value: true,
+      says: [
+        "Moderately to severely active ulcerative colitis with bloody diarrhea and urgency.",
+        "Ulcerative colitis is moderately to severely active; Mayo endoscopic score 2.",
+        "He has moderately to severely active UC with frequent nocturnal stools.",
+      ],
+      saysObliquely: [
+        "Colitis activity remains above target despite optimized oral therapy.",
+      ],
+      cues: [
+        /moderately to severely active ulcerative colitis/i,
+        /moderate[- ]to[- ]severe(ly active)? (UC|ulcerative colitis)/i,
+        /ulcerative colitis[^.]{0,40}(moderately|severely) active/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Ulcerative colitis is currently mild with rare blood streaking only.",
+        "Mild ulcerative colitis, mostly in remission between flares.",
+      ],
+      cues: [/mild ulcerative colitis/i, /UC[^.]{0,40}mild/i],
+    },
+  ],
+};
+
+const UC_WEIGHT_PROVIDED: NoteField = {
+  key: "ucWeightProvided",
+  label: "Pediatric UC weight documented",
+  type: "boolean",
+  step: 34,
+  values: [
+    {
+      value: true,
+      says: [
+        "Current weight is 34 kg.",
+        "Weight today 52 lbs (23.6 kg).",
+        "Member weight: 38.2 kg at today's visit.",
+      ],
+      cues: [
+        /weight (is |today |: )?(\d{2}(\.\d+)?)\s?kg/i,
+        /(\d{2})\s?lbs/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Weight was not recorded at this visit.",
+      ],
+      cues: [/weight was not recorded/i],
     },
   ],
 };
@@ -600,6 +694,9 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    MODERATELY_SEVERELY_ACTIVE_CD,
+    MODERATELY_SEVERELY_ACTIVE_UC,
+    UC_WEIGHT_PROVIDED,
     CONVENTIONAL_TRIAL,
   ],
 };

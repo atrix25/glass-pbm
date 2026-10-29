@@ -38,6 +38,9 @@ const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
     topicalTrialDocumented: "middle",
     conventionalTherapyTrial: "middle",
     preferredBiosimilarOrFailure: "middle",
+    moderatelySeverelyActiveCd: "early",
+    moderatelySeverelyActiveUc: "early",
+    ucWeightProvided: "med",
     allAlternativesContraindicated: "late",
     contraindicationsListed: "late",
   };
@@ -329,7 +332,9 @@ async function main() {
       truth.diagnosisCriteria === "__none" ||
       truth.phototherapyTrial === false ||
       truth.topicalTrialDocumented === false ||
-      truth.conventionalTherapyTrial === false;
+      truth.conventionalTherapyTrial === false ||
+      truth.moderatelySeverelyActiveCd === false ||
+      truth.moderatelySeverelyActiveUc === false;
     if (decoyEligible && rng.next() < 0.28) {
       filler.push(rng.pick(DECOYS));
       decoyed++;
