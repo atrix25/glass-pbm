@@ -238,28 +238,16 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-adalimumab": [
     {
-      weight: 48,
+      weight: 40,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 14,
@@ -273,29 +261,70 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
-        },
-      }),
+      build: (c) => {
+        const cd = c.diagnosisCodes.some((d) => d.startsWith("K50"));
+        const uc = c.diagnosisCodes.some((d) => d.startsWith("K51"));
+        return {
+          prescriberSpecialty:
+            cd || uc ? "Gastroenterology" : "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            ...(cd
+              ? { moderatelySeverelyActiveCd: false }
+              : uc
+                ? { moderatelySeverelyActiveUc: false }
+                : { conventionalTherapyTrial: false }),
+          },
+        };
+      },
+    },
+    {
+      weight: 8,
+      label: "IBD without moderately–severely active documentation",
+      build: (c) => {
+        const cd = c.diagnosisCodes.some((d) => d.startsWith("K50"));
+        const uc = c.diagnosisCodes.some((d) => d.startsWith("K51"));
+        if (cd || uc) {
+          return {
+            prescriberSpecialty: "Gastroenterology",
+            answers: {
+              quantityLimitBasis: ["loading-dose"],
+              preferredBiosimilarOrFailure: true,
+              // Mesalamine-style attestation alone must not Approve IBD.
+              conventionalTherapyTrial: true,
+              ...(cd
+                ? { moderatelySeverelyActiveCd: false }
+                : { moderatelySeverelyActiveUc: false }),
+            },
+          };
+        }
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: false,
+          },
+        };
+      },
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +336,53 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab Crohn's (K50) / UC (K51) INITIAL walks form steps 25–26 /
+ * 31–34 and needs Gastroenterology + moderately–severely active documentation.
+ * Other indications still use the collapsed conventional-therapy gate.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  const cd = c.diagnosisCodes.some((d) => d.startsWith("K50"));
+  const uc = c.diagnosisCodes.some((d) => d.startsWith("K51"));
+  if (cd) {
+    return {
+      prescriberSpecialty: "Gastroenterology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        moderatelySeverelyActiveCd: true,
+      },
+    };
+  }
+  if (uc) {
+    return {
+      prescriberSpecialty: "Gastroenterology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        moderatelySeverelyActiveUc: true,
+        // Seed members are adults; pediatric weight path is covered in unit tests.
+        ucWeightProvided: true,
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque

@@ -398,7 +398,37 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      /*
+       * Form step 5 is a multi-way indication branch. Crohn's / UC initial
+       * must walk steps 25–26 / 31–34 (gastroenterology → moderately to
+       * severely active disease; UC then ages into weight). Collapsing K50/K51
+       * into the DMARD conventional-therapy Approve skipped the activity gate
+       * and issued a 365-day Approve that unlocked specialty POS for mild or
+       * undocumented disease (and without a GI specialist).
+       */
       step: 5,
+      question:
+        "Is the request for initial therapy for Crohn's disease (ICD-10 K50)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["K50"] },
+      yes: { outcome: "step", step: 25 },
+      no: { outcome: "step", step: 6 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Initial therapy for Crohn's disease → #25)",
+    },
+    {
+      step: 6,
+      question:
+        "Is the request for initial therapy for ulcerative colitis (ICD-10 K51)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["K51"] },
+      yes: { outcome: "step", step: 31 },
+      no: { outcome: "step", step: 7 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Initial therapy for ulcerative colitis → #31)",
+    },
+    {
+      step: 7,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
@@ -423,6 +453,91 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    // Initial Therapy for Crohn's Disease (CD) — form steps 25–26
+    {
+      step: 25,
+      question: "Is the medication prescribed by a gastroenterology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Gastroenterology"] },
+      yes: { outcome: "step", step: 26 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for Crohn's disease must be prescribed by a gastroenterology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 25",
+    },
+    {
+      step: 26,
+      question:
+        "Does the member have a diagnosis of moderately to severely active Crohn's disease (CD)?",
+      predicate: "request.answerYes",
+      args: { field: "moderatelySeverelyActiveCd" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of moderately to severely active Crohn's disease. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 26. Form complete here (Approve - 1 year).",
+    },
+    // Initial Therapy for Ulcerative Colitis (UC) — form steps 31–34
+    {
+      step: 31,
+      question: "Is the medication prescribed by a gastroenterology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Gastroenterology"] },
+      yes: { outcome: "step", step: 32 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for ulcerative colitis must be prescribed by a gastroenterology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 31",
+    },
+    {
+      step: 32,
+      question:
+        "Does the member have a diagnosis of moderately to severely active ulcerative colitis (UC)?",
+      predicate: "request.answerYes",
+      args: { field: "moderatelySeverelyActiveUc" },
+      yes: { outcome: "step", step: 33 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of moderately to severely active ulcerative colitis. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 32",
+    },
+    {
+      step: 33,
+      question: "Please indicate ONE (1) of the following:",
+      predicate: "member.ageBetween",
+      args: { min: 0, max: 17 },
+      options: [
+        "Member is 17 years of age or younger",
+        "Member is 18 years of age or older",
+      ],
+      yes: { outcome: "step", step: 34 },
+      no: { outcome: "approve", days: 365 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 33. Adult (18+) path: Form complete here (Approve - 1 year).",
+    },
+    {
+      step: 34,
+      question: "Please provide the member's weight (kg or lbs.):",
+      predicate: "request.answerYes",
+      args: { field: "ucWeightProvided" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Member weight is required for pediatric ulcerative colitis dosing. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 34. Form complete here (Approve - 1 year).",
     },
   ],
 };

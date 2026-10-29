@@ -274,7 +274,9 @@ const SCENARIOS: Scenario[] = [
       "step-1": ["loading-dose"],
       "step-3": true,
       "step-4": true,
-      "step-5": true,
+      "step-5": false,
+      "step-6": false,
+      "step-7": true,
     },
     facts: facts({
       answers: {
@@ -283,6 +285,28 @@ const SCENARIOS: Scenario[] = [
       },
       memberDiagnosisCodes: ["L40.0"],
       filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab Crohn's approved on moderately–severely active documentation",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["loading-dose"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": true,
+      "step-25": "Gastroenterology",
+      "step-26": true,
+    },
+    facts: facts({
+      answers: {
+        quantityLimitBasis: ["loading-dose"],
+        preferredBiosimilarOrFailure: true,
+        moderatelySeverelyActiveCd: true,
+      },
+      memberDiagnosisCodes: ["K50.90"],
+      prescriberSpecialty: "Gastroenterology",
+      filledDrugNames: [],
     }),
   },
 ];
