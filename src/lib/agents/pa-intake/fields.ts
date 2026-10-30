@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 6,
   values: [
     {
       value: true,
@@ -572,6 +572,39 @@ const CONVENTIONAL_TRIAL: NoteField = {
         "No conventional therapy has been used; the patient wishes to start a biologic directly.",
       ],
       cues: [/no conventional therapy/i],
+    },
+  ],
+};
+
+const PREDOMINANT_AXIAL_AS: NoteField = {
+  key: "predominantAxialAs",
+  label: "Ankylosing spondylitis with predominant axial involvement",
+  type: "boolean",
+  step: 24,
+  values: [
+    {
+      value: true,
+      says: [
+        "Ankylosing spondylitis with predominant axial involvement; inflammatory back pain and sacroiliitis on MRI.",
+        "AS with predominant axial disease; BASDAI remains elevated despite NSAIDs.",
+        "Radiographic axial spondyloarthritis with predominant axial involvement.",
+      ],
+      saysObliquely: [
+        "Axial disease drives the functional limitation more than peripheral joints.",
+      ],
+      cues: [
+        /predominant axial/i,
+        /axial (involvement|disease|spondyloarthritis)/i,
+        /ankylosing spondylitis[^.]{0,40}axial/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "Ankylosing spondylitis limited to peripheral joints without predominant axial involvement.",
+        "Peripheral joint symptoms dominate; axial disease is minimal.",
+      ],
+      cues: [/without predominant axial/i, /peripheral[^.]{0,40}ankylosing/i],
     },
   ],
 };
@@ -600,6 +633,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    PREDOMINANT_AXIAL_AS,
     CONVENTIONAL_TRIAL,
   ],
 };
