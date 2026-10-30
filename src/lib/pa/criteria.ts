@@ -398,7 +398,26 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      /*
+       * Form step 5 is a multi-way indication branch. Ankylosing spondylitis
+       * (M45) must walk steps 23–24 (rheumatology → predominant axial
+       * involvement → Approve lifetime). Collapsing M45 into the DMARD
+       * conventional-therapy Approve skipped the axial-involvement gate and
+       * issued a 365-day Approve that unlocked specialty POS without axial
+       * documentation (and without a rheumatologist).
+       */
       step: 5,
+      question:
+        "Is the request for ankylosing spondylitis (ICD-10 M45)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["M45"] },
+      yes: { outcome: "step", step: 23 },
+      no: { outcome: "step", step: 6 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Ankylosing spondylitis → #23)",
+    },
+    {
+      step: 6,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
@@ -423,6 +442,35 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    // Ankylosing Spondylitis (AS) — form steps 23–24
+    {
+      step: 23,
+      question: "Is the medication prescribed by a rheumatology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Rheumatology"] },
+      yes: { outcome: "step", step: 24 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for ankylosing spondylitis must be prescribed by a rheumatology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 23",
+    },
+    {
+      step: 24,
+      question:
+        "Does the member have a diagnosis of ankylosing spondylitis (AS) with predominant axial involvement?",
+      predicate: "request.answerYes",
+      args: { field: "predominantAxialAs" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of ankylosing spondylitis with predominant axial involvement. Form complete here (Deny).",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 24. Form complete here (Approve - lifetime).",
     },
   ],
 };

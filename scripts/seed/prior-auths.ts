@@ -238,28 +238,16 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-adalimumab": [
     {
-      weight: 48,
+      weight: 40,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 14,
@@ -273,29 +261,62 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
-        },
-      }),
+      build: (c) => {
+        const as = c.diagnosisCodes.some((d) => d.startsWith("M45"));
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            ...(as
+              ? { predominantAxialAs: false }
+              : { conventionalTherapyTrial: false }),
+          },
+        };
+      },
+    },
+    {
+      weight: 8,
+      label: "AS without predominant axial involvement",
+      build: (c) => {
+        if (c.diagnosisCodes.some((d) => d.startsWith("M45"))) {
+          return {
+            prescriberSpecialty: "Rheumatology",
+            answers: {
+              quantityLimitBasis: ["standard-2-inj-28-days"],
+              preferredBiosimilarOrFailure: true,
+              // DMARD attestation alone must not Approve axial AS.
+              conventionalTherapyTrial: true,
+              predominantAxialAs: false,
+            },
+          };
+        }
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: false,
+          },
+        };
+      },
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +328,39 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab ankylosing spondylitis (M45) walks form steps 23–24 and needs
+ * Rheumatology + predominant axial involvement. Other indications still use
+ * the collapsed conventional-therapy gate.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  if (c.diagnosisCodes.some((d) => d.startsWith("M45"))) {
+    return {
+      prescriberSpecialty: "Rheumatology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        predominantAxialAs: true,
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque
