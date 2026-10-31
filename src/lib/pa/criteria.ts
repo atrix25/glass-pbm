@@ -398,7 +398,27 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
     },
     {
+      /*
+       * Form step 5 is a multi-way indication branch. Psoriatic arthritis
+       * (ICD-10 L40.5x) must walk steps 18–22 (rheumatology → PsA group
+       * diagnosis → methotrexate or sulfasalazine, or dual contraindication →
+       * Approve lifetime). Prefix-matching bare L40 treated PsA like plaque
+       * psoriasis and the collapsed conventional OR-list Approves on acitretin
+       * / LEF / HCQ / attest — none of which satisfy form step 20 — unlocking
+       * specialty POS without a PsA DMARD trial.
+       */
       step: 5,
+      question:
+        "Is the request for psoriatic arthritis (ICD-10 L40.5)?",
+      predicate: "member.hasDiagnosis",
+      args: { codes: ["L40.5"] },
+      yes: { outcome: "step", step: 18 },
+      no: { outcome: "step", step: 6 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 5 (Peripheral AS / PsA / reactive arthritis → #18)",
+    },
+    {
+      step: 6,
       question:
         "Has the member had a trial of a conventional therapy appropriate to the diagnosis, which was ineffective or not tolerated?",
       predicate: "member.hasTrialOf",
@@ -423,6 +443,94 @@ export const ADALIMUMAB: CriteriaTreeDef = {
       },
       citation:
         "ADALIMUMAB PRODUCTS prior authorization form, conventional therapy requirement",
+    },
+    // Peripheral AS / Psoriatic arthritis / Reactive arthritis — form steps 18–22
+    {
+      step: 18,
+      question: "Is the medication prescribed by a rheumatology specialist?",
+      predicate: "prescriber.specialtyIs",
+      args: { specialties: ["Rheumatology"] },
+      yes: { outcome: "step", step: 19 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Adalimumab for psoriatic arthritis must be prescribed by a rheumatology specialist.",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 18",
+    },
+    {
+      step: 19,
+      question: "The member has a diagnosis of ONE (1) of the following:",
+      predicate: "request.selectedAny",
+      args: {
+        field: "psaGroupDiagnosis",
+        options: [
+          "peripheral-as",
+          "psoriatic-arthritis",
+          "reactive-arthritis",
+        ],
+      },
+      options: [
+        "Peripheral ankylosing spondylitis (AS)",
+        "Psoriatic arthritis (PsA)",
+        "Reactive arthritis",
+        "None of the above",
+      ],
+      yes: { outcome: "step", step: 20 },
+      no: {
+        outcome: "deny",
+        reason:
+          "No documented diagnosis of peripheral ankylosing spondylitis, psoriatic arthritis, or reactive arthritis. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 19",
+    },
+    {
+      step: 20,
+      question:
+        "A trial of ONE (1) of the following was ineffective or not tolerated: methotrexate or sulfasalazine.",
+      predicate: "member.hasTrialOf",
+      args: {
+        drugPatterns: ["methotrexate", "sulfasalazine"],
+        alsoAcceptAnswer: "psaDmardTrial",
+      },
+      options: [
+        "Methotrexate",
+        "Sulfasalazine",
+        "None of the above",
+      ],
+      yes: { outcome: "approve", days: 365 },
+      no: { outcome: "step", step: 21 },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 20. Form complete here (Approve - lifetime).",
+    },
+    {
+      step: 21,
+      question:
+        "If no, does the member have a contraindication to BOTH methotrexate and sulfasalazine?",
+      predicate: "request.answerYes",
+      args: { field: "psaBothDmardsContraindicated" },
+      yes: { outcome: "step", step: 22 },
+      no: {
+        outcome: "deny",
+        reason:
+          "The member has not tried methotrexate or sulfasalazine, and they are not both contraindicated. Form complete here (Deny).",
+      },
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 21",
+    },
+    {
+      step: 22,
+      question:
+        "Please list contraindication(s) to BOTH methotrexate and sulfasalazine.",
+      predicate: "request.answerYes",
+      args: { field: "psaContraindicationsListed" },
+      yes: { outcome: "approve", days: 365 },
+      no: {
+        outcome: "deny",
+        reason:
+          "Contraindications to both methotrexate and sulfasalazine were not documented.",
+      },
+      citation:
+        "ADALIMUMAB PRODUCTS prior authorization form, step 22. Form complete here (Approve - lifetime).",
     },
   ],
 };

@@ -274,7 +274,8 @@ const SCENARIOS: Scenario[] = [
       "step-1": ["loading-dose"],
       "step-3": true,
       "step-4": true,
-      "step-5": true,
+      "step-5": false,
+      "step-6": true,
     },
     facts: facts({
       answers: {
@@ -282,6 +283,29 @@ const SCENARIOS: Scenario[] = [
         preferredBiosimilarOrFailure: true,
       },
       memberDiagnosisCodes: ["L40.0"],
+      filledDrugNames: ["methotrexate tab"],
+    }),
+  },
+  {
+    name: "Adalimumab PsA approved with rheumatology, PsA diagnosis, and methotrexate",
+    tree: ADALIMUMAB,
+    answers: {
+      "step-1": ["standard-2-inj-28-days"],
+      "step-3": true,
+      "step-4": true,
+      "step-5": true,
+      "step-18": "Rheumatology",
+      "step-19": ["psoriatic-arthritis"],
+      "step-20": true,
+    },
+    facts: facts({
+      answers: {
+        quantityLimitBasis: ["standard-2-inj-28-days"],
+        preferredBiosimilarOrFailure: true,
+        psaGroupDiagnosis: ["psoriatic-arthritis"],
+      },
+      prescriberSpecialty: "Rheumatology",
+      memberDiagnosisCodes: ["L40.51"],
       filledDrugNames: ["methotrexate tab"],
     }),
   },

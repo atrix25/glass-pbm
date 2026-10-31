@@ -238,28 +238,16 @@ const PATTERNS: Record<string, FactPattern[]> = {
 
   "pa-adalimumab": [
     {
-      weight: 48,
+      weight: 40,
       label: "complete request with the required prior therapy",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Rheumatology", ["standard-2-inj-28-days"]),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "loading dose, complete",
-      build: () => ({
-        prescriberSpecialty: "Gastroenterology",
-        answers: {
-          quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) =>
+        adalimumabComplete(c, "Gastroenterology", ["loading-dose"]),
     },
     {
       weight: 14,
@@ -273,29 +261,68 @@ const PATTERNS: Record<string, FactPattern[]> = {
       }),
     },
     {
-      weight: 12,
+      weight: 10,
       label: "no conventional therapy tried first",
-      build: () => ({
-        prescriberSpecialty: "Rheumatology",
-        answers: {
-          quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: false,
-        },
-      }),
+      build: (c) => {
+        const psa = c.diagnosisCodes.some((d) => d.startsWith("L40.5"));
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            ...(psa
+              ? {
+                  psaGroupDiagnosis: ["psoriatic-arthritis"],
+                  psaDmardTrial: false,
+                  psaBothDmardsContraindicated: false,
+                }
+              : { conventionalTherapyTrial: false }),
+          },
+        };
+      },
+    },
+    {
+      weight: 8,
+      label: "PsA with only a psoriasis-appropriate conventional agent",
+      build: (c) => {
+        if (c.diagnosisCodes.some((d) => d.startsWith("L40.5"))) {
+          return {
+            prescriberSpecialty: "Rheumatology",
+            answers: {
+              quantityLimitBasis: ["standard-2-inj-28-days"],
+              preferredBiosimilarOrFailure: true,
+              psaGroupDiagnosis: ["psoriatic-arthritis"],
+              // Acitretin / LEF / HCQ / flat conventional attest must not Approve PsA.
+              conventionalTherapyTrial: true,
+              psaDmardTrial: false,
+              psaBothDmardsContraindicated: false,
+            },
+          };
+        }
+        return {
+          prescriberSpecialty: "Rheumatology",
+          answers: {
+            quantityLimitBasis: ["standard-2-inj-28-days"],
+            preferredBiosimilarOrFailure: true,
+            conventionalTherapyTrial: false,
+          },
+        };
+      },
     },
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
-        prescriberSpecialty: "Dermatology",
-        answers: {
-          quantityLimitBasis: [],
-          quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
-          conventionalTherapyTrial: true,
-        },
-      }),
+      build: (c) => {
+        const base = adalimumabComplete(c, "Dermatology", []);
+        return {
+          ...base,
+          answers: {
+            ...base.answers,
+            quantityLimitBasis: [],
+            quantityDosingProvided: true,
+          },
+        };
+      },
     },
     {
       weight: 6,
@@ -307,6 +334,41 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/**
+ * Adalimumab psoriatic arthritis (L40.5x) walks form steps 18–22 and needs
+ * Rheumatology + a PsA-group diagnosis + methotrexate or sulfasalazine (or
+ * dual contraindication). Other indications still use the collapsed
+ * conventional-therapy gate.
+ */
+function adalimumabComplete(
+  c: PACandidate,
+  fallbackSpecialty: string,
+  quantityLimitBasis: string[],
+): {
+  prescriberSpecialty: string;
+  answers: Record<string, unknown>;
+} {
+  if (c.diagnosisCodes.some((d) => d.startsWith("L40.5"))) {
+    return {
+      prescriberSpecialty: "Rheumatology",
+      answers: {
+        quantityLimitBasis,
+        preferredBiosimilarOrFailure: true,
+        psaGroupDiagnosis: ["psoriatic-arthritis"],
+        psaDmardTrial: true,
+      },
+    };
+  }
+  return {
+    prescriberSpecialty: fallbackSpecialty,
+    answers: {
+      quantityLimitBasis,
+      preferredBiosimilarOrFailure: true,
+      conventionalTherapyTrial: true,
+    },
+  };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque
