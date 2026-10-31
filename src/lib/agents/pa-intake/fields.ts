@@ -549,7 +549,7 @@ const CONVENTIONAL_TRIAL: NoteField = {
   key: "conventionalTherapyTrial",
   label: "Trial of conventional therapy",
   type: "boolean",
-  step: 5,
+  step: 6,
   values: [
     {
       value: true,
@@ -572,6 +572,114 @@ const CONVENTIONAL_TRIAL: NoteField = {
         "No conventional therapy has been used; the patient wishes to start a biologic directly.",
       ],
       cues: [/no conventional therapy/i],
+    },
+  ],
+};
+
+const PSA_GROUP_DIAGNOSIS: NoteField = {
+  key: "psaGroupDiagnosis",
+  label: "Peripheral AS, psoriatic arthritis, or reactive arthritis",
+  type: "multi",
+  step: 19,
+  values: [
+    {
+      value: "psoriatic-arthritis",
+      says: [
+        "Psoriatic arthritis with active peripheral joint involvement and psoriasis.",
+        "Documented psoriatic arthritis (ICD-10 L40.5); enthesitis and dactylitis present.",
+      ],
+      cues: [/psoriatic arthritis/i, /L40\.5/i],
+    },
+    {
+      value: "peripheral-as",
+      says: [
+        "Peripheral ankylosing spondylitis with predominant peripheral joint disease.",
+      ],
+      cues: [/peripheral ankylosing/i, /peripheral AS/i],
+    },
+    {
+      value: "reactive-arthritis",
+      says: ["Reactive arthritis following GI infection."],
+      cues: [/reactive arthritis/i],
+    },
+    {
+      value: "__none",
+      says: ["Inflammatory arthritis not further classified."],
+      cues: [],
+    },
+  ],
+};
+
+const PSA_DMARD_TRIAL: NoteField = {
+  key: "psaDmardTrial",
+  label: "Trial of methotrexate or sulfasalazine for PsA",
+  type: "boolean",
+  step: 20,
+  values: [
+    {
+      value: true,
+      says: [
+        "Methotrexate 20 mg weekly for four months was ineffective for psoriatic arthritis.",
+        "Sulfasalazine 2 g daily was not tolerated; GI adverse effects required discontinuation.",
+      ],
+      cues: [
+        /methotrexate[^.]{0,40}(psoriatic|ineffective|inadequate)/i,
+        /sulfasalazine[^.]{0,40}(psoriatic|not tolerated|inadequate)/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No methotrexate or sulfasalazine trial for psoriatic arthritis; only topical and acitretin exposure.",
+      ],
+      cues: [/no methotrexate or sulfasalazine/i, /only[^.]{0,30}acitretin/i],
+    },
+  ],
+};
+
+const PSA_BOTH_DMARDS_CONTRAINDICATED: NoteField = {
+  key: "psaBothDmardsContraindicated",
+  label: "Contraindication to both methotrexate and sulfasalazine",
+  type: "boolean",
+  step: 21,
+  values: [
+    {
+      value: true,
+      says: [
+        "Methotrexate and sulfasalazine are both contraindicated given chronic liver disease and sulfa allergy.",
+      ],
+      cues: [
+        /both contraindicated/i,
+        /methotrexate and sulfasalazine[^.]{0,40}contraindicated/i,
+      ],
+    },
+    {
+      value: false,
+      says: [
+        "No contraindication to methotrexate or sulfasalazine is documented.",
+      ],
+      cues: [/no contraindication to methotrexate/i],
+    },
+  ],
+};
+
+const PSA_CONTRAINDICATIONS_LISTED: NoteField = {
+  key: "psaContraindicationsListed",
+  label: "Listed contraindications to methotrexate and sulfasalazine",
+  type: "boolean",
+  step: 22,
+  values: [
+    {
+      value: true,
+      says: [
+        "Contraindications listed: Child-Pugh B cirrhosis (methotrexate) and documented sulfa anaphylaxis (sulfasalazine).",
+      ],
+      cues: [/contraindications listed/i, /Child-Pugh|sulfa anaphylaxis/i],
+    },
+    {
+      value: false,
+      says: ["Contraindications were not listed on the request."],
+      cues: [/contraindications were not listed/i],
     },
   ],
 };
@@ -600,6 +708,10 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
     PREFERRED_BIOSIMILAR,
+    PSA_GROUP_DIAGNOSIS,
+    PSA_DMARD_TRIAL,
+    PSA_BOTH_DMARDS_CONTRAINDICATED,
+    PSA_CONTRAINDICATIONS_LISTED,
     CONVENTIONAL_TRIAL,
   ],
 };
