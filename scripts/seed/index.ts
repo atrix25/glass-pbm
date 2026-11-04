@@ -522,6 +522,17 @@ async function main() {
   await prisma.accumulatorTransfer.deleteMany();
   await prisma.accumulatorFile.deleteMany();
   await prisma.rebateAccrual.deleteMany();
+  /*
+   * Settlement tables have no Claim FK. build-financials writes them after
+   * seed; a re-seed that left them behind kept prior remittance/sponsor/rebate
+   * dollars on Paid cycles while Claim (and B2 clawbacks) were rebuilt from
+   * scratch — settlement no longer tied out until enrich finished, and on
+   * Postgres enrich often cannot finish (#68/#69).
+   */
+  await prisma.remittanceLine.deleteMany();
+  await prisma.remittanceRun.deleteMany();
+  await prisma.sponsorInvoice.deleteMany();
+  await prisma.rebateInvoice.deleteMany();
   await prisma.traceStep.deleteMany();
   await prisma.pADecisionStep.deleteMany();
   await prisma.priorAuthorization.deleteMany();
