@@ -517,30 +517,56 @@ const QUANTITY_BASIS_ADA: NoteField = {
   ],
 };
 
-const PREFERRED_BIOSIMILAR: NoteField = {
-  key: "preferredBiosimilarOrFailure",
-  label: "Preferred biosimilar, or failure of one",
-  type: "boolean",
+const REQUESTED_ADALIMUMAB_PRODUCT: NoteField = {
+  key: "requestedAdalimumabProduct",
+  label: "Requested adalimumab product",
+  type: "multi",
   step: 4,
   values: [
     {
-      value: true,
+      value: "adalimumab-aaty",
       says: [
-        "The requested product is the plan's preferred adalimumab biosimilar.",
-        "Patient was switched to the preferred biosimilar in March and lost response after four months; requesting the reference product.",
-        "We are prescribing the preferred biosimilar as listed on the formulary.",
+        "Requesting ADALIMUMAB-AATY (Yuflyma), the preferred adalimumab biosimilar.",
+        "Product requested: Yuflyma (adalimumab-aaty).",
       ],
-      cues: [
-        /preferred (adalimumab )?biosimilar/i,
-        /lost response[^.]{0,60}biosimilar/i,
-      ],
+      cues: [/yuflyma/i, /adalimumab[- ]?aaty/i],
     },
     {
-      value: false,
+      value: "adalimumab-adaz",
       says: [
-        "Patient and I would prefer to remain on the reference product; no biosimilar has been tried.",
+        "Requesting ADALIMUMAB-ADAZ (Hyrimoz), the preferred adalimumab biosimilar.",
+        "Product requested: Hyrimoz (adalimumab-adaz).",
       ],
-      cues: [/no biosimilar has been tried/i, /remain on the reference product/i],
+      cues: [/hyrimoz/i, /adalimumab[- ]?adaz/i],
+    },
+    {
+      value: "adalimumab-fkjp",
+      says: [
+        "Requesting ADALIMUMAB-FKJP (Hulio), the preferred adalimumab biosimilar.",
+        "Product requested: Hulio (adalimumab-fkjp).",
+      ],
+      cues: [/\bhulio\b/i, /adalimumab[- ]?fkjp/i],
+    },
+    {
+      value: "adalimumab-ryvk",
+      says: [
+        "Requesting ADALIMUMAB-RYVK (Simlandi), the preferred adalimumab biosimilar.",
+        "Product requested: Simlandi (adalimumab-ryvk).",
+      ],
+      cues: [/simlandi/i, /adalimumab[- ]?ryvk/i],
+    },
+    {
+      value: "__none",
+      says: [
+        "Requesting the reference product Humira; no preferred biosimilar is being prescribed.",
+        "Patient and I would prefer to remain on Abrilada / the reference product.",
+      ],
+      cues: [
+        /\bhumira\b/i,
+        /\babrilada\b/i,
+        /reference product/i,
+        /no preferred biosimilar/i,
+      ],
     },
   ],
 };
@@ -599,7 +625,7 @@ export const FIELDS_BY_TREE: Record<string, NoteField[]> = {
     SPECIALTY,
     QUANTITY_BASIS_ADA,
     QUANTITY_DOSING_PROVIDED,
-    PREFERRED_BIOSIMILAR,
+    REQUESTED_ADALIMUMAB_PRODUCT,
     CONVENTIONAL_TRIAL,
   ],
 };

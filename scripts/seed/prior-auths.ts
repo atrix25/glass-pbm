@@ -19,6 +19,7 @@
 import type { Prisma, PrismaClient } from "../../src/generated/prisma/index.js";
 import {
   findTreeForDrug,
+  preferredAdalimumabProduct,
   type CriteriaTreeDef,
 } from "../../src/lib/pa/criteria.js";
 import {
@@ -240,11 +241,11 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 48,
       label: "complete request with the required prior therapy",
-      build: () => ({
+      build: (c) => ({
         prescriberSpecialty: "Rheumatology",
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
+          ...adalimumabProductAnswer(c.drugName),
           conventionalTherapyTrial: true,
         },
       }),
@@ -252,34 +253,34 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 12,
       label: "loading dose, complete",
-      build: () => ({
+      build: (c) => ({
         prescriberSpecialty: "Gastroenterology",
         answers: {
           quantityLimitBasis: ["loading-dose"],
-          preferredBiosimilarOrFailure: true,
+          ...adalimumabProductAnswer(c.drugName),
           conventionalTherapyTrial: true,
         },
       }),
     },
     {
       weight: 14,
-      label: "reference product requested with no biosimilar failure",
+      label: "reference or non-preferred product requested",
       build: () => ({
         prescriberSpecialty: "Rheumatology",
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: false,
+          requestedAdalimumabProduct: [],
         },
       }),
     },
     {
       weight: 12,
       label: "no conventional therapy tried first",
-      build: () => ({
+      build: (c) => ({
         prescriberSpecialty: "Rheumatology",
         answers: {
           quantityLimitBasis: ["standard-2-inj-28-days"],
-          preferredBiosimilarOrFailure: true,
+          ...adalimumabProductAnswer(c.drugName),
           conventionalTherapyTrial: false,
         },
       }),
@@ -287,12 +288,12 @@ const PATTERNS: Record<string, FactPattern[]> = {
     {
       weight: 8,
       label: "quantity off the listed limits, dosing supplied on request",
-      build: () => ({
+      build: (c) => ({
         prescriberSpecialty: "Dermatology",
         answers: {
           quantityLimitBasis: [],
           quantityDosingProvided: true,
-          preferredBiosimilarOrFailure: true,
+          ...adalimumabProductAnswer(c.drugName),
           conventionalTherapyTrial: true,
         },
       }),
@@ -307,6 +308,14 @@ const PATTERNS: Record<string, FactPattern[]> = {
     },
   ],
 };
+
+/** Form step 3: only preferred biosimilar codes continue; others Deny. */
+function adalimumabProductAnswer(drugName: string): {
+  requestedAdalimumabProduct: string[];
+} {
+  const code = preferredAdalimumabProduct(drugName);
+  return { requestedAdalimumabProduct: code ? [code] : [] };
+}
 
 /*
  * The Skyrizi form covers seven indications, but only the initial plaque

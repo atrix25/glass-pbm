@@ -37,7 +37,7 @@ const SLOT: Record<string, "med" | "early" | "middle" | "late" | "assessment"> =
     phototherapyTrial: "middle",
     topicalTrialDocumented: "middle",
     conventionalTherapyTrial: "middle",
-    preferredBiosimilarOrFailure: "middle",
+    requestedAdalimumabProduct: "middle",
     allAlternativesContraindicated: "late",
     contraindicationsListed: "late",
   };

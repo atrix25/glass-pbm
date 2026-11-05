@@ -273,13 +273,13 @@ const SCENARIOS: Scenario[] = [
     answers: {
       "step-1": ["loading-dose"],
       "step-3": true,
-      "step-4": true,
+      "step-4": ["adalimumab-adaz"],
       "step-5": true,
     },
     facts: facts({
       answers: {
         quantityLimitBasis: ["loading-dose"],
-        preferredBiosimilarOrFailure: true,
+        requestedAdalimumabProduct: ["adalimumab-adaz"],
       },
       memberDiagnosisCodes: ["L40.0"],
       filledDrugNames: ["methotrexate tab"],
