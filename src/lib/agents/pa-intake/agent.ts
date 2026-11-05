@@ -16,8 +16,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { judge } from "../brain";
 import { startRun, type Run } from "../runtime";
+import { CRITERIA_TREES, preferredAdalimumabProduct } from "@/lib/pa/criteria";
 import { determinePA, type PAFacts } from "@/lib/pa/engine";
-import { CRITERIA_TREES } from "@/lib/pa/criteria";
 import { fieldsFor, type NoteField } from "./fields";
 
 export interface Extracted {
@@ -381,6 +381,14 @@ export async function runIntake(opts: {
     else if (e.value === "__none") answers[e.key] = [];
     else if (typeof e.value === "boolean") answers[e.key] = e.value;
     else answers[e.key] = [e.value];
+  }
+
+  // Form step 3 keys off the product actually requested, not a free-text
+  // attestation that the request is "preferred". Derive the code from the PA
+  // drug so Humira/Abrilada cannot Approve by claiming biosimilar status.
+  if (tree.id === "pa-adalimumab") {
+    const code = preferredAdalimumabProduct(pa.drug.name);
+    answers.requestedAdalimumabProduct = code ? [code] : [];
   }
 
   const facts: PAFacts = {

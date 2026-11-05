@@ -205,8 +205,8 @@ function humanField(key: string): string {
       return "the topical trial";
     case "conventionalTherapyTrial":
       return "the conventional therapy trial";
-    case "preferredBiosimilarOrFailure":
-      return "the preferred biosimilar question";
+    case "requestedAdalimumabProduct":
+      return "the preferred adalimumab product selection";
     default:
       return key;
   }

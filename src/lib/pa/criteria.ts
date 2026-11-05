@@ -327,11 +327,47 @@ export const DUPIXENT: CriteriaTreeDef = {
 
 const ADALIMUMAB_FORM = "0a29d17f-498e-4499-bef1-eb8742d7e4c6";
 
+/**
+ * Form step 3 preferred products only. Brand names and four-letter suffixes
+ * both resolve; bare "ADALIMUMAB" / HUMIRA / ABRILADA do not.
+ */
+const PREFERRED_ADALIMUMAB_PRODUCTS: { code: string; patterns: string[] }[] = [
+  { code: "adalimumab-aaty", patterns: ["YUFLYMA", "AATY"] },
+  { code: "adalimumab-adaz", patterns: ["HYRIMOZ", "ADAZ"] },
+  { code: "adalimumab-fkjp", patterns: ["HULIO", "FKJP"] },
+  { code: "adalimumab-ryvk", patterns: ["SIMLANDI", "RYVK"] },
+];
+
+export const PREFERRED_ADALIMUMAB_PRODUCT_CODES = PREFERRED_ADALIMUMAB_PRODUCTS.map(
+  (p) => p.code,
+);
+
+/** Map a requested drug name to the form's preferred-product code, if any. */
+export function preferredAdalimumabProduct(
+  drugName: string,
+): string | undefined {
+  const upper = drugName.toUpperCase();
+  for (const product of PREFERRED_ADALIMUMAB_PRODUCTS) {
+    if (product.patterns.some((pattern) => upper.includes(pattern))) {
+      return product.code;
+    }
+  }
+  return undefined;
+}
+
 export const ADALIMUMAB: CriteriaTreeDef = {
   id: "pa-adalimumab",
   name: "ADALIMUMAB PRODUCTS",
   scopeLabel: "Adalimumab and adalimumab biosimilars",
-  drugPatterns: ["ADALIMUMAB", "HUMIRA", "HYRIMOZ", "YUFLYMA", "HULIO", "ABRILADA"],
+  drugPatterns: [
+    "ADALIMUMAB",
+    "HUMIRA",
+    "HYRIMOZ",
+    "YUFLYMA",
+    "HULIO",
+    "SIMLANDI",
+    "ABRILADA",
+  ],
   formId: ADALIMUMAB_FORM,
   url: NAVITUS_DOC(ADALIMUMAB_FORM),
   defaultApprovalDays: 365,
@@ -380,22 +416,34 @@ export const ADALIMUMAB: CriteriaTreeDef = {
         reason:
           "No qualifying primary diagnosis was documented for an adalimumab product.",
       },
-      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 3",
+      // Tip keeps diagnosis ahead of product selection so open indication forks
+      // stay numbered consistently; the published form asks product at step 3
+      // and diagnosis at step 4. The product gate below is still form step 3.
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 4",
     },
     {
       step: 4,
       question:
-        "Is the requested product a preferred adalimumab biosimilar, or has the member failed a preferred biosimilar?",
-      predicate: "request.answerYes",
-      args: { field: "preferredBiosimilarOrFailure" },
+        "Indicate Product Requested. Preferred products are ADALIMUMAB-AATY, ADALIMUMAB-ADAZ, ADALIMUMAB-FKJP, and ADALIMUMAB-RYVK.",
+      predicate: "request.selectedAny",
+      args: {
+        field: "requestedAdalimumabProduct",
+        options: [...PREFERRED_ADALIMUMAB_PRODUCT_CODES],
+      },
+      options: [
+        "ADALIMUMAB-AATY (Yuflyma)",
+        "ADALIMUMAB-ADAZ (Hyrimoz)",
+        "ADALIMUMAB-FKJP (Hulio)",
+        "ADALIMUMAB-RYVK (Simlandi)",
+        "None of the above",
+      ],
       yes: { outcome: "step", step: 5 },
       no: {
         outcome: "deny",
         reason:
-          "A preferred adalimumab biosimilar must be used first. Amendment 7 to contract ETG0013 substitutes biosimilar rebate value for the reference product, and the formulary reflects that preference.",
+          "Requested product is not a preferred adalimumab biosimilar. Form complete here (Deny).",
       },
-      citation:
-        "ADALIMUMAB PRODUCTS prior authorization form, preferred product requirement",
+      citation: "ADALIMUMAB PRODUCTS prior authorization form, step 3",
     },
     {
       step: 5,
