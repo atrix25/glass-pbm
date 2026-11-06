@@ -15,6 +15,7 @@ import { Badge, Card, CardHeader, Table, Td, Th } from "@/components/ui";
 import { formatCents, formatCentsWhole } from "@/lib/money";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 import type { ConfigOverride } from "@/lib/engine/replay";
+import { assertFinishedReplayResponse } from "@/lib/engine/replay-response";
 
 // ---------------------------------------------------------------------------
 
@@ -214,6 +215,7 @@ export function ChangeConsole({
   const [projecting, setProjecting] = useState(false);
   const [committed, setCommitted] = useState<string | null>(null);
   const [appliedPreset, setAppliedPreset] = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const changes = describeChanges(baseline, draft);
   const dirty = changes.length > 0;
@@ -230,6 +232,7 @@ export function ChangeConsole({
     setResult(null);
     setProjection(null);
     setCommitted(null);
+    setRunError(null);
   };
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
@@ -274,13 +277,33 @@ export function ChangeConsole({
   const run = async () => {
     setRunning(true);
     setCommitted(null);
+    setRunError(null);
     try {
+      /*
+       * Full-book measure must stay on the request.
+       *
+       * `/api/replay` defaults full runs (no sampleRate) to a worker job and
+       * returns `{ jobId, status }`. This page never polled that envelope; it
+       * cast it as ReplayResponse and crashed in formatNumber(undefined) while
+       * trying to render annual plan/member deltas — and Commit stayed fed by
+       * the same broken object. Request a synchronous run instead (full book
+       * is ~30s; the route allows 120s).
+       */
       const res = await fetch("/api/replay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ override: buildOverride(baseline, draft) }),
+        body: JSON.stringify({
+          override: buildOverride(baseline, draft),
+          async: false,
+        }),
       });
-      setResult((await res.json()) as ReplayResponse);
+      if (!res.ok) {
+        throw new Error(`Replay failed (${res.status}).`);
+      }
+      setResult(assertFinishedReplayResponse<ReplayResponse>(await res.json()));
+    } catch (e) {
+      setResult(null);
+      setRunError(e instanceof Error ? e.message : "Replay failed.");
     } finally {
       setRunning(false);
     }
@@ -652,6 +675,20 @@ export function ChangeConsole({
               <div className="flex items-center justify-center gap-3 px-6 py-16 text-[13px] text-ink-600">
                 <Loader2 className="h-4 w-4 animate-spin text-glass-600" />
                 Re-adjudicating the full plan year…
+              </div>
+            </Card>
+          ) : null}
+
+          {runError && !running ? (
+            <Card className="border-rose-600/25 bg-rose-50/40">
+              <div className="flex items-start gap-2 px-5 py-4 text-[13px] text-rose-800">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Full measure did not finish</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-rose-700">
+                    {runError}
+                  </p>
+                </div>
               </div>
             </Card>
           ) : null}
