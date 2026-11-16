@@ -6,6 +6,11 @@ import { tenantSponsorId } from "@/lib/config";
  * Used by the rollup_refresh job so dashboards never scan the claim table.
  * Dimension rollups remain seed/enrich territory for now; this keeps the
  * primary daily totals correct after claim mutations or replay commits.
+ *
+ * The activity columns count B1 submissions only. A B2 reversal carries the
+ * original date of service, so counting it here would book a second script
+ * against the day the fill happened; reversals belong in the `reversal*`
+ * columns, which `scripts/build-financials.ts` maintains separately.
  */
 export async function refreshBookDayRollups(from?: Date, to?: Date) {
   const sponsorId = tenantSponsorId();
@@ -31,7 +36,7 @@ export async function refreshBookDayRollups(from?: Date, to?: Date) {
     }>
   >(
     `SELECT date_trunc('day', "dateOfService") AS day,
-            COUNT(*)::bigint AS "claimsSubmitted",
+            SUM(CASE WHEN "transactionCode" = 'B1' THEN 1 ELSE 0 END)::bigint AS "claimsSubmitted",
             SUM(CASE WHEN "responseStatus" = 'P' AND "transactionCode" = 'B1' THEN 1 ELSE 0 END)::bigint AS "claimsPaid",
             SUM(CASE WHEN "responseStatus" = 'R' THEN 1 ELSE 0 END)::bigint AS "claimsRejected",
             COALESCE(SUM(CASE WHEN "responseStatus" = 'P' AND "transactionCode" = 'B1' THEN "totalBilledCents" ELSE 0 END), 0)::bigint AS "totalBilledCents",
@@ -43,10 +48,10 @@ export async function refreshBookDayRollups(from?: Date, to?: Date) {
             SUM(CASE WHEN "responseStatus" = 'P' AND "brandGenericClass" = 'Brand' THEN 1 ELSE 0 END)::bigint AS "brandClaims",
             SUM(CASE WHEN "responseStatus" = 'P' AND "isSpecialtyClaim" IS TRUE THEN 1 ELSE 0 END)::bigint AS "specialtyClaims",
             COALESCE(SUM(CASE WHEN "responseStatus" = 'P' AND "isSpecialtyClaim" IS TRUE THEN "totalBilledCents" ELSE 0 END), 0)::bigint AS "specialtyBilledCents",
-            SUM(CASE WHEN "channel" = 'Mail' THEN 1 ELSE 0 END)::bigint AS "mailClaims",
-            SUM(CASE WHEN "channel" = 'Retail' THEN 1 ELSE 0 END)::bigint AS "retailClaims",
-            SUM(CASE WHEN "channel" = 'Retail90' THEN 1 ELSE 0 END)::bigint AS "retail90Claims",
-            COUNT(DISTINCT "memberId")::bigint AS "membersFilling"
+            SUM(CASE WHEN "responseStatus" = 'P' AND "channel" = 'Mail' THEN 1 ELSE 0 END)::bigint AS "mailClaims",
+            SUM(CASE WHEN "responseStatus" = 'P' AND "channel" = 'Retail' THEN 1 ELSE 0 END)::bigint AS "retailClaims",
+            SUM(CASE WHEN "responseStatus" = 'P' AND "channel" = 'Retail90' THEN 1 ELSE 0 END)::bigint AS "retail90Claims",
+            (COUNT(DISTINCT "memberId") FILTER (WHERE "transactionCode" = 'B1'))::bigint AS "membersFilling"
      FROM "Claim"
      WHERE ($1::timestamptz IS NULL OR "dateOfService" >= $1)
        AND ($2::timestamptz IS NULL OR "dateOfService" <= $2)
@@ -58,7 +63,7 @@ export async function refreshBookDayRollups(from?: Date, to?: Date) {
 
   let upserted = 0;
   for (const r of rows) {
-    const id = r.day.toISOString().slice(0, 10);
+    const id = `day-${r.day.toISOString().slice(0, 10)}`;
     const data = {
       sponsorId,
       date: r.day,
@@ -79,8 +84,14 @@ export async function refreshBookDayRollups(from?: Date, to?: Date) {
       retail90Claims: Number(r.retail90Claims),
       membersFilling: Number(r.membersFilling),
     };
+    /*
+     * Matched on `date`, not on `id`. The day is identified by its date — the
+     * column carrying the unique index — so a row seeded under any id
+     * convention is still found and updated rather than re-inserted into a
+     * collision. `id` is only consumed when the day is genuinely new.
+     */
     await prisma.bookDay.upsert({
-      where: { id },
+      where: { date: r.day },
       create: { id, ...data },
       update: data,
     });
