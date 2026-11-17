@@ -45,33 +45,60 @@ function connectionUrl(): string {
   }
 }
 
+/*
+ * Prisma builds the interactive-transaction client by cloning this one, so the
+ * overrides below are inherited by the `tx` handed to a `$transaction`
+ * callback. They must therefore forward to the original on `this` rather than
+ * on a captured client: binding them to the long-lived client sends raw SQL
+ * out on a pooled connection of its own, outside the caller's transaction,
+ * where it commits on its own and takes no part in the rollback. That silently
+ * defeated `SELECT … FOR UPDATE SKIP LOCKED` in claimNextJob, because the row
+ * lock was released the instant the statement returned.
+ */
 function wrapClient(client: PrismaClient): PrismaClient {
-  const raw = client.$queryRaw.bind(client);
-  const rawUnsafe = client.$queryRawUnsafe.bind(client);
-  const exec = client.$executeRaw.bind(client);
-  const execUnsafe = client.$executeRawUnsafe.bind(client);
+  const raw = client.$queryRaw;
+  const rawUnsafe = client.$queryRawUnsafe;
+  const exec = client.$executeRaw;
+  const execUnsafe = client.$executeRawUnsafe;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (client as any).$queryRaw = (strings: TemplateStringsArray, ...values: unknown[]) => {
+  function adapt(strings: TemplateStringsArray): TemplateStringsArray {
     const adapted = strings.map((part) => quotePgSql(adaptSqliteDialect(part)));
-    const next = Object.assign([...adapted], { raw: adapted }) as TemplateStringsArray;
-    return raw(next, ...values);
+    return Object.assign([...adapted], { raw: adapted }) as unknown as TemplateStringsArray;
+  }
+
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  (client as any).$queryRaw = function (
+    this: PrismaClient | undefined,
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) {
+    return raw.call(this ?? client, adapt(strings), ...values);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (client as any).$executeRaw = (strings: TemplateStringsArray, ...values: unknown[]) => {
-    const adapted = strings.map((part) => quotePgSql(adaptSqliteDialect(part)));
-    const next = Object.assign([...adapted], { raw: adapted }) as TemplateStringsArray;
-    return exec(next, ...values);
+  (client as any).$executeRaw = function (
+    this: PrismaClient | undefined,
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) {
+    return exec.call(this ?? client, adapt(strings), ...values);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (client as any).$queryRawUnsafe = (query: string, ...values: unknown[]) =>
-    rawUnsafe(sqlitePlaceholdersToPg(query), ...values);
+  (client as any).$queryRawUnsafe = function (
+    this: PrismaClient | undefined,
+    query: string,
+    ...values: unknown[]
+  ) {
+    return rawUnsafe.call(this ?? client, sqlitePlaceholdersToPg(query), ...values);
+  };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (client as any).$executeRawUnsafe = (query: string, ...values: unknown[]) =>
-    execUnsafe(sqlitePlaceholdersToPg(query), ...values);
+  (client as any).$executeRawUnsafe = function (
+    this: PrismaClient | undefined,
+    query: string,
+    ...values: unknown[]
+  ) {
+    return execUnsafe.call(this ?? client, sqlitePlaceholdersToPg(query), ...values);
+  };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   return client;
 }
