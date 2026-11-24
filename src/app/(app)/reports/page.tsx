@@ -20,7 +20,7 @@ import {
 } from "@/lib/queries/reports";
 import { getBookTotals } from "@/lib/queries/sponsor";
 import { getClock } from "@/lib/session";
-import { formatCents, formatCentsCompact } from "@/lib/money";
+import { accruedPmpmCents, formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
 
@@ -41,11 +41,10 @@ export default async function ReportsPage() {
   const missed = guarantees.filter((g) => g.met === false);
   // Administrative fees accrue per member per month, so only the months that
   // have elapsed have been billed.
-  const monthsElapsed = Math.max(1, clock.yearElapsed * 12);
-  const adminFeeCents = Math.round(
-    totals.members *
-      monthsElapsed *
-      WISCONSIN_CONTRACT.adminFeePmpmCommercialCents,
+  const adminFeeCents = accruedPmpmCents(
+    totals.members,
+    clock.yearElapsed,
+    WISCONSIN_CONTRACT.adminFeePmpmCommercialCents,
   );
 
   return (
