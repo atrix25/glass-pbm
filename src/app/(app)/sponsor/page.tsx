@@ -23,7 +23,7 @@ import {
   getTopDrugs,
 } from "@/lib/queries/sponsor";
 import { getClock } from "@/lib/session";
-import { formatCents, formatCentsCompact } from "@/lib/money";
+import { accruedPmpmCents, formatCents, formatCentsCompact } from "@/lib/money";
 import { formatNumber, formatPercent, levelMeta } from "@/lib/utils";
 import { PRICING_ARM_LABEL } from "@/lib/engine/types";
 import { WISCONSIN_CONTRACT } from "@/lib/contracts/wisconsin";
@@ -66,8 +66,12 @@ export default async function SponsorDashboard() {
     totals.specialtyBilledCents / Math.max(1, totals.totalBilledCents);
   const marginOverAcquisition =
     totals.totalBilledCents - totals.nadacTotalCents - totals.dispensingFeeCents;
-  const adminFeeCents =
-    totals.members * 12 * WISCONSIN_CONTRACT.adminFeePmpmCommercialCents;
+  // Same accrual rule as /reports: only elapsed months have been billed.
+  const adminFeeCents = accruedPmpmCents(
+    totals.members,
+    clock.yearElapsed,
+    WISCONSIN_CONTRACT.adminFeePmpmCommercialCents,
+  );
 
   return (
     <div className="space-y-6">

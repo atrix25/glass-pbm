@@ -177,3 +177,19 @@ export function formatUnitPrice(value: number): string {
 export function formatBpsAsPercent(bps: number, decimals = 2): string {
   return `${(bps / 100).toFixed(decimals)}%`;
 }
+
+/**
+ * Accrue a per-member-per-month fee through the simulation clock.
+ *
+ * Administrative and rebate-admin fees are billed for months that have
+ * actually elapsed. Multiplying by a full twelve against a partial year of
+ * claim dollars invents fees the sponsor has not been invoiced for yet.
+ */
+export function accruedPmpmCents(
+  members: number,
+  yearElapsed: number,
+  pmpmCents: Cents,
+): Cents {
+  const monthsElapsed = Math.max(1, yearElapsed * 12);
+  return Math.round(members * monthsElapsed * pmpmCents);
+}
